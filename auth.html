@@ -7,11 +7,15 @@
   const auth=window.CareerDiyaProfileAuth; if(!auth) return;
   const qs=new URLSearchParams(location.search); const message=document.getElementById('authMessage'); const status=document.getElementById('authStatus'); const email=document.getElementById('authEmail');
   function show(text,type='ok'){message.textContent=text;message.className='auth-message '+type;}
+  function exploreDestination(){
+    const explorationId=qs.get('explorationId');
+    return explorationId ? `explore.html?explorationId=${encodeURIComponent(explorationId)}` : 'explore.html?resume=1';
+  }
   try{
     const returned=await auth.handleOAuthReturn();
     if(returned && returned.authenticated && qs.get('confirmed')!=='1'){
       const returnTo=qs.get('return') || localStorage.getItem('careerdiya_post_auth_return') || 'explore';
-      window.location.replace(returnTo==='dashboard' ? 'dashboard.html' : returnTo==='profile' ? 'profile.html' : 'explore.html?resume=1');
+      window.location.replace(returnTo==='dashboard' ? 'dashboard.html' : returnTo==='profile' ? 'profile.html' : exploreDestination());
       return;
     }
     if(qs.get('confirmed')==='1') show('Your email is confirmed. Sign in below to open your saved exploration.');
@@ -20,6 +24,6 @@
   }catch(err){show(err.message || 'We could not complete the sign-in step.','err');}
 
   document.querySelectorAll('[data-provider]').forEach(btn=>btn.addEventListener('click',async()=>{btn.disabled=true;status.textContent=btn.dataset.provider==='azure'?'Redirecting to Microsoft…':'Redirecting to Google…';status.className='profile-gate-status ok';try{await auth.signInWithProvider(btn.dataset.provider);}catch(err){status.textContent=err.message||'Social sign-in could not be started.';status.className='profile-gate-status err';btn.disabled=false;}}));
-  document.getElementById('authForm').addEventListener('submit',async e=>{e.preventDefault();const form=e.currentTarget;const btn=form.querySelector('button[type=submit]');const emailValue=form.email.value.trim();const password=form.password.value;if(!emailValue||!password){status.textContent='Enter your email and password.';status.className='profile-gate-status err';return;}btn.disabled=true;btn.textContent='Signing In…';status.textContent='';try{await auth.signIn({email:emailValue,password});const returnTo=qs.get('return') || localStorage.getItem('careerdiya_post_auth_return') || 'explore';localStorage.removeItem('careerdiya_post_auth_return');window.location.replace(returnTo==='dashboard'?'dashboard.html':returnTo==='profile'?'profile.html':'explore.html?resume=1');}catch(err){status.textContent=err.message||'Invalid email or password.';status.className='profile-gate-status err';btn.disabled=false;btn.textContent='Sign In And Continue →';}});
+  document.getElementById('authForm').addEventListener('submit',async e=>{e.preventDefault();const form=e.currentTarget;const btn=form.querySelector('button[type=submit]');const emailValue=form.email.value.trim();const password=form.password.value;if(!emailValue||!password){status.textContent='Enter your email and password.';status.className='profile-gate-status err';return;}btn.disabled=true;btn.textContent='Signing In…';status.textContent='';try{await auth.signIn({email:emailValue,password});const returnTo=qs.get('return') || localStorage.getItem('careerdiya_post_auth_return') || 'explore';localStorage.removeItem('careerdiya_post_auth_return');window.location.replace(returnTo==='dashboard'?'dashboard.html':returnTo==='profile'?'profile.html':exploreDestination());}catch(err){status.textContent=err.message||'Invalid email or password.';status.className='profile-gate-status err';btn.disabled=false;btn.textContent='Sign In And Continue →';}});
 })();
 </script><script src="assets/design-system-v2.js"></script></body></html>

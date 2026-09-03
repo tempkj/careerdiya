@@ -287,28 +287,117 @@
     return { education: cleanEducation, experience: cleanExperience };
   }
 
-  async function saveExploration({ audience, answers, result }) {
+  /* Multi-exploration history (career_explorations, id-PK, many-per-user).
+   * A completed exploration is immutable: only `pinned` may ever change
+   * after insert (enforced by a database trigger, not just by convention).
+   * `save_exploration_snapshot` is idempotent by id, so promoting the same
+   * anonymous snapshot twice (e.g. a retried promotion) never duplicates it.
+   */
+  async function saveNewExploration({ id, audience, answers, result, engine_version, completed_at, legacy = false }) {
+    if (!id || !audience || !answers || !engine_version) throw new Error('A complete exploration snapshot (id, audience, answers, engine_version) is required to save it.');
     const client = getSupabaseClient();
     const { data: sessionData, error: sessionError } = await client.auth.getSession();
     if (sessionError) throw sessionError;
     const session = sessionData && sessionData.session;
     if (!session || !session.user) throw new Error('You need to be signed in to save this exploration.');
-    const payload = { user_id: session.user.id, audience, answers, result, completed_at: new Date().toISOString(), updated_at: new Date().toISOString() };
-    const { data, error } = await client.from('career_exploration_results').upsert(payload, { onConflict: 'user_id' }).select().single();
+    const { data, error } = await client.rpc('save_exploration_snapshot', {
+      p_id: id,
+      p_audience: audience,
+      p_answers: answers,
+      p_result: result ?? null,
+      p_engine_version: engine_version,
+      p_completed_at: completed_at || new Date().toISOString(),
+      p_legacy: !!legacy
+    });
+    if (error) throw error;
+    return Array.isArray(data) ? data[0] : data;
+  }
+
+  async function listExplorations() {
+    if (!isAuthenticated()) return [];
+    const client = getSupabaseClient();
+    const { data, error } = await client.from('career_explorations').select('*').order('updated_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  }
+
+  async function getExploration(id) {
+    if (!id || !isAuthenticated()) return null;
+    const client = getSupabaseClient();
+    const { data, error } = await client.from('career_explorations').select('*').eq('id', id).maybeSingle();
+    if (error) throw error;
+    return data || null;
+  }
+
+  async function setExplorationPinned(id, pinned) {
+    const client = getSupabaseClient();
+    const { data, error } = await client.rpc('set_exploration_pinned', { p_id: id, p_pinned: !!pinned });
     if (error) throw error;
     return data;
   }
 
+  // Compatibility view over the exploration history for callers that only
+  // ever cared about "the latest saved exploration" (dashboard summary,
+  // paths.html, Skill Diya context). Not used for exploration-view routing.
   async function getSavedExploration() {
-    if (!isAuthenticated()) return null;
-    const client = getSupabaseClient();
-    const { data: sessionData, error: sessionError } = await client.auth.getSession();
-    if (sessionError) throw sessionError;
-    const session = sessionData && sessionData.session;
-    if (!session || !session.user) return null;
-    const { data, error } = await client.from('career_exploration_results').select('user_id,audience,answers,result,completed_at,updated_at').eq('user_id', session.user.id).maybeSingle();
-    if (error) throw error;
-    return data || null;
+    const list = await listExplorations();
+    return list.length ? list[0] : null;
+  }
+
+  let promotionInFlight = false;
+  const PENDING_EXPLORATION_KEY = 'careerdiya_pending_exploration';
+
+  // Promotes the anonymous pending exploration snapshot (if any) to a real
+  // row owned by the now-authenticated user, exactly as captured at
+  // completion time — no recomputation. Idempotent (safe to call more than
+  // once, including from multiple auth-state notifications): the pending
+  // snapshot is only cleared after the database confirms the row exists.
+  async function promotePendingExploration() {
+    if (promotionInFlight) return { promoted: false, error: 'already_in_progress' };
+    const raw = localStorage.getItem(PENDING_EXPLORATION_KEY);
+    if (!raw) return { promoted: false, error: null };
+    let pending;
+    try { pending = JSON.parse(raw); } catch (_) { return { promoted: false, error: 'corrupt_snapshot' }; }
+    if (!pending || !pending.exploration_id || !pending.audience || !pending.answers || !pending.engine_version) {
+      return { promoted: false, error: 'incomplete_snapshot' };
+    }
+    if (!isAuthenticated()) return { promoted: false, error: 'not_authenticated' };
+    promotionInFlight = true;
+    try {
+      const saved = await saveNewExploration({
+        id: pending.exploration_id,
+        audience: pending.audience,
+        answers: pending.answers,
+        result: pending.result ?? null,
+        engine_version: pending.engine_version,
+        completed_at: pending.completed_at
+      });
+      localStorage.removeItem(PENDING_EXPLORATION_KEY);
+      return { promoted: true, exploration: saved };
+    } catch (err) {
+      // Leave the pending snapshot untouched so promotion can be retried later.
+      return { promoted: false, error: (err && err.message) || 'promotion_failed' };
+    } finally {
+      promotionInFlight = false;
+    }
+  }
+
+  // Wires the real Supabase auth-state lifecycle so promotion happens as
+  // soon as a session is actually established (sign-in, sign-up with an
+  // immediate session, or an OAuth round trip) rather than only on the one
+  // page that happened to call handleOAuthReturn().
+  function registerAuthListener() {
+    try {
+      const client = getSupabaseClient();
+      if (client.__careerdiyaAuthListenerRegistered) return;
+      client.__careerdiyaAuthListenerRegistered = true;
+      client.auth.onAuthStateChange((event, session) => {
+        if (session) rememberSession(session); else if (event === 'SIGNED_OUT') localStorage.removeItem('careerdiya_auth_session');
+        if (event === 'SIGNED_IN') promotePendingExploration().catch(() => {});
+      });
+    } catch (_) {
+      // Supabase config/library not ready on this page load; nothing to wire yet.
+    }
   }
 
   async function signOut() {
@@ -319,5 +408,7 @@
     }
   }
 
-  window.CareerDiyaProfileAuth = { signUp, signIn, signInWithProvider, handleOAuthReturn, refreshLocalSession, ensureProfile, getProfile, saveProfile, getEducationRecords, getExperienceRecords, saveBackground, saveExploration, getSavedExploration, setAudience, signOut, getSession, isAuthenticated };
+  window.CareerDiyaProfileAuth = { signUp, signIn, signInWithProvider, handleOAuthReturn, refreshLocalSession, ensureProfile, getProfile, saveProfile, getEducationRecords, getExperienceRecords, saveBackground, saveNewExploration, listExplorations, getExploration, setExplorationPinned, getSavedExploration, promotePendingExploration, setAudience, signOut, getSession, isAuthenticated };
+
+  registerAuthListener();
 })();

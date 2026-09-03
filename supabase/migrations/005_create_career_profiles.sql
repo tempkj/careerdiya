@@ -7,7 +7,7 @@ create table if not exists public.career_profiles (
   institution text,
   field_of_study text,
   graduation_year text,
-  current_role text,
+  "current_role" text,
   industry text,
   experience_years text,
   career_interests text[] not null default '{}'::text[],

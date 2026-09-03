@@ -83,6 +83,14 @@
 .profile-gate-switch a{text-decoration:none}
 .profile-gate-note{font-size:13px;color:var(--muted);margin-top:12px}
 .profile-confirmation{padding:14px 16px;background:#effaf5;border:1px solid #d8e6df;border-radius:14px;color:#176a4b;margin-bottom:18px}
+.save-journey-panel{margin-top:28px;padding-top:28px;border-top:1px solid var(--line)}
+.exploration-context-banner{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:#f3f0e6;border:1px solid #e4dfc9;border-radius:16px;padding:12px 18px;margin-bottom:20px;font-size:14px;font-weight:600;color:#4a4530}
+.exploration-context-banner .link-button{font-weight:700}
+.exploration-history-list{display:grid;gap:12px}
+.exploration-history-item{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px 20px}
+.exploration-history-item h3{margin:4px 0 0;font-size:19px}
+.exploration-history-date{color:var(--muted);font-size:13px;margin-top:6px}
+.exploration-history-actions{display:flex;gap:8px;flex-wrap:wrap}
 @media(max-width:760px){.profile-social{grid-template-columns:1fr}.auth-card{padding:26px}.auth-card h1,.profile-gate h2{font-size:36px}}
 
 /* Personalized account experience */

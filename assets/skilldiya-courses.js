@@ -152,17 +152,29 @@
     return null;
   }
 
-  async function savedContext(){
+  // `exploration` = the user's latest saved exploration (used only for the
+  // "based on your latest exploration" contextual course banner).
+  // `activeExploration` = a specific exploration the visitor is currently
+  // VIEWING (passed as ?explorationId= on the calling page), which — per
+  // the parent-safety/exploration-view rules — takes priority over the
+  // current profile for audience/segment purposes when present.
+  async function savedContext(explorationId){
     const a=window.CareerDiyaProfileAuth;
-    if(!a||!a.isAuthenticated()) return {loggedIn:false,profile:null,exploration:null,user:null};
+    if(!a||!a.isAuthenticated()) return {loggedIn:false,profile:null,exploration:null,activeExploration:null,user:null};
     try{
       const [p,e]=await Promise.all([a.getProfile(),a.getSavedExploration()]);
       const session=typeof a.getSession==='function'?a.getSession():null;
-      return {loggedIn:true,profile:p,exploration:e,user:session?.user||null};
-    }catch(_){ const session=typeof a.getSession==='function'?a.getSession():null; return {loggedIn:true,profile:null,exploration:null,user:session?.user||null}; }
+      let activeExploration=null;
+      if(explorationId && typeof a.getExploration==='function'){
+        try{ activeExploration=await a.getExploration(explorationId); }catch(_){ activeExploration=null; }
+      }
+      return {loggedIn:true,profile:p,exploration:e,activeExploration,user:session?.user||null};
+    }catch(_){ const session=typeof a.getSession==='function'?a.getSession():null; return {loggedIn:true,profile:null,exploration:null,activeExploration:null,user:session?.user||null}; }
   }
 
   function canonicalAudience(ctx={}){
+    const activeAudience=String(ctx.activeExploration?.audience||'').toLowerCase();
+    if(ctx.loggedIn && validAudiences.has(activeAudience)) return activeAudience;
     const profileAudience=String(ctx.profile?.audience||'').toLowerCase();
     if(ctx.loggedIn && validAudiences.has(profileAudience)) return profileAudience;
     const explorationAudience=String(ctx.exploration?.audience||ctx.exploration?.result?.audience||'').toLowerCase();
@@ -180,6 +192,14 @@
       current_career_id:currentCareer.id||null,
       current_career_name:currentCareer.name||null,
       exploration_direction:ctx.exploration?.result?.recommendations?.[0]?.name||null,
+      // Kept separate from profile_context and from current_career_*: an
+      // actively-viewed historical exploration must never be conflated with
+      // the current career or the current profile in lead metadata.
+      active_exploration_context:ctx.activeExploration?{
+        id:ctx.activeExploration.id||null,
+        audience:ctx.activeExploration.audience||null,
+        completed_at:ctx.activeExploration.completed_at||null
+      }:null,
       profile_context:ctx.profile?{
         education_level:ctx.profile.education_level||null,
         industry:ctx.profile.industry||null,
@@ -188,6 +208,10 @@
         experience_years:ctx.profile.experience_years||null
       }:null
     };
+  }
+
+  function activeExplorationIdFromUrl(){
+    try{ return new URLSearchParams(location.search).get('explorationId') || ''; }catch(_){ return ''; }
   }
 
   function closeInterest(){
@@ -225,7 +249,7 @@
     setTimeout(()=>emailInput?.focus(),0);
 
     try{
-      const ctx=await savedContext();
+      const ctx=await savedContext(activeExplorationIdFromUrl());
       if(ctx.profile?.display_name && nameInput && !nameInput.value) nameInput.value=ctx.profile.display_name;
       if(ctx.user?.email && emailInput && !emailInput.value) emailInput.value=ctx.user.email;
     }catch(_){ }
@@ -237,7 +261,7 @@
     const email=form.querySelector('[name=email]').value.trim();
     const msg=document.getElementById('interestMessage');
     if(!email){ msg.textContent='Please enter your email so we know where to reach you.'; msg.className='form-message error'; return; }
-    const ctx=await savedContext();
+    const ctx=await savedContext(activeExplorationIdFromUrl());
     const kind=form.dataset.interestKind||'course';
     const courseId=kind==='course'?form.dataset.interest:'';
     const courseTitle=kind==='course'?form.dataset.interestTitle:'';
