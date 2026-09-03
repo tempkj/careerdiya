@@ -1,0 +1,8 @@
+# Career Diya Supabase function configuration
+project_id = "kvhovrtaaoecnicdpsgm"
+
+[functions.career-library]
+verify_jwt = false
+
+[functions.career-library-video]
+verify_jwt = false

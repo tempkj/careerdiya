@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <title>College Application Request — Career Diya</title>
+  <link rel="stylesheet" href="assets/site.css"><link rel="stylesheet" href="assets/design-system-v2.css">
+  <style>
+    .admissions-wrap{max-width:920px;margin:0 auto;padding:32px 0 76px}.admissions-card{background:#fff;border:1px solid var(--line);border-radius:26px;padding:32px;box-shadow:var(--shadow)}
+    .admissions-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.admissions-grid .full{grid-column:1/-1}.admissions-grid label{display:block;font-size:12px;font-weight:700;color:#606577;margin-bottom:6px}.admissions-grid input,.admissions-grid select{width:100%;box-sizing:border-box;font:inherit;border:1px solid #dedbd1;border-radius:12px;padding:13px 14px;background:#fff;color:var(--ink)}
+    .admissions-summary{padding:16px 18px;border-radius:16px;background:#f7f3e8;border:1px solid #e7dfcb;margin:18px 0}.admissions-summary strong{display:block;font-size:18px}.admissions-summary span{display:block;color:var(--muted);margin-top:4px}.admissions-consent{display:flex;gap:10px;align-items:flex-start;margin-top:18px;font-size:13px;color:var(--muted)}.admissions-consent input{margin-top:3px}.admissions-status{min-height:20px;margin-top:14px;font-size:13px}.admissions-status.err{color:#b3261e}.admissions-status.ok{color:var(--success)}
+    .admissions-confirmation{max-width:760px;margin:0 auto;padding:42px;border:1px solid #e3ded4;border-radius:28px;background:linear-gradient(135deg,#fffdf7,#eef2fb);box-shadow:0 20px 50px rgba(24,27,35,.06)}.admissions-id{display:inline-block;margin:16px 0;padding:12px 16px;border-radius:12px;background:#151827;color:#fff;font-weight:800;letter-spacing:.08em}.admissions-steps{display:grid;gap:10px;margin:24px 0}.admissions-step{padding:12px 14px;border:1px solid #e4e1d8;border-radius:12px;background:#fff}.admissions-note{padding:14px 16px;border:1px solid #f0ddb2;background:#fff8e8;border-radius:14px;font-size:13px;color:#5f624f}
+    @media(max-width:700px){.admissions-grid{grid-template-columns:1fr}.admissions-grid .full{grid-column:auto}.admissions-card{padding:22px}.admissions-confirmation{padding:26px}}
+  </style>
+</head>
+<body>
+<header class="site-header"><div class="container nav"><a href="index.html"><img class="logo" src="assets/careerdiya-horizontal-lockup.svg" alt="Career Diya"></a><nav class="navlinks"><a href="explore.html">Explore Careers</a><a href="paths.html">Career Paths</a><a href="assessment.html">Assessment</a><a href="counselling.html">Counselling</a><a href="resources.html">Resources</a><a href="courses.html">Courses &amp; Training</a></nav><a class="btn nav-cta" href="dashboard.html">My Career</a></div></header>
+<main>
+<section class="page-hero mural-band"><div class="container"><div class="eyebrow">College application</div><h1>Start your application request.</h1><p>Tell us a little about you and the programme you want to pursue. This creates a Career Diya pre-application request.</p></div></section>
+<section><div class="container admissions-wrap" id="admissionsRoot"></div></section>
+</main>
+<footer class="footer"><div class="container">© Career Diya · Swakojo</div></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/supabase-config.js"></script>
+<script src="assets/profile-auth.js"></script>
+<script src="assets/admissions.js"></script>
+<script>
+(function(){
+  const p=new URLSearchParams(location.search);
+  const root=document.getElementById('admissionsRoot');
+  const context={
+    collegeId:p.get('collegeId')||'',collegeName:p.get('collegeName')||'',
+    programmeId:p.get('programmeId')||'',programmeName:p.get('programmeName')||'',
+    specialization:p.get('specialization')||'', audience:p.get('audience')||localStorage.getItem('careerdiyaAudience')||'professional'
+  };
+  const esc=v=>String(v||'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));
+  if(!context.collegeName||!context.programmeName){
+    root.innerHTML=`<div class="admissions-card"><span class="tag">Programme required</span><h2>Select a college and programme first.</h2><p>Career Diya creates a pre-application only after a specific college and programme have been selected.</p><div class="actions"><a class="btn btn-primary" href="index.html">Back to Career Diya</a></div></div>`;
+    return;
+  }
+  renderForm();
+  function renderForm(){
+    const parent=context.audience==='parent';
+    root.innerHTML=`<div class="admissions-card">
+      <div class="tag">Career Diya pre-application</div>
+      <h2>Tell us how we should reach you.</h2>
+      <p>We will record your request and give you a Career Diya Pre-Application ID. Our admissions partner will then contact you and guide you through the remaining process.</p>
+      <div class="admissions-summary"><strong>${esc(context.programmeName)}</strong><span>${esc(context.collegeName)}${context.specialization?' · '+esc(context.specialization):''}</span></div>
+      <form id="admissionForm" class="admissions-grid" novalidate>
+        <div><label for="name">Full name *</label><input id="name" name="name" required autocomplete="name"></div>
+        <div><label for="email">Email *</label><input id="email" type="email" name="email" required autocomplete="email"></div>
+        <div><label for="phone">Mobile number *</label><input id="phone" type="tel" name="phone" required autocomplete="tel"></div>
+        <div><label for="location">Current location</label><input id="location" name="location" autocomplete="address-level2"></div>
+        <div><label for="education_level">Current education level</label><select id="education_level" name="education_level"><option value="">Select</option><option>School</option><option>12th / equivalent</option><option>Undergraduate</option><option>Graduate</option><option>Working professional</option><option>Other</option></select></div>
+        <div><label for="qualification">Current qualification / stream</label><input id="qualification" name="qualification"></div>
+        <div><label for="completion_year">Completion year</label><input id="completion_year" name="completion_year" inputmode="numeric" maxlength="4" placeholder="e.g. 2027"></div>
+        ${parent?`<div><label for="guardian_name">Parent / guardian name</label><input id="guardian_name" name="guardian_name" autocomplete="name"></div>`:''}
+        <div class="full"><label for="notes">Anything we should know? (optional)</label><input id="notes" name="notes" placeholder="e.g. preferred intake, questions, constraints"></div>
+        <div class="full"><label class="admissions-consent"><input id="consent" type="checkbox" required><span>I agree that Career Diya may use these details to process this pre-application request and contact me about the next steps. I understand this is not yet a confirmed university application.</span></label></div>
+        <div class="full"><button class="btn btn-primary" type="submit">Create my pre-application →</button><p id="status" class="admissions-status" role="status" aria-live="polite"></p></div>
+      </form>
+    </div>`;
+    const form=document.getElementById('admissionForm'); const status=document.getElementById('status');
+    form.addEventListener('submit',async(e)=>{e.preventDefault(); status.textContent=''; status.className='admissions-status'; const f=new FormData(form); const data=Object.fromEntries(f.entries()); if(!document.getElementById('consent').checked){status.textContent='Please confirm the consent checkbox to continue.';status.className='admissions-status err';return;} const btn=form.querySelector('button[type=submit]'); btn.disabled=true; btn.textContent='Creating pre-application…';
+      try{const id=await window.CareerDiyaAdmissions.submit({name:String(data.name).trim(),email:String(data.email).trim(),phone:String(data.phone).trim(),location:String(data.location||'').trim(),audience:context.audience,education_level:data.education_level||'',qualification:String(data.qualification||'').trim(),completion_year:String(data.completion_year||'').trim(),college_id:context.collegeId,college_name:context.collegeName,programme_id:context.programmeId,programme_name:context.programmeName,specialization:context.specialization,raw:{audience:context.audience,guardian_name:String(data.guardian_name||'').trim(),notes:String(data.notes||'').trim(),url:location.href,submitted_at:new Date().toISOString()}}); renderConfirmation(id);}
+      catch(err){status.textContent=err.message||'We could not create your pre-application. Please try again.';status.className='admissions-status err';btn.disabled=false;btn.textContent='Create my pre-application →';}
+    });
+  }
+  function renderConfirmation(id){
+    root.innerHTML=`<div class="admissions-confirmation"><div class="eyebrow">Request received</div><h2>Your application request has been received.</h2><p>We've recorded your interest in <strong>${esc(context.programmeName)}</strong> at <strong>${esc(context.collegeName)}</strong>.</p><div class="admissions-id">${esc(id)}</div><div class="admissions-steps"><div class="admissions-step">✓ Career Diya has recorded your pre-application request.</div><div class="admissions-step">○ Our admissions partner will review it and contact you using the details you provided.</div><div class="admissions-step">○ They will guide you through any remaining documents, payment or application steps.</div></div><div class="admissions-note"><strong>Keep this ID for reference.</strong><br>It is a Career Diya Pre-Application ID, not a university application number or admission confirmation.</div><div class="actions" style="margin-top:24px"><a class="btn btn-primary" href="dashboard.html">Go to My Career</a><a class="btn btn-secondary" href="index.html">Continue Exploring</a></div></div>`;
+  }
+})();
+</script>
+<script src="assets/design-system-v2.js"></script></body></html>

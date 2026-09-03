@@ -1,0 +1,373 @@
+/* Career Diya Design System v2
+   Unified surface hierarchy, mural bands, card language and journey rhythm.
+*/
+:root{
+  --cd2-paper:#fbfbf8;
+  --cd2-mural:#fdf9f1;
+  --cd2-panel:#ffffff;
+  --cd2-ink:#151827;
+  --cd2-muted:#687083;
+  --cd2-brand:#213a8f;
+  --cd2-gold:#d4a017;
+  --cd2-success:#207a58;
+  --cd2-line:#e8e7e2;
+  --cd2-soft:#f8f1d9;
+  --cd2-radius-card:18px;
+  --cd2-radius-panel:24px;
+  --cd2-shadow:0 18px 50px rgba(31,35,54,.08);
+  --mural:#fdf9f1;
+  --bloom-navy:rgba(33,58,143,.30);
+  --bloom-gold:rgba(212,160,23,.42);
+  --bloom-green:rgba(32,122,88,.24);
+  --mural-hatch:rgba(21,24,39,.05);
+}
+
+html,body{background:var(--cd2-paper);color:var(--cd2-ink)}
+body{line-height:1.55}
+
+/* Shared shell */
+.site-header{background:rgba(253,253,251,.96);border-bottom:1px solid rgba(232,231,226,.82)}
+.nav{height:80px}
+.navlinks{gap:26px;font-size:14px}
+.navlinks a{color:#42475a;position:relative;padding:8px 0}
+.navlinks a::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;border-radius:2px;background:var(--cd2-brand);transform:scaleX(0);transform-origin:center;transition:transform .18s ease}
+.navlinks a:hover::after,.navlinks a[aria-current="page"]::after{transform:scaleX(1)}
+.navlinks a[aria-current="page"]{color:var(--cd2-brand);font-weight:650}
+.logo{width:205px}
+.profile-menu{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;flex:none}
+.profile-menu.guest{cursor:default}
+.profile-avatar{width:48px;height:48px;font-weight:700;border:2px solid #fff}
+
+/* Buttons are one language */
+.btn{font-weight:650;letter-spacing:-.01em;border-radius:12px;min-height:46px}
+.btn-primary{background:var(--cd2-brand);box-shadow:0 12px 25px rgba(33,58,143,.18)}
+.btn-secondary{background:#fff;border-color:#d8d7ce}
+.btn-secondary:hover{border-color:rgba(33,58,143,.35);background:#fcfcfa}
+.btn:focus-visible,.profile-menu:focus-visible,.navlinks a:focus-visible{outline:3px solid rgba(33,58,143,.26);outline-offset:3px}
+
+/* One mural language, one band per page */
+.mural-band{position:relative;overflow:hidden;background:var(--cd2-mural)}
+.mural-band>*{position:relative;z-index:2}
+.mural-band .cd2-mural-decor{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.mural-band .bloom{position:absolute;filter:blur(26px);will-change:transform}
+.mural-band .bloom-navy{width:640px;height:420px;left:-120px;top:-120px;border-radius:50% 42% 55% 48%;background:radial-gradient(circle at 40% 40%,var(--bloom-navy),rgba(33,58,143,.06) 55%,transparent 72%);animation:cd2BloomA 26s ease-in-out infinite}
+.mural-band .bloom-gold{width:520px;height:520px;right:-100px;top:-40px;border-radius:48% 52% 44% 56%;background:radial-gradient(circle at 60% 50%,var(--bloom-gold),rgba(212,160,23,.10) 52%,transparent 70%);animation:cd2BloomB 32s ease-in-out infinite}
+.mural-band .bloom-green{width:420px;height:360px;right:12%;bottom:-160px;border-radius:55% 45% 52% 48%;background:radial-gradient(circle at 50% 50%,var(--bloom-green),rgba(32,122,88,.07) 52%,transparent 72%);animation:cd2BloomC 30s ease-in-out infinite}
+.mural-band .hatch{position:absolute;inset:0;z-index:0;opacity:.7;background-image:repeating-linear-gradient(58deg,var(--mural-hatch) 0 2px,transparent 2px 9px)}
+.mural-band .scrim{position:absolute;inset:0;z-index:1;background:radial-gradient(60% 78% at 32% 50%,rgba(253,249,241,.96),rgba(253,249,241,0) 74%)}
+.mural-shape{position:absolute;display:block}
+.mural-shape.circle{width:118px;height:118px;right:6%;bottom:18px;border:3px solid rgba(212,160,23,.40);border-radius:50%}
+.mural-shape.square{width:82px;height:82px;right:3%;top:26px;border:3px dashed rgba(212,160,23,.38);border-radius:18px;transform:rotate(10deg)}
+.mural-shape.ring{width:58px;height:58px;left:7%;bottom:20px;border:3px solid rgba(33,58,143,.25);border-radius:50%}
+
+@keyframes cd2BloomA{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(38px,26px,0) scale(1.09)}}
+@keyframes cd2BloomB{0%,100%{transform:translate3d(0,0,0) scale(1.04)}50%{transform:translate3d(-32px,30px,0) scale(.95)}}
+@keyframes cd2BloomC{0%,100%{transform:translate3d(0,0,0) scale(.98)}50%{transform:translate3d(26px,-22px,0) scale(1.12)}}
+@media (prefers-reduced-motion:reduce){[data-bloom]{animation:none!important}.navlinks a::after{transition:none}}
+
+/* Home hero: richest expression */
+.hero.mural-band{padding:82px 0 72px;background:var(--cd2-mural)}
+.hero.mural-band .hero-grid{position:relative;z-index:2}
+.hero h1{font-size:clamp(44px,5.8vw,74px);max-width:790px}
+.hero p{color:#586175;max-width:700px}
+.gradient,.accent{background:linear-gradient(120deg,var(--cd2-brand),var(--cd2-gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero.mural-band .hero-orbit{box-shadow:0 20px 50px rgba(31,35,54,.12)}
+
+/* Inner page hero: same system, quieter budget */
+.page-hero.mural-band{padding:58px 0 58px;border-bottom:1px solid var(--cd2-line);min-height:250px}
+.page-hero.mural-band .container{max-width:1180px}
+.page-hero h1{font-size:clamp(42px,5vw,60px);max-width:1000px}
+.page-hero p{font-size:17px;max-width:760px;color:#586175}
+.page-hero .eyebrow,.hero .eyebrow{color:var(--cd2-brand)}
+
+/* Plain body: no decorative treatment after the hero */
+.section,.profile-page,.auth-page,.dashboard{background:var(--cd2-paper)}
+.section{padding:72px 0}
+.section.alt{background:var(--cd2-paper)}
+.section-head{margin-bottom:30px}
+.section h2{font-size:40px}
+
+/* One card language */
+.cards{align-items:stretch}
+.cards>.career-card,.career-card,.intent,.step,.metric,.eco-card,.career-side-card,.admissions-card,.profile-side-card,.profile-form-card,.auth-card,.profile-gate-panel{border:1px solid var(--cd2-line);border-radius:var(--cd2-radius-card);box-shadow:none}
+.cards>.career-card:hover,.intent:hover,.career-card:hover{box-shadow:var(--cd2-shadow);transform:translateY(-2px)}
+.career-card,.intent,.step,.metric,.eco-card{background:var(--cd2-panel)}
+.tag{background:var(--cd2-soft);color:var(--cd2-brand);font-weight:800}
+
+/* Featured CTA: Navy means decisive next step */
+.redirect-strip{position:relative;overflow:hidden;background:var(--cd2-ink);border-radius:26px;padding:28px 30px}
+.redirect-strip::after{content:"";position:absolute;right:-140px;top:-120px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(212,160,23,.32),transparent 68%);pointer-events:none}
+.redirect-strip>*{position:relative;z-index:1}
+
+/* Ecosystem as a single transition, not a decorative block */
+.ecosystem{background:#f8f7f0;border-color:#e6dfcc;border-radius:var(--cd2-radius-panel)}
+.eco-arrow{font-weight:700}
+
+/* Dashboard uses the same shell and card rhythm */
+.dashboard{min-height:720px}
+.side{background:var(--cd2-ink)}
+.main{padding:34px}
+.timeline .t{background:#fff;border-color:var(--cd2-line);border-radius:16px}
+.notice{background:#fff8e9;border-color:#f3dfb1}
+
+/* Profile / forms stay quiet */
+.profile-page .page-hero{padding-bottom:26px;border-bottom:0}
+.profile-form-card .input,.auth-form .input{border-radius:12px}
+.profile-repeat-card{background:#fcfcfa;border-color:var(--cd2-line);border-radius:18px}
+
+/* Footer closes the same journey */
+.footer{position:relative;overflow:hidden;background:var(--cd2-brand);padding:58px 0 64px}
+.footer::after{content:"";position:absolute;right:-180px;bottom:-180px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(212,160,23,.18),transparent 68%);pointer-events:none}
+.footer .container{position:relative;z-index:1}
+.footer a{color:#d7daf0}
+.footer b{font-weight:700}
+
+/* Explicit utility used for page-level journey labels */
+.journey-label{display:inline-flex;align-items:center;gap:8px;color:var(--cd2-brand);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.journey-label .journey-dot{width:8px;height:8px;border-radius:50%;background:var(--cd2-gold)}
+
+/* Mobile keeps the same hierarchy, just simplifies the artwork */
+@media(max-width:900px){
+  .nav{height:74px}.navlinks{gap:18px}
+  .page-hero.mural-band{padding:50px 0 48px;min-height:0}
+  .hero.mural-band{padding:62px 0 56px}
+  .mural-shape.square{right:-14px}.mural-shape.circle{right:-12px}
+}
+@media(max-width:560px){
+  .logo{width:175px}.profile-avatar,.profile-menu{width:44px;height:44px}
+  .page-hero h1{font-size:40px}.page-hero p{font-size:16px}
+  .hero h1{font-size:44px}.section{padding:56px 0}.section h2{font-size:34px}
+  .mural-shape.ring{display:none}.mural-band .bloom-green{display:none}
+}
+
+/* Journey cards — the same component language, with explicit sequencing */
+.assessment-options{grid-template-columns:repeat(3,1fr);align-items:stretch}
+.journey-section-head{align-items:flex-end}
+.journey-card{position:relative;display:flex;flex-direction:column;min-height:290px}
+.journey-card .journey-card-number{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:var(--cd2-ink);color:#fff;font-size:12px;font-weight:800;margin-bottom:14px}
+.journey-card .btn{margin-top:auto;align-self:flex-start}
+@media(max-width:900px){.assessment-options{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.assessment-options{grid-template-columns:1fr}.journey-card{min-height:0}}
+
+/* =========================================================
+   Design System v2 — Continuous Page Canvas
+   One continuous mural/background across the page body.
+   Header and footer remain deliberate solid surfaces.
+   ========================================================= */
+html, body {
+  background-color: var(--cd2-mural) !important;
+}
+
+body {
+  background-image:
+    radial-gradient(58% 42% at 8% 10%, rgba(33,58,143,.115), transparent 72%),
+    radial-gradient(52% 46% at 93% 18%, rgba(212,160,23,.145), transparent 70%),
+    radial-gradient(48% 38% at 78% 78%, rgba(32,122,88,.055), transparent 72%),
+    repeating-linear-gradient(58deg, rgba(21,24,39,.032) 0 1px, transparent 1px 9px);
+  background-attachment: fixed;
+}
+
+/* The mural is now a page-level treatment, not a repeating section treatment. */
+.hero.mural-band,
+.page-hero.mural-band,
+.mural-band {
+  background: transparent !important;
+}
+
+/* Prevent the old per-section mural artwork from restarting on every hero. */
+.mural-band .cd2-mural-decor {
+  display: none !important;
+}
+
+/* All ordinary page sections sit directly on the continuous canvas. */
+.section,
+.section.alt,
+.page-hero,
+.profile-page,
+.auth-page,
+.dashboard,
+.main {
+  background: transparent !important;
+}
+
+/* Preserve the visual breathing space created by the old hero/section boundaries. */
+.page-hero.mural-band {
+  border-bottom-color: rgba(232,231,226,.72);
+}
+
+/* Workspace/profile pages also use the same canvas, while their cards remain surfaces. */
+.dashboard {
+  background-color: transparent !important;
+}
+
+.dashboard .side {
+  background: var(--cd2-ink) !important;
+}
+
+/* Career detail uses the same outer canvas; its white cards remain foreground surfaces. */
+.career-detail-shell,
+.career-detail-layout {
+  background: transparent !important;
+}
+
+/* Quiet panels remain opaque so the mural never competes with readable content. */
+.career-detail-card,
+.career-side-card,
+.career-library-loading,
+.career-option,
+.profile-side-card,
+.profile-form-card,
+.profile-repeat-card,
+.auth-card,
+.profile-gate-panel,
+.intent,
+.step,
+.metric,
+.eco-card,
+.career-card,
+.admissions-card,
+.timeline .t,
+.notice {
+  background: var(--cd2-panel) !important;
+}
+
+/* The ecosystem block stays a distinct semantic transition, not another page background. */
+.ecosystem {
+  background: rgba(248,247,240,.94) !important;
+}
+
+/* Avoid another large coloured band before the footer. */
+.footer {
+  background: var(--cd2-brand) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body { background-attachment: scroll; }
+}
+
+/* =========================================================
+   Career Diya Background System — 1b + 2a + 2b
+   Blank paper first; editorial mural only where the journey
+   needs a visual opening. Footer is the only true black surface.
+   ========================================================= */
+:root{
+  --cd-bg-paper:#fbfbf8;
+  --cd-mural:#fdf9f1;
+  --cd-ink:#151827;
+  --cd-brand:#213a8f;
+  --cd-gold:#d4a017;
+  --cd-green:#207a58;
+}
+
+html,body{background:var(--cd-bg-paper)!important;color:var(--cd-ink)}
+
+/* No black utility bars/panels. The footer owns black. */
+.topbar{display:none!important}
+.nav-cta{background:var(--cd-brand)!important;color:#fff!important}
+.profile-menu .profile-avatar{background:var(--cd-brand)!important;color:#fff!important}
+.btn-dark{background:var(--cd-brand)!important;color:#fff!important}
+.journey-card .journey-card-number{background:var(--cd-brand)!important}
+.side{background:var(--cd-brand)!important;color:#fff}
+.side a{color:#eef1ff}
+.side a.active{background:rgba(255,255,255,.14)}
+
+/* The deeper-assessment CTA uses exactly the same brand-navy as the path-card system. */
+.redirect-strip{
+  background:rgba(253,249,241,.94)!important;
+  border:1px solid rgba(33,58,143,.14)!important;
+  color:var(--cd-ink)!important;
+  box-shadow:0 14px 34px rgba(31,35,54,.06);
+}
+.redirect-strip::after{display:none!important}
+.redirect-strip p{color:var(--cd-muted)!important}
+.redirect-strip .btn-secondary,
+.redirect-strip .btn-primary{background:var(--cd-brand)!important;border-color:var(--cd-brand)!important;color:#fff!important;box-shadow:0 12px 25px rgba(33,58,143,.18)}
+
+/* 1b — spray mural: warm paper, moving blooms, thin hatch, marker accent. */
+.mural-band{
+  position:relative;
+  overflow:hidden;
+  background:var(--cd-mural)!important;
+}
+.mural-band .cd2-mural-decor{display:block!important}
+.mural-band .bloom{filter:blur(26px)!important;will-change:transform}
+.mural-band .hatch{opacity:.56!important}
+.mural-band .scrim{background:radial-gradient(62% 82% at 30% 50%,rgba(253,249,241,.975),rgba(253,249,241,0) 76%)!important}
+.mural-band .mural-shape{will-change:transform}
+.mural-band .mural-shape.circle{animation:cd2ShapeFloatA 20s ease-in-out infinite}
+.mural-band .mural-shape.square{animation:cd2ShapeFloatB 24s ease-in-out infinite}
+.mural-band .mural-shape.ring{animation:cd2ShapeFloatC 22s ease-in-out infinite}
+
+/* 1b marker accent is deliberately separate from the gradient. */
+.gradient,.accent{position:relative;display:inline-block;z-index:0}
+.gradient::after,.accent::after{
+  content:"";
+  position:absolute;
+  left:-5px;right:-7px;bottom:1px;height:.20em;
+  background:linear-gradient(90deg,rgba(212,160,23,.82),rgba(212,160,23,.42));
+  border-radius:14px 8px 16px 10px;
+  transform:rotate(-1.2deg);
+  z-index:-1;
+}
+
+/* 2a — restrained page-opening: stronger paper wash, quieter blooms. */
+.page-hero.cd2-2a .bloom-navy{opacity:.85;animation-duration:30s}
+.page-hero.cd2-2a .bloom-gold{opacity:.78;animation-duration:36s}
+.page-hero.cd2-2a .bloom-green{display:none}
+.page-hero.cd2-2a .mural-shape.circle{opacity:.85}
+.page-hero.cd2-2a .mural-shape.square{opacity:.9}
+
+/* 2b — fuller editorial opening: adds a third bloom + ring movement. */
+.page-hero.cd2-2b .bloom-navy{animation-duration:26s}
+.page-hero.cd2-2b .bloom-gold{animation-duration:32s}
+.page-hero.cd2-2b .bloom-green{display:block;animation-duration:38s}
+.page-hero.cd2-2b .mural-shape.ring{display:block}
+
+@keyframes cd2ShapeFloatA{
+  0%,100%{transform:translate3d(0,0,0) rotate(0deg)}
+  50%{transform:translate3d(10px,-9px,0) rotate(4deg)}
+}
+@keyframes cd2ShapeFloatB{
+  0%,100%{transform:translate3d(0,0,0) rotate(10deg)}
+  50%{transform:translate3d(-9px,12px,0) rotate(14deg)}
+}
+@keyframes cd2ShapeFloatC{
+  0%,100%{transform:translate3d(0,0,0)}
+  50%{transform:translate3d(12px,-7px,0)}
+}
+
+/* Pages that don't have a conventional hero still get a quiet 2b opening. */
+.cd2-page-mural{
+  position:relative;
+  overflow:hidden;
+  min-height:220px;
+  background:var(--cd-mural);
+  border-bottom:1px solid rgba(232,231,226,.78);
+}
+.cd2-page-mural .cd2-mural-decor{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.cd2-page-mural .cd2-mural-decor>*{position:absolute}
+.cd2-page-mural .bloom{filter:blur(26px);will-change:transform}
+.cd2-page-mural .bloom-navy{width:620px;height:420px;left:-140px;top:-150px;border-radius:50%;background:radial-gradient(circle at 40% 40%,rgba(33,58,143,.24),rgba(33,58,143,.05) 58%,transparent 74%);animation:cd2BloomA 30s ease-in-out infinite}
+.cd2-page-mural .bloom-gold{width:500px;height:500px;right:-130px;top:-120px;border-radius:50%;background:radial-gradient(circle at 60% 50%,rgba(212,160,23,.32),rgba(212,160,23,.06) 54%,transparent 72%);animation:cd2BloomB 34s ease-in-out infinite}
+.cd2-page-mural .bloom-green{width:360px;height:280px;left:55%;bottom:-140px;border-radius:50%;background:radial-gradient(circle,rgba(32,122,88,.16),transparent 66%);animation:cd2BloomC 40s ease-in-out infinite}
+.cd2-page-mural .hatch{inset:0;opacity:.5;background-image:repeating-linear-gradient(58deg,rgba(21,24,39,.045) 0 1px,transparent 1px 9px)}
+.cd2-page-mural .scrim{inset:0;background:radial-gradient(58% 76% at 31% 50%,rgba(253,249,241,.975),rgba(253,249,241,0) 75%)}
+.cd2-page-mural .mural-shape{z-index:2}
+.cd2-page-mural .mural-shape.square{width:74px;height:74px;right:5%;top:24px;border:3px dashed rgba(212,160,23,.36);border-radius:18px;transform:rotate(10deg);animation:cd2ShapeFloatB 24s ease-in-out infinite}
+.cd2-page-mural .mural-shape.circle{width:108px;height:108px;right:8%;bottom:16px;border:3px solid rgba(212,160,23,.34);border-radius:50%;animation:cd2ShapeFloatA 20s ease-in-out infinite}
+.cd2-page-mural .mural-shape.ring{width:56px;height:56px;left:8%;bottom:20px;border:3px solid rgba(33,58,143,.22);border-radius:50%;animation:cd2ShapeFloatC 22s ease-in-out infinite}
+.cd2-page-mural .cd2-page-mural-content{position:relative;z-index:3;padding:52px 0 44px}
+
+/* Existing page content stays on a blank paper canvas after the mural opening. */
+.section,.section.alt,.profile-page,.auth-page,.dashboard,.main,.career-detail-shell,.career-detail-layout{background:var(--cd-bg-paper)!important}
+
+/* Footer is the only actual black surface. */
+.footer{background:var(--cd-ink)!important}
+.footer::after{background:radial-gradient(circle,rgba(33,58,143,.28),transparent 68%)!important}
+
+@media(max-width:560px){
+  .cd2-page-mural{min-height:190px}
+  .cd2-page-mural .mural-shape.circle{right:-18px}
+  .cd2-page-mural .mural-shape.square{right:-12px}
+  .cd2-page-mural .mural-shape.ring{display:none}
+}

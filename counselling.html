@@ -1,0 +1,42 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet"><title>Counselling — Career Diya</title><link rel="stylesheet" href="assets/site.css"><link rel="stylesheet" href="assets/design-system-v2.css"></head><body><header class="site-header"><div class="container nav"><a href="index.html"><img class="logo" src="assets/careerdiya-horizontal-lockup.svg"></a><nav class="navlinks"><a href="explore.html">Explore Careers</a><a href="paths.html">Career Paths</a><a href="assessment.html">Assessment</a><a href="counselling.html">Counselling</a><a href="resources.html">Resources</a><a href="courses.html">Courses &amp; Training</a></nav><a class="profile-menu guest" data-profile-menu href="javascript:void(0)" title="Create a free profile to unlock your Career Diya workspace" aria-label="Profile locked for guests"><span class="profile-avatar">?</span></a></div></header><section class="page-hero mural-band"><div class="container"><div class="eyebrow">Career guidance</div><h1>Talk to someone when the decision is bigger than a quiz.</h1><p>Structured conversations can help turn a confusing situation into a practical action plan.</p></div></section><section class="section"><div class="container"><div class="cards"><div class="career-card"><span class="tag">1:1</span><h3>Career conversation</h3><p>For students and professionals who want a clearer next step — choosing between options, thinking about a switch, or working through a career decision.</p><form class="counsel-lead-form" data-interest="career-conversation-session" novalidate><input class="input" type="text" name="name" placeholder="Name (optional)" autocomplete="name"><input class="input" type="email" name="email" placeholder="you@email.com" required autocomplete="email"><input class="input" type="tel" name="phone" placeholder="Phone (optional)" autocomplete="tel"><button class="btn btn-primary" type="submit">Request A Conversation</button></form><p class="lead-status" role="status" aria-live="polite"></p></div><div class="career-card"><span class="tag">Specialist</span><h3>Specialist assessment + counselling</h3><p>Use Career Diya's deeper assessment/report journey when you need more structured evidence alongside counselling.</p><a class="btn btn-secondary" data-audience-external-assessment href="https://careerdiya.edumilestones.com/career-lab/">Open Deeper Assessment</a></div></div></div></section></section><script src="assets/supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="assets/profile-auth.js"></script><script src="assets/lead-capture.js"></script><script>
+document.addEventListener('DOMContentLoaded',function(){
+  function currentAudience(){
+    var p=new URLSearchParams(location.search);
+    var a=p.get('audience')||localStorage.getItem('careerdiyaAudience');
+    return ['parent','student','professional'].indexOf(a)!==-1?a:'professional';
+  }
+  function setStatus(el,msg,kind){ if(!el)return; el.textContent=msg; el.className='lead-status '+kind; }
+  document.querySelectorAll('form.counsel-lead-form').forEach(function(form){
+    var status=form.parentNode.querySelector('.lead-status');
+    form.addEventListener('submit',function(e){
+      e.preventDefault();
+      var btn=form.querySelector('[type="submit"]');
+      var original=btn?btn.textContent:'';
+      var data=new FormData(form);
+      var payload={
+        source:'careerdiya',
+        segment:currentAudience(),
+        interest:form.getAttribute('data-interest'),
+        interest_kind:'general',
+        name:(data.get('name')||'').trim()||undefined,
+        email:(data.get('email')||'').trim()||undefined,
+        phone:(data.get('phone')||'').trim()||undefined,
+        shared_user_id:null,
+        raw:{page:'counselling',interestLabel:'Career conversation',url:location.href}
+      };
+      if(btn){btn.disabled=true;btn.textContent='Sending…';}
+      setStatus(status,'Sending…','busy');
+      var lead=window.CareerDiyaLeadCapture;
+      var submit=lead?lead.submitLead(payload):Promise.reject(new Error('Lead capture is not loaded.'));
+      submit.then(function(){
+        form.reset();
+        setStatus(status,"Request sent — we'll reach out by email.",'ok');
+      }).catch(function(err){
+        setStatus(status,(err&&err.message)||'Something went wrong — please try again.','err');
+      }).then(function(){
+        if(btn){btn.disabled=false;btn.textContent=original;}
+      });
+    });
+  });
+});
+</script><footer class="footer"><div class="container footer-grid"><div><img class="logo" src="assets/careerdiya-horizontal-lockup-white.svg" alt="Career Diya"><p style="color:#f8f8f9;max-width:430px">A guiding light for your career journey</p><small class="footer-unit">Unit of Swakojo Group</small></div><div><b>Explore</b><a href="explore.html">Career Explorer</a><a href="paths.html">Career Paths</a><a href="assessment.html">Assessment</a></div><div><b>Guidance</b><a href="counselling.html">Counselling</a><a href="dashboard.html">My Career</a><a href="resources.html">Resources</a></div><div><b>Career ecosystem</b><a href="courses.html">Courses &amp; Training</a><a href="https://careerdiya.edumilestones.com/">Deeper Assessment</a></div></div></footer><script src="assets/site.js"></script><script src="assets/design-system-v2.js"></script></body></html>
