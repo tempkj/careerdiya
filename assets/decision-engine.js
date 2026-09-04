@@ -122,6 +122,17 @@ function buildStoredResult(answers,audience){
 // whether the visitor is signed in. A self-contained snapshot is captured
 // once, here, so it can be replayed later without ever recomputing it.
 async function completeExploration(root,answers,audience){
+  const auth=window.CareerDiyaProfileAuth;
+  const authenticated=!!(auth && auth.isAuthenticated && auth.isAuthenticated());
+
+  // If an earlier snapshot is still sitting in the pending slot unsaved
+  // (e.g. a previous save attempt failed), flush it before this new
+  // snapshot claims the single pending slot — otherwise that retry data
+  // would be silently overwritten and lost.
+  if(authenticated && auth.promotePendingExploration){
+    try{ await auth.promotePendingExploration(); }catch(_){}
+  }
+
   const storedResult=buildStoredResult(answers,audience);
   const explorationId=newExplorationId();
   const engineVersion=getEngineVersion();
@@ -130,15 +141,16 @@ async function completeExploration(root,answers,audience){
 
   localStorage.setItem('careerdiya_profile',JSON.stringify(storedResult));
 
-  const auth=window.CareerDiyaProfileAuth;
-  const authenticated=!!(auth && auth.isAuthenticated && auth.isAuthenticated());
-  if(authenticated){
-    localStorage.removeItem('careerdiya_pending_exploration');
-    if(auth.saveNewExploration){
-      auth.saveNewExploration(snapshot).catch(err=>console.warn('Career Diya exploration persistence failed:',err));
-    }
-  } else {
-    localStorage.setItem('careerdiya_pending_exploration',JSON.stringify(snapshot));
+  // The snapshot is written to the pending slot BEFORE any save is
+  // attempted, and is only ever cleared by promotePendingExploration()
+  // after the database confirms the row exists — whether the visitor is
+  // anonymous (awaiting registration) or already authenticated (awaiting
+  // this save call). This guarantees a failed/late save never loses the
+  // result: it stays retryable from the same pending slot either way.
+  localStorage.setItem('careerdiya_pending_exploration',JSON.stringify(snapshot));
+
+  if(authenticated && auth.promotePendingExploration){
+    auth.promotePendingExploration().catch(err=>console.warn('Career Diya exploration persistence failed:',err));
   }
 
   renderExplorationResult(root,{audience,answers,result:storedResult,historical:false,authenticated,snapshot});
@@ -163,19 +175,25 @@ function renderExplorationResult(root,ctx){
     return;
   }
 
+  // When this is a historical exploration being viewed (not a just-completed
+  // one), thread its id through into career.html so that any course-interest
+  // registered from there correctly reflects THIS exploration's audience —
+  // not the current profile's — per the exploration-view precedence rule.
+  const explorationContextParam=(historical&&meta&&meta.id)?`&explorationId=${encodeURIComponent(meta.id)}`:'';
+
   const topMapping=typeof getDirectionCareerMapping==='function'?getDirectionCareerMapping(top.id):null;
   const topHasVerifiedCareers=!!(topMapping&&(topMapping.careers||[]).some(c=>c.status==='verified'));
   const primaryAction=isParent
     ? '<a class="btn btn-primary" href="https://careerdiya.edumilestones.com/career-lab/">Explore school-stage assessment →</a>'
     : topHasVerifiedCareers
-      ? `<a class="btn btn-primary" href="career.html?direction=${encodeURIComponent(top.id)}&audience=${encodeURIComponent(audience)}">Explore careers in ${top.name} →</a>`
+      ? `<a class="btn btn-primary" href="career.html?direction=${encodeURIComponent(top.id)}&audience=${encodeURIComponent(audience)}${explorationContextParam}">Explore careers in ${top.name} →</a>`
       : `<span class="btn btn-secondary" aria-disabled="true" title="Career Library mappings for this direction are still being verified.">Career options being mapped</span>`;
   const extra=isParent?`<a class="btn btn-secondary" href="explore.html?audience=parent&start=1">Start another exploration</a>`:`<a class="btn btn-secondary" href="assessment.html?audience=${audience}">Need more confidence?</a>`;
   const renderDirectionLink=(direction)=>{
     const m=typeof getDirectionCareerMapping==='function'?getDirectionCareerMapping(direction.id):null;
     const hasVerified=!!(m&&(m.careers||[]).some(c=>c.status==='verified'));
     return hasVerified
-      ? `<a class="mini-result" href="career.html?direction=${encodeURIComponent(direction.id)}&audience=${encodeURIComponent(audience)}"><strong>${direction.name}</strong><span>Explore →</span></a>`
+      ? `<a class="mini-result" href="career.html?direction=${encodeURIComponent(direction.id)}&audience=${encodeURIComponent(audience)}${explorationContextParam}"><strong>${direction.name}</strong><span>Explore →</span></a>`
       : `<div class="mini-result disabled" aria-disabled="true"><strong>${direction.name}</strong><span>Career options being mapped</span></div>`;
   };
   const resultEyebrow=isParent?'Your child’s starting directions':'Your starting directions';

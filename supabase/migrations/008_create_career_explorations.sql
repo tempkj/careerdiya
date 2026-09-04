@@ -10,11 +10,16 @@
 -- What it does:
 --   1. Creates `public.career_explorations` (id-PK, many rows per user).
 --   2. Adds indexes, RLS (own-row only), and an immutability trigger that
---      blocks changing any column except `pinned` after insert.
+--      blocks changing any column except `pinned` after insert — including
+--      `shared_user_id`, which must never be rewritten on a historical row.
 --   3. Adds two SECURITY INVOKER functions used by the frontend instead of a
---      raw upsert: `exploration_storage_limit` (server-side limit lookup) and
---      `save_exploration_snapshot` (idempotent-by-id insert with storage-cap
---      enforcement and unpinned eviction).
+--      raw upsert: `exploration_storage_limit` (server-side limit lookup for
+--      the CALLING user only — takes no user-id parameter, so it can't be
+--      asked about another user) and `save_exploration_snapshot`
+--      (idempotent-by-id insert with storage-cap enforcement and unpinned
+--      eviction, serialized per user via a transaction-scoped advisory lock
+--      so two concurrent saves for the same user can't both bypass the
+--      storage limit).
 --   4. Backfills existing rows from `career_exploration_results` as
 --      `legacy = true, engine_version = 'legacy-unknown'` — these rows do
 --      have a stored `result` (the old table enforced NOT NULL on it), but
@@ -36,13 +41,17 @@
 --      returns only your rows; attempting to select another user's id
 --      returns nothing).
 --   5. Verify immutability: `update career_explorations set answers = '{}' where id = '<id>'`
---      as the owning user must fail with the raised exception; `update
---      career_explorations set pinned = true where id = '<id>'` must succeed.
+--      (and likewise for `shared_user_id`) as the owning user must fail with
+--      the raised exception; `update career_explorations set pinned = true
+--      where id = '<id>'` must succeed.
 --   6. Verify storage cap: call `select save_exploration_snapshot(...)` more
---      times than `exploration_storage_limit` for a test user and confirm the
---      oldest unpinned row is evicted, and that pinning every stored row
+--      times than `exploration_storage_limit()` for a test user and confirm
+--      the oldest unpinned row is evicted, and that pinning every stored row
 --      then attempting one more insert raises 'STORAGE_FULL'.
---   7. Re-run this file a second time against the same database and confirm
+--   7. Verify `exploration_storage_limit()` takes no user-id argument and
+--      always reflects the caller (auth.uid()) — it cannot be asked about
+--      another user's limit.
+--   8. Re-run this file a second time against the same database and confirm
 --      no error and no duplicate legacy rows are created (the backfill step
 --      is idempotent).
 
@@ -114,6 +123,7 @@ begin
      or new.result is distinct from old.result
      or new.engine_version is distinct from old.engine_version
      or new.legacy is distinct from old.legacy
+     or new.shared_user_id is distinct from old.shared_user_id
      or new.completed_at is distinct from old.completed_at
   then
     raise exception 'career_explorations rows are immutable; only pinned may change';
@@ -128,21 +138,30 @@ create trigger trg_prevent_exploration_mutation
   before update on public.career_explorations
   for each row execute function public.prevent_exploration_mutation();
 
--- Server-side storage-limit lookup.
+-- Server-side storage-limit lookup for the CURRENT caller only.
+--
+-- Deliberately takes no user-id parameter: it always resolves the limit for
+-- auth.uid(), so no authenticated caller can pass an arbitrary UUID to read
+-- (today) or, once real per-user entitlement logic exists, influence another
+-- user's limit. If this ever needs to be called for a specific user from
+-- trusted server-side code (not from the browser), add a SEPARATE
+-- SECURITY DEFINER function for that purpose rather than widening this one.
 --
 -- KNOWN LIMITATION: Career Diya has no billing/subscription system yet, so
 -- there is no trusted server-side signal to distinguish a paid user from a
 -- free one. This function currently always returns the free-tier limit for
 -- every user. When a real paid entitlement source (e.g. a bookings/
 -- subscriptions table) exists, this function is the one place to update to
--- check it — nothing else should need to change. The value below must be
--- kept in sync with assets/exploration-config.js's EXPLORATION_CONFIG.free.storageLimit.
-create or replace function public.exploration_storage_limit(p_user_id uuid)
+-- check it (via auth.uid()) — nothing else should need to change. The value
+-- below must be kept in sync with assets/exploration-config.js's
+-- EXPLORATION_CONFIG.free.storageLimit.
+drop function if exists public.exploration_storage_limit(uuid);
+create or replace function public.exploration_storage_limit()
 returns integer
 language sql
 stable
 as $$
-  select 1; -- EXPLORATION_CONFIG.free.storageLimit
+  select 1; -- EXPLORATION_CONFIG.free.storageLimit, for auth.uid()
 $$;
 
 -- Idempotent-by-id exploration insert with server-side storage-cap
@@ -182,12 +201,21 @@ begin
     raise exception 'save_exploration_snapshot requires an authenticated user';
   end if;
 
+  -- Serialize this whole read-evict-insert sequence per user so two
+  -- concurrent saves (e.g. two open tabs, or a retried request racing the
+  -- original) cannot both pass the storage-limit check before either has
+  -- inserted, which would let the limit be exceeded or corrupt the eviction
+  -- choice. pg_advisory_xact_lock is a transaction-scoped lock — Supabase
+  -- (via PostgREST) runs each RPC call in its own transaction, so this
+  -- releases automatically when the call finishes; nothing to unlock.
+  perform pg_advisory_xact_lock(hashtextextended(v_uid::text, 0));
+
   select * into v_existing from public.career_explorations where id = p_id and user_id = v_uid;
   if found then
     return v_existing;
   end if;
 
-  v_limit := public.exploration_storage_limit(v_uid);
+  v_limit := public.exploration_storage_limit();
   select count(*) into v_count from public.career_explorations where user_id = v_uid;
 
   if v_count >= v_limit then
@@ -212,7 +240,7 @@ begin
 end;
 $$;
 
-grant execute on function public.exploration_storage_limit(uuid) to authenticated;
+grant execute on function public.exploration_storage_limit() to authenticated;
 grant execute on function public.save_exploration_snapshot(uuid, text, jsonb, jsonb, text, timestamptz, boolean) to authenticated;
 
 -- Pin/unpin. A thin, explicit RPC rather than a raw update, since the
