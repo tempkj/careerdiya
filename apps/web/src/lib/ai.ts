@@ -4,6 +4,13 @@ import Anthropic from '@anthropic-ai/sdk';
 // AI_DEFAULT_MODEL in your secrets manager — do not hardcode a tier here. (ADR-003)
 export const AI_MODEL = process.env.AI_DEFAULT_MODEL ?? 'claude-haiku-4-5-20251001';
 
+// Task identification (packages/prompts/task-identification/v1.md) is deliberately NOT
+// on the shared AI_MODEL default: it's the counsellor prompt's creative core, worth the
+// best model even in dev while tuning it. A dedicated var (not AI_DEFAULT_MODEL) so
+// dev-testing quality here is never silently downgraded by a change meant for the rest
+// of the app's dev-cost default.
+export const AI_TASK_IDENTIFICATION_MODEL = process.env.AI_TASK_IDENTIFICATION_MODEL ?? 'claude-opus-4-8';
+
 // 'mock': deterministic fixtures, no network call, $0. Default in any non-production env.
 // 'live': calls the real model. Set AI_MODE=live for real-API testing against dev.
 export const AI_MODE: 'mock' | 'live' =

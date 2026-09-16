@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { TextBlock } from '@anthropic-ai/sdk/resources/messages';
-import { AI_MODE, getAnthropicClient } from '@/lib/ai';
+import { AI_MODE, AI_TASK_IDENTIFICATION_MODEL, getAnthropicClient } from '@/lib/ai';
 import type { TransitionDelta, SubstrateSkill } from '@modules/knowledge';
 import type { Basis, DraftTask } from '../domain/types';
 import { bucketGateProfile } from './gateBucketing';
@@ -319,11 +319,14 @@ export async function callTaskIdentificationModel(
   const userBrief = buildUserBrief(delta, gateAnswers, intent);
 
   const client = getAnthropicClient();
-  // Model hardcoded to opus, not the AI_DEFAULT_MODEL/AI_MODEL dev-cost default — this
-  // is the counsellor prompt's creative core, worth the best model even in dev while
-  // tuning it. Matches the model declared in the prompt file's own front matter.
+  // Deliberately not the AI_DEFAULT_MODEL/AI_MODEL dev-cost default — this is the
+  // counsellor prompt's creative core, worth the best model even in dev while tuning it.
+  // AI_TASK_IDENTIFICATION_MODEL (src/lib/ai.ts) defaults to the same 'claude-opus-4-8'
+  // this used to hardcode; matches the model declared in the prompt file's own front
+  // matter. Config, not a shared default, so it can't be silently downgraded by an
+  // AI_DEFAULT_MODEL change meant for the rest of the app.
   const response = await client.messages.create({
-    model: 'claude-opus-4-8',
+    model: AI_TASK_IDENTIFICATION_MODEL,
     // 3000 truncated mid-array on a real 9-skill gap (customer success -> product
     // manager) — a cut-off response is a hard parse failure, not a quality tradeoff, so
     // over-provision rather than tune close to the observed ceiling.
