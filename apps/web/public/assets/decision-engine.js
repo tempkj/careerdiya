@@ -36,6 +36,7 @@ function qs(){return new URLSearchParams(location.search);}
 function currentAudience(){const a=qs().get('audience')||localStorage.getItem('careerdiyaAudience');return ['parent','student','professional'].includes(a)?a:'professional';}
 function questionsForAudience(a){return a==='parent'?PARENT_QUESTIONS:a==='student'?STUDENT_QUESTIONS:PROFESSIONAL_QUESTIONS;}
 function elsLocal(q,p){return [...p.querySelectorAll(q)];}
+function escHtml(s){return String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
 
 function skillPlan(direction,answers){
   const mode=answers.learning;
@@ -57,6 +58,20 @@ function renderWizard(root, currentRole = null){
   draw();
 }
 
+// ADR-CAREERDIY-0015: bounded (dropdown) role capture, seeded from the same curated
+// role-family aliases ADR-CD-001's routing already uses (buildRoleDropdownGroups,
+// decision-data.js), plus an "Other (type it)" free-text escape. A bounded selection is
+// what makes a result eligible for LLM enrichment later in renderResults — see
+// isBoundedRoleValue (decision-data.js), re-checked there rather than threaded through
+// as a separate flag, so resume/reload paths get the same answer for free.
+const OTHER_ROLE_VALUE='__other__';
+
+function buildRoleOptionsHtml(selectedValue){
+  const groups=typeof buildRoleDropdownGroups==='function'?buildRoleDropdownGroups():[];
+  const optgroups=groups.map(g=>`<optgroup label="${escHtml(g.label)}">${g.options.map(o=>`<option value="${escHtml(o)}" ${o===selectedValue?'selected':''}>${escHtml(o)}</option>`).join('')}</optgroup>`).join('');
+  return `<option value="">Select your current or most recent role…</option>${optgroups}<option value="${OTHER_ROLE_VALUE}" ${selectedValue===OTHER_ROLE_VALUE?'selected':''}>Other (type it)</option>`;
+}
+
 function renderCurrentRoleStep(root, audience, onContinue){
   if(audience!=='professional'){
     onContinue(null);
@@ -66,11 +81,11 @@ function renderCurrentRoleStep(root, audience, onContinue){
   let initialRole='';
   try {
     const saved=JSON.parse(localStorage.getItem('careerdiya_profile_details')||'null');
-    initialRole=(saved?.current_role_title || saved?.current_role || '').trim();
+    initialRole=(saved?.current_role_title || saved?.current_role_other || saved?.current_role || '').trim();
   } catch(_){}
   if(!initialRole && window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.isAuthenticated() && window.CareerDiyaProfileAuth.getProfile){
     window.CareerDiyaProfileAuth.getProfile().then(profile=>{
-      const role=(profile?.current_role_title || profile?.current_role || '').trim();
+      const role=(profile?.current_role_title || profile?.current_role_other || profile?.current_role || '').trim();
       if(role){
         initialRole=role;
         draw(role,false);
@@ -79,12 +94,16 @@ function renderCurrentRoleStep(root, audience, onContinue){
   }
 
   const draw=(role, fresher)=>{
+    const isBounded=role && typeof isBoundedRoleValue==='function' && isBoundedRoleValue(role);
+    const selectValue=role?(isBounded?role:OTHER_ROLE_VALUE):'';
+    const otherValue=role&&!isBounded?role:'';
     root.innerHTML=`<div class="profile-context-card">
       <div class="eyebrow">Before we start</div>
       <h2>What is your current or most recent role?</h2>
       <p class="profile-context-lead">This gives us a starting point when you later explore a different career. It is not part of your assessment score.</p>
       <label class="profile-context-label" for="currentRoleCapture">Current / most recent role</label>
-      <input class="input" id="currentRoleCapture" type="text" value="${String(role||'').replace(/[&<>\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}" placeholder="e.g. Marketing Manager" autocomplete="organization-title" ${fresher?'disabled':''}>
+      <select class="input" id="currentRoleCapture" ${fresher?'disabled':''}>${buildRoleOptionsHtml(selectValue)}</select>
+      <input class="input" id="currentRoleOther" type="text" value="${escHtml(otherValue)}" placeholder="Type your role" autocomplete="organization-title" ${fresher?'disabled':''} ${selectValue===OTHER_ROLE_VALUE?'':'hidden'}>
       <label class="profile-context-fresher"><input type="checkbox" id="currentRoleFresher" ${fresher?'checked':''}> I’m a fresher / I haven’t worked yet</label>
       <p class="profile-context-status" role="status" aria-live="polite"></p>
       <div class="wizard-footer">
@@ -93,27 +112,39 @@ function renderCurrentRoleStep(root, audience, onContinue){
       </div>
     </div>`;
 
-    const input=root.querySelector('#currentRoleCapture');
+    const select=root.querySelector('#currentRoleCapture');
+    const other=root.querySelector('#currentRoleOther');
     const check=root.querySelector('#currentRoleFresher');
     const status=root.querySelector('.profile-context-status');
+
+    select.addEventListener('change',()=>{
+      other.hidden=select.value!==OTHER_ROLE_VALUE;
+      if(select.value===OTHER_ROLE_VALUE) other.focus();
+    });
     check.addEventListener('change',()=>{
-      input.disabled=check.checked;
-      if(check.checked) input.value='';
-      else input.focus();
+      select.disabled=check.checked;
+      other.disabled=check.checked;
+      if(check.checked){ select.value=''; other.value=''; other.hidden=true; }
+      else select.focus();
     });
     root.querySelector('#continueRole').addEventListener('click',()=>{
-      const value=check.checked?'':input.value.trim();
-      if(!check.checked && !value){
-        status.textContent='Enter your current or most recent role, or choose the fresher option.';
+      if(check.checked){
+        localStorage.setItem('careerdiya_current_role','');
+        onContinue(null);
+        return;
+      }
+      const value=select.value===OTHER_ROLE_VALUE?other.value.trim():select.value;
+      if(!value){
+        status.textContent='Select your role, type it under "Other", or choose the fresher option.';
         status.className='profile-context-status err';
-        input.focus();
+        (select.value===OTHER_ROLE_VALUE?other:select).focus();
         return;
       }
       localStorage.setItem('careerdiya_current_role',value);
-      onContinue(value||null);
+      onContinue(value);
     });
   };
-  draw(initialRole, !initialRole && false);
+  draw(initialRole, false);
 }
 
 function gateBeforeResults(root,answers,audience,currentRole=null){
@@ -217,8 +248,9 @@ function renderResults(root,answers,audience,profileMessage='',currentRole=null)
   }
   const effectiveCurrentRole=(currentRole || localStorage.getItem('careerdiya_current_role') || '').trim() || null;
   const result=generateRecommendations(answers,audience,effectiveCurrentRole);
+  const isBoundedRole=!!(effectiveCurrentRole && audience==='professional' && typeof isBoundedRoleValue==='function' && isBoundedRoleValue(effectiveCurrentRole));
   if(window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.setCurrentRole){
-    window.CareerDiyaProfileAuth.setCurrentRole(effectiveCurrentRole).catch(err=>console.warn('Career Diya current-role persistence failed:',err));
+    window.CareerDiyaProfileAuth.setCurrentRole(effectiveCurrentRole, {isOther: !!effectiveCurrentRole && !isBoundedRole}).catch(err=>console.warn('Career Diya current-role persistence failed:',err));
   }const top=result.chosen[0].direction;const alternatives=result.chosen.slice(1);const plan=skillPlan(top,answers);const isParent=audience==='parent';
   const signal=result.signal;
   const rationale=result.topSignals.length?result.topSignals.join(', '):'the mix of preferences you selected';
@@ -250,8 +282,59 @@ function renderResults(root,answers,audience,profileMessage='',currentRole=null)
       : `<div class="mini-result disabled" aria-disabled="true"><strong>${direction.name}</strong><span>Career options being mapped</span></div>`;
   };
   const leadCopy="Leave your email and we'll send this exploration summary so you can revisit it — no spam, no pressure to buy.";
-  root.innerHTML=`<div class="results-wrap">${profileMessage?`<div class="profile-confirmation">${profileMessage}</div>`:''}<div class="eyebrow">${resultEyebrow}</div><h2>${heading}</h2><p class="results-lead">${lead}</p><div class="results-grid"><div class="result-panel"><span class="tag">${signal}</span><h3>${top.name}</h3><p>${top.tags.join(' · ')}</p><div class="scorebar"><span style="width:${Math.max(35,Math.min(94,result.chosen[0].score))}%"></span></div><small>Exploration signal based on your answers; this score is not a validated percentage.</small><p class="result-why"><b>Why it surfaced:</b> ${explanation}</p></div><div class="result-panel"><span class="tag">Other directions worth exploring</span>${alternatives.map(c=>renderDirectionLink(c.direction,audience)).join('')}</div></div><div class="result-panel next-step"><span class="tag">What to do next</span><h3>${nextTitle}</h3><p>${nextCopy}</p><div class="actions">${primaryAction}${extra}</div></div><div class="result-panel lead-panel"><span class="tag">Get this by email</span><h3>Send me this direction</h3><p>${leadCopy}</p><form id="leadForm" class="lead-form" novalidate><input class="input" type="text" name="name" placeholder="Name (optional)" autocomplete="name"><input class="input" type="email" name="email" placeholder="you@email.com" required autocomplete="email"><input class="input" type="tel" name="phone" placeholder="Phone (optional)" autocomplete="tel"><button class="btn btn-primary" type="submit">Send me this direction</button></form><p class="lead-status" role="status" aria-live="polite"></p></div><div class="notice">${isParent?'<b>Parent note:</b> This free exploration uses observations you provided about your child and is intentionally broad. Use the age-designed school-stage assessment when you need deeper evidence.':'<b>Free exploration note:</b> This is a lightweight, deterministic exploration tool. A deeper assessment can provide more evidence when you are ready.'}</div></div>`;
+  // ADR-CAREERDIY-0015: llmAdviceBlock/courseRecsPanel start hidden/empty and are only
+  // populated if the bounded-role enrichment fetch below succeeds. "Why it surfaced"
+  // above always stays the deterministic explanation, unedited — this block is
+  // additive and clearly attributed, never a replacement for it.
+  const llmSection=isBoundedRole?`<p class="llm-advice" id="llmAdviceBlock" hidden></p>`:'';
+  const courseRecsPanel=isBoundedRole?`<div class="result-panel courses-panel" id="courseRecsPanel" hidden><span class="tag">AI-suggested · explore further</span><h3>Suggested learning</h3><div id="courseRecsList"></div></div>`:'';
+  root.innerHTML=`<div class="results-wrap">${profileMessage?`<div class="profile-confirmation">${profileMessage}</div>`:''}<div class="eyebrow">${resultEyebrow}</div><h2>${heading}</h2><p class="results-lead">${lead}</p><div class="results-grid"><div class="result-panel"><span class="tag">${signal}</span><h3>${top.name}</h3><p>${top.tags.join(' · ')}</p><div class="scorebar"><span style="width:${Math.max(35,Math.min(94,result.chosen[0].score))}%"></span></div><small>Exploration signal based on your answers; this score is not a validated percentage.</small><p class="result-why"><b>Why it surfaced:</b> ${explanation}</p></div><div class="result-panel"><span class="tag">Other directions worth exploring</span>${alternatives.map(c=>renderDirectionLink(c.direction,audience)).join('')}</div></div><div class="result-panel next-step"><span class="tag">What to do next</span><h3>${nextTitle}</h3><p>${nextCopy}</p><div class="actions">${primaryAction}${extra}</div>${llmSection}</div>${courseRecsPanel}<div class="result-panel lead-panel"><span class="tag">Get this by email</span><h3>Send me this direction</h3><p>${leadCopy}</p><form id="leadForm" class="lead-form" novalidate><input class="input" type="text" name="name" placeholder="Name (optional)" autocomplete="name"><input class="input" type="email" name="email" placeholder="you@email.com" required autocomplete="email"><input class="input" type="tel" name="phone" placeholder="Phone (optional)" autocomplete="tel"><button class="btn btn-primary" type="submit">Send me this direction</button></form><p class="lead-status" role="status" aria-live="polite"></p></div><div class="notice">${isParent?'<b>Parent note:</b> This free exploration uses observations you provided about your child and is intentionally broad. Use the age-designed school-stage assessment when you need deeper evidence.':'<b>Free exploration note:</b> This is a lightweight, deterministic exploration tool. A deeper assessment can provide more evidence when you are ready.'}</div></div>`;
   wireLeadForm(root,top,audience,answers,signal);
+  if(isBoundedRole) enrichBoundedResult(root,effectiveCurrentRole,answers,top.id);
+}
+
+// ADR-CAREERDIY-0015: fire-and-forget. The deterministic result above is already fully
+// rendered and usable — this only ever ADDS the advice block / course panel on success.
+// Any failure, timeout, or invalid response is caught and logged, never surfaced to the
+// user and never blocks or breaks the page.
+async function fetchBoundedEnrichment(role,answers,chosenDirectionId){
+  const session=window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.getSession && window.CareerDiyaProfileAuth.getSession();
+  const token=session && session.access_token;
+  if(!token) throw new Error('No active Career Diya session for enrichment call.');
+  const controller=new AbortController();
+  const timeoutId=setTimeout(()=>controller.abort(),8000);
+  try{
+    const res=await fetch('/api/v1/career-diya/recommend',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+      body:JSON.stringify({role,answers,chosenDirectionId}),
+      signal:controller.signal
+    });
+    if(!res.ok) throw new Error('Enrichment request failed with status '+res.status);
+    const data=await res.json();
+    if(!data || typeof data.advice!=='string') throw new Error('Enrichment response missing advice.');
+    return data;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function enrichBoundedResult(root,role,answers,chosenDirectionId){
+  fetchBoundedEnrichment(role,answers,chosenDirectionId).then(data=>{
+    const adviceEl=root.querySelector('#llmAdviceBlock');
+    if(adviceEl && data.advice){
+      adviceEl.innerHTML=`<b>AI-suggested next step:</b> ${escHtml(data.advice)}`;
+      adviceEl.hidden=false;
+    }
+    const coursesPanel=root.querySelector('#courseRecsPanel');
+    const coursesList=root.querySelector('#courseRecsList');
+    if(coursesPanel && coursesList && Array.isArray(data.courseRecommendations) && data.courseRecommendations.length){
+      coursesList.innerHTML=data.courseRecommendations.map(c=>`<div class="mini-result"><strong>${escHtml(c.title)}</strong><span>${escHtml(c.provider)}${c.type?' · '+escHtml(c.type):''}</span></div>`).join('');
+      coursesPanel.hidden=false;
+    }
+  }).catch(err=>{
+    console.warn('Career Diya enrichment unavailable — showing deterministic result only:',err && err.message);
+  });
 }
 
 function wireLeadForm(root,direction,audience,answers,signal){

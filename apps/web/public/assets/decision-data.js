@@ -5,7 +5,12 @@
  */
 
 const FREE_ENGINE_CONFIG = {
-  version: '1.1-context-routing',
+  // ADR-CAREERDIY-0015: bounded (dropdown) roles now get an additional LLM-enrichment
+  // pass (advice + course recommendations) layered on top of the unchanged deterministic
+  // pick — the result envelope's meaning changes even though the scoring/gating math
+  // below does not. Historical core.career_diya_exploration rows are immutable snapshots
+  // and are never recomputed against this newer version.
+  version: '1.2-llm-enrichment',
   categoryWeights: {
     interest: 0.20,
     strengths: 0.20,
@@ -219,6 +224,35 @@ const ROLE_FAMILY_BY_DIRECTION = {
   hospitality:'hospitality_service',
   entrepreneurship:'entrepreneurship'
 };
+
+// ADR-CAREERDIY-0015 — bounded-role dropdown, seeded from the same curated aliases
+// ADR-CD-001 already uses for routing (no new authoring, stays in lockstep by construction).
+const ROLE_TITLE_CASE_ACRONYMS = {hr:'HR', ux:'UX', ui:'UI', 'l&d':'L&D', it:'IT'};
+function titleCaseRole(role){
+  return String(role||'').split(' ').map(word=>{
+    const lower=word.toLowerCase();
+    if(ROLE_TITLE_CASE_ACRONYMS[lower]) return ROLE_TITLE_CASE_ACRONYMS[lower];
+    return word.charAt(0).toUpperCase()+word.slice(1).toLowerCase();
+  }).join(' ');
+}
+
+function buildRoleDropdownGroups(){
+  return Object.values(STARTER_ROLE_FAMILIES).map(family=>({
+    label:family.label,
+    options:[...new Set(family.aliases.map(titleCaseRole))]
+  }));
+}
+
+// "Bounded" = the value is exactly one of the curated dropdown options (not merely a
+// value that maps to a role family via regex — an "Other" free-text entry can coincide
+// with a family alias without having been an explicit dropdown pick, and that's fine:
+// same string, same trust level, no separate flag needs threading through the wizard/
+// gate/resume flow).
+function isBoundedRoleValue(role){
+  const normalized=normalizeRoleText(role);
+  if(!normalized) return false;
+  return Object.values(STARTER_ROLE_FAMILIES).some(family=>family.aliases.includes(normalized));
+}
 
 function normalizeRoleText(role){
   return String(role||'').trim().toLowerCase()

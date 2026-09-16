@@ -174,7 +174,10 @@
     return data || null;
   }
 
-  async function setCurrentRole(currentRole = null) {
+  // ADR-CAREERDIY-0015: isOther distinguishes a bounded dropdown pick from free-typed
+  // "Other" text — current_role_title/current_role_other are kept mutually exclusive so
+  // a later switch between the two doesn't leave a stale value in the other column.
+  async function setCurrentRole(currentRole = null, { isOther = false } = {}) {
     const client = getSupabaseClient();
     const { data: sessionData, error: sessionError } = await client.auth.getSession();
     if (sessionError) throw sessionError;
@@ -184,14 +187,16 @@
     const { data, error } = await coreTable('profile')
       .upsert({
         user_id: user.id,
-        current_role_title: value,
+        current_role_title: isOther ? null : value,
+        current_role_other: isOther ? value : null,
         updated_at: new Date().toISOString()
       }, { onConflict: 'user_id' })
       .select().single();
     if (error) throw error;
     try {
       const local = JSON.parse(localStorage.getItem('careerdiya_profile_details') || 'null') || {};
-      local.current_role_title = value;
+      local.current_role_title = isOther ? null : value;
+      local.current_role_other = isOther ? value : null;
       localStorage.setItem('careerdiya_profile_details', JSON.stringify(local));
     } catch (_) {}
     return data;
