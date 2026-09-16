@@ -1,0 +1,43 @@
+-- 027: role_substrate — grant authenticated INSERT (substrate-generator v1 write path)
+--
+-- On-demand substrate generation (LiveSubstrateGenerator, not yet implemented) writes a
+-- newly-generated role substrate inline, from within an authenticated user's own request
+-- (SubstrateStore.get() on a cache miss — see knowledge/application/substrate.ts). Invariant
+-- A5 forbids using the service-role key in a request path, so the write must go through the
+-- authenticated user's own request-scoped client — exactly the same justification already
+-- used for knowledge.identification_cache (migration 025) and knowledge.gap_analysis_cache
+-- (migration 026), both of which grant authenticated INSERT for the same inline-write reason.
+--
+-- WRITE-ONCE, NOT MUTABLE — authenticated gets INSERT only, no UPDATE, no DELETE. A generated
+-- substrate is either fresh (INSERT) or served from cache (SELECT, already granted); a request
+-- never needs to mutate or remove an existing substrate row. This mirrors the caches' stance
+-- (immutable rows, ON CONFLICT DO NOTHING at the app layer) even though role_substrate's app
+-- write path today uses upsert-on-conflict for staleness refresh, not a plain insert-only cache
+-- — authenticated still never needs UPDATE for that: a stale row is naturally superseded by a
+-- fresh generate+upsert, and only the generator's own request should be doing that write, for
+-- the role it just generated. DELETE remains worker/service-role only (purge/curation actions,
+-- not a request-path concern).
+--
+-- SAFETY CONTEXT — this grant is necessary but not sufficient for safety. role_substrate is
+-- shared reference data: a bad row here grounds every transition computation involving that
+-- role, from- and to-side, for every future user, not just the one whose request created it.
+-- This migration only OPENS the write path; it does not make writing safe. The actual safety
+-- boundary is validation-before-write in the generator/store (planned as the next step, not
+-- part of this migration) — the generator's raw model output must be hard-validated (structural
+-- shape, enum-coerced, bounded) before anything reaches this table. The grant enables the
+-- write; the validator ensures only validated generate-output is ever the thing written.
+--
+-- GRANTS — hardened REVOKE-then-GRANT pattern (migrations 025/026): migration 002/021's
+-- ALTER DEFAULT PRIVILEGES apply automatically to existing tables too when their grants
+-- change, and default-privilege inheritance has previously been found unreliable to reason
+-- about implicitly (migration 022) — state the intended grant explicitly here, and verify the
+-- applied result with role_table_grants after, don't trust the SQL alone.
+
+GRANT INSERT ON knowledge.role_substrate TO authenticated;
+
+-- Explicit no-op statements would be REVOKE UPDATE/DELETE FROM authenticated, but authenticated
+-- has never held UPDATE or DELETE on this table (confirmed via role_table_grants before writing
+-- this migration) — nothing to revoke. This migration ADDS INSERT only; every other existing
+-- grant (worker: INSERT/SELECT/UPDATE; service_role: full DML; SELECT for
+-- anon/authenticated/careerasana_app/careerasana_readonly) is untouched by this statement and
+-- is re-verified, not re-declared, after applying.

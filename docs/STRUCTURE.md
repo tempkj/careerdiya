@@ -1,0 +1,244 @@
+# Repository structure (v0.4.1)
+```
+.
+.editorconfig
+.env.example
+.github
+  pull_request_template.md
+  workflows
+    ci.yml
+.gitignore
+.nvmrc
+.prettierignore
+.prettierrc.json
+CONTRIBUTING.md
+ENGINEERING_HANDBOOK.md
+README.md
+apps
+  web
+    app
+      api
+        v1
+          health
+            route.ts
+      layout.tsx
+      page.tsx
+    next.config.mjs
+    package.json
+    postcss.config.mjs
+    src
+      lib
+        supabase
+          client.ts
+          server.ts
+      modules
+        activation
+          README.md
+          application
+            README.md
+          domain
+            README.md
+          index.ts
+          infrastructure
+            README.md
+          ui
+            README.md
+        blueprint
+          README.md
+          application
+            README.md
+          domain
+            README.md
+          index.ts
+          infrastructure
+            README.md
+          ui
+            README.md
+        coach
+          README.md
+          application
+            README.md
+          domain
+            README.md
+          index.ts
+          infrastructure
+            README.md
+          ui
+            README.md
+        feedback
+          README.md
+          application
+            README.md
+          domain
+            README.md
+          index.ts
+          infrastructure
+            README.md
+          ui
+            README.md
+        identity
+          README.md
+          application
+            README.md
+          domain
+            README.md
+          index.ts
+          infrastructure
+            README.md
+          ui
+            README.md
+        knowledge
+          README.md
+          application
+            README.md
+          domain
+            README.md
+          index.ts
+          infrastructure
+            README.md
+          ui
+            README.md
+        outcome
+          README.md
+          application
+            README.md
+          domain
+            README.md
+          index.ts
+          infrastructure
+            README.md
+          ui
+            README.md
+        planner
+          README.md
+          application
+            README.md
+          domain
+            README.md
+          index.ts
+          infrastructure
+            README.md
+          ui
+            README.md
+        readiness
+          README.md
+          application
+            README.md
+          domain
+            README.md
+          index.ts
+          infrastructure
+            README.md
+          ui
+            README.md
+        twin
+          README.md
+          application
+            README.md
+          domain
+            README.md
+          index.ts
+          infrastructure
+            README.md
+          ui
+            README.md
+    tailwind.config.ts
+    tsconfig.json
+contracts
+  README.md
+  careerasana_api_spectral.yaml
+  careerasana_openapi_v1.yaml
+  events
+    README.md
+  prompts
+    README.md
+docs
+  README.md
+  STRUCTURE.md
+  architecture
+    adr
+      ADR-001-twin-append-only-signals.md
+      ADR-002-openapi-first.md
+      ADR-003-prompt-governance.md
+      ADR-004-modular-monolith-boundaries.md
+      ADR-005-readiness-extracted.md
+      ADR-006-single-coach.md
+      ADR-007-three-schemas.md
+      ADR-008-dual-freeze.md
+      ADR-009-jsonb-twin.md
+      README.md
+  product
+    README.md
+  research
+    README.md
+  ux
+    README.md
+eslint.config.mjs
+package.json
+packages
+  api-types
+    generated
+      .gitkeep
+      generated.ts
+    package.json
+    src
+      index.ts
+  db
+    README.md
+    package.json
+    schemas
+      readiness.schema.json
+      twin.schema.json
+    supabase
+      config.toml
+      migrations
+        .gitkeep
+    vocab.json
+  observability
+    README.md
+    package.json
+    src
+      index.ts
+  prompts
+    README.md
+    activation
+      v1.md
+    blueprint
+      v2.md
+    coach
+      v3.md
+    package.json
+    recommendation
+      v1.md
+    shared
+      system-preamble.md
+    src
+      index.ts
+  shared
+    README.md
+    package.json
+    src
+      index.ts
+planning
+  Backlog.md
+  README.md
+  Sprint-0.md
+  Sprint-1.md
+pnpm-workspace.yaml
+scripts
+  check-enum-parity.mjs
+  check-module-boundaries.mjs
+  codegen-openapi.mjs
+  validate-openapi.mjs
+tests
+  contract
+    README.md
+    contract.spec.ts
+  integration
+    .gitkeep
+  unit
+    .gitkeep
+tsconfig.base.json
+turbo.json
+vitest.config.ts
+```

@@ -1,0 +1,126 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet"><title>My Profile — Career Diya</title><link rel="stylesheet" href="assets/site.css"><link rel="stylesheet" href="assets/design-system-v2.css"></head><body>
+<header class="site-header"><div class="container nav"><a href="index.html"><img class="logo" src="assets/careerdiya-horizontal-lockup.svg" alt="Career Diya"></a><nav class="navlinks"><a href="explore.html">Explore Careers</a><a href="paths.html">Career Paths</a><a href="assessment.html">Assessment</a><a href="counselling.html">Counselling</a><a href="resources.html">Resources</a><a href="courses.html">Courses &amp; Training</a></nav><a class="profile-menu guest" data-profile-menu href="javascript:void(0)"><span class="profile-avatar">?</span></a></div></header>
+<main class="profile-page"><div class="container">
+  <div class="page-hero mural-band" style="border-bottom:0;padding-bottom:20px"><div class="eyebrow">My Profile</div><h1>Tell Career Diya More About You.</h1><p>The more you choose to share, the more relevant your future career guidance can become.</p></div>
+  <div class="profile-layout">
+    <aside class="profile-side"><div class="profile-side-card"><div class="profile-big-avatar" id="profileAvatar">?</div><h3 id="profileNamePreview">Your Profile</h3><p>Private to your Career Diya account.</p><a class="btn btn-secondary" href="dashboard.html">Back To My Career</a></div></aside>
+    <section class="profile-form-card">
+      <form id="profileForm" class="profile-edit-form">
+        <div class="profile-section">
+          <div class="eyebrow">Personal</div><h2>About You</h2>
+          <div class="profile-form-grid">
+            <label>Full Name<input class="input" name="display_name" autocomplete="name"></label>
+            <label>Country<select class="input select" name="country" data-options="countries"></select><input class="input other-field hidden" name="country_other" placeholder="Enter your country"></label>
+            <label>Photo URL <span class="field-help">Optional</span><input class="input" name="avatar_url" type="url" placeholder="https://…"></label>
+          </div>
+        </div>
+
+        <div class="profile-section">
+          <div class="eyebrow">Academic</div><h2>Your Education</h2>
+          <p class="profile-section-note">Add every meaningful formal study area. You can add multiple records.</p>
+          <div id="educationRecords" class="profile-repeat-list"></div>
+          <button class="btn btn-secondary profile-add-btn" type="button" id="addEducation">+ Add Education</button>
+        </div>
+
+        <div class="profile-section">
+          <div class="eyebrow">Professional</div><h2>Your Current Work Context</h2>
+          <p class="profile-section-note">Keep this focused on what you are doing now. Your broader work and knowledge history is captured below.</p>
+          <div class="profile-form-grid">
+            <label>Current Role<select class="input select" name="current_role_title"></select><input class="input other-field hidden" name="current_role_other" placeholder="Enter your role"></label>
+            <label>Industry<select class="input select" name="industry"></select><input class="input other-field hidden" name="industry_other" placeholder="Enter your industry"></label>
+            <label>Experience<select class="input select" name="experience_years"></select></label>
+          </div>
+        </div>
+
+        <div class="profile-section">
+          <div class="eyebrow">Experience &amp; Knowledge</div><h2>Where You’ve Built Experience Or Knowledge</h2>
+          <p class="profile-section-note">Capture more than one stream — academic knowledge, work experience, projects, certifications, or self-learning. Keep each area broad and bounded.</p>
+          <div id="experienceRecords" class="profile-repeat-list"></div>
+          <button class="btn btn-secondary profile-add-btn" type="button" id="addExperience">+ Add Experience Or Knowledge Area</button>
+        </div>
+
+        <div class="profile-section">
+          <div class="eyebrow">Career Direction</div><h2>What You Want Next</h2>
+          <div class="profile-form-grid">
+            <div class="profile-field-block"><span>Career Interests</span><div id="careerInterests" class="chip-select" data-options="careerInterests"></div><div class="other-wrap hidden"><input class="input" name="career_interests_other_text" placeholder="Add another interest"></div></div>
+            <div class="profile-field-block"><span>Career Goals</span><div id="careerGoals" class="chip-select" data-options="careerGoals"></div><div class="other-wrap hidden"><input class="input" name="career_goals_other_text" placeholder="Add another goal"></div></div>
+            <div class="profile-field-block"><span>Perceived Strengths</span><div id="strengths" class="chip-select" data-options="strengths"></div><div class="other-wrap hidden"><input class="input" name="strengths_other_text" placeholder="Add another strength"></div></div>
+            <div class="profile-field-block"><span>Development Areas</span><div id="weaknesses" class="chip-select" data-options="developmentAreas"></div><div class="other-wrap hidden"><input class="input" name="weaknesses_other_text" placeholder="Add another development area"></div></div>
+            <div class="profile-field-block"><span>Learning Preferences</span><div id="learningPreferences" class="chip-select" data-options="learningPreferences"></div><div class="other-wrap hidden"><input class="input" name="learning_preferences_other_text" placeholder="Add another learning preference"></div></div>
+          </div>
+        </div>
+
+        <div class="profile-save-row"><button class="btn btn-primary" type="submit">Save My Profile</button><span id="profileStatus" class="profile-gate-status" role="status" aria-live="polite"></span></div>
+      </form>
+    </section>
+  </div>
+</div></main>
+<footer class="footer"><div class="container footer-grid"><div><img class="logo" src="assets/careerdiya-horizontal-lockup-white.svg" alt="Career Diya"><p style="color:#f8f8f9;max-width:430px">Career guidance that helps you make the next decision with more clarity.</p><small class="footer-unit">Unit of Swakojo Group</small></div><div><b>Explore</b><a href="explore.html">Career Explorer</a><a href="paths.html">Career Paths</a><a href="assessment.html">Assessment</a></div><div><b>Guidance</b><a href="counselling.html">Counselling</a><a href="dashboard.html">My Career</a><a href="resources.html">Resources</a></div><div><b>Career Ecosystem</b><a href="courses.html">Courses &amp; Training</a><a href="https://careerdiya.edumilestones.com/">Deeper Assessment</a></div></div></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="assets/supabase-config.js"></script><script src="assets/profile-options.js"></script><script src="assets/profile-auth.js"></script><script src="assets/site.js"></script>
+<script>
+(async()=>{
+  const auth=window.CareerDiyaProfileAuth, options=window.CAREER_DIYA_PROFILE_OPTIONS||{};
+  if(!auth||!auth.isAuthenticated()){location.replace('auth.html?return=profile');return;}
+  const form=document.getElementById('profileForm'), status=document.getElementById('profileStatus');
+  const avatar=document.getElementById('profileAvatar'), namePreview=document.getElementById('profileNamePreview');
+  const educationBox=document.getElementById('educationRecords'), experienceBox=document.getElementById('experienceRecords');
+  const escapeHtml=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const optionList=(items, selected='', placeholder='Select an option')=>[
+    `<option value="">${escapeHtml(placeholder)}</option>`,...(items||[]).map(v=>`<option value="${escapeHtml(v)}" ${v===selected?'selected':''}>${escapeHtml(v)}</option>`)
+  ].join('');
+  const yearOptions=(selected='')=>{let a=[''];for(let y=2035;y>=1990;y--)a.push(String(y));a.push('Before 1990');return a.map(v=>`<option value="${escapeHtml(v)}" ${v===selected?'selected':''}>${v||'Select year'}</option>`).join('');};
+  const wireOther=(select, other)=>{if(!select||!other)return;const sync=()=>{const show=select.value==='Other';other.classList.toggle('hidden',!show);other.disabled=!show;if(!show)other.value='';};select.addEventListener('change',sync);sync();};
+  const wireChipSet=(box, items, selected=[], otherText='')=>{
+    if(!box)return;box.innerHTML=(items||[]).map(v=>{const checked=(selected||[]).includes(v)?'selected':'';return `<button type="button" class="chip-option ${checked}" data-value="${escapeHtml(v)}">${escapeHtml(v)}</button>`}).join('');
+    box.querySelectorAll('.chip-option').forEach(btn=>btn.addEventListener('click',()=>{btn.classList.toggle('selected');const hasOther=btn.dataset.value==='Other';if(hasOther){const wrap=box.parentElement.querySelector('.other-wrap');if(wrap)wrap.classList.toggle('hidden',!btn.classList.contains('selected'));}}));
+    const hasOther=(selected||[]).includes('Other');const wrap=box.parentElement.querySelector('.other-wrap');if(wrap){wrap.classList.toggle('hidden',!hasOther);const input=wrap.querySelector('input');if(input)input.value=otherText||'';}
+  };
+  const chipValues=id=>Array.from(document.querySelectorAll(`#${id} .chip-option.selected`)).map(b=>b.dataset.value);
+  function addEducationRecord(row={}){
+    const card=document.createElement('div');card.className='profile-repeat-card education-record';card.innerHTML=`<div class="profile-repeat-head"><strong>Education ${educationBox.children.length+1}</strong><button class="profile-remove-btn" type="button">Remove</button></div><div class="profile-form-grid"><label>Education Level<select class="input select education-level">${optionList(options.educationLevels,row.education_level)}</select><input class="input other-field hidden education-level-other" placeholder="Specify education level" value="${escapeHtml(row.education_level_other||'')}"></label><label>Field Of Study<select class="input select field-of-study">${optionList(options.studyFields,row.field_of_study)}</select><input class="input other-field hidden field-of-study-other" placeholder="Specify field of study" value="${escapeHtml(row.field_of_study_other||'')}"></label><label>Institution<input class="input institution" value="${escapeHtml(row.institution||'')}"></label><label>Graduation Year<select class="input select graduation-year">${yearOptions(row.graduation_year)}</select></label><label class="check-line"><input type="checkbox" class="is-current" ${row.is_current?'checked':''}> Currently studying</label></div>`;
+    card.querySelector('.profile-remove-btn').addEventListener('click',()=>{card.remove();renumber(educationBox,'.education-record','Education');});
+    wireOther(card.querySelector('.education-level'),card.querySelector('.education-level-other'));wireOther(card.querySelector('.field-of-study'),card.querySelector('.field-of-study-other'));
+    educationBox.appendChild(card);
+  }
+  function addExperienceRecord(row={}){
+    const card=document.createElement('div');card.className='profile-repeat-card experience-record';card.innerHTML=`<div class="profile-repeat-head"><strong>Experience Or Knowledge Area ${experienceBox.children.length+1}</strong><button class="profile-remove-btn" type="button">Remove</button></div><div class="profile-form-grid"><label>Domain<select class="input select domain">${optionList(options.domains,row.domain)}</select><input class="input other-field hidden domain-other" placeholder="Specify domain" value="${escapeHtml(row.domain_other||'')}"></label><label>How You Gained It<select class="input select exposure-type">${optionList(options.exposureTypes,row.exposure_type,'Select how you gained it')}</select></label><label>Level<select class="input select exposure-level">${optionList(options.exposureLevels,row.exposure_level,'Select level')}</select></label><label>Role Family <span class="field-help">Optional</span><select class="input select role-family">${optionList(options.roleFamilies,row.role_family,'Select role family')}</select><input class="input other-field hidden role-family-other" placeholder="Specify role family" value="${escapeHtml(row.role_family_other||'')}"></label><label>Duration <span class="field-help">Optional</span><select class="input select years-bucket">${optionList(options.experienceBuckets,row.years_bucket,'Select duration')}</select></label></div>`;
+    card.querySelector('.profile-remove-btn').addEventListener('click',()=>{card.remove();renumber(experienceBox,'.experience-record','Experience Or Knowledge Area');});
+    wireOther(card.querySelector('.domain'),card.querySelector('.domain-other'));wireOther(card.querySelector('.role-family'),card.querySelector('.role-family-other'));
+    experienceBox.appendChild(card);
+  }
+  const renumber=(box,selector,label)=>box.querySelectorAll(selector).forEach((card,i)=>card.querySelector('.profile-repeat-head strong').textContent=`${label} ${i+1}`);
+  function fillProfile(p){
+    if(!p)return;
+    ['display_name','avatar_url','country','country_other','current_role_title','current_role_other','industry','industry_other','experience_years'].forEach(k=>{const el=form.elements[k];if(el)el.value=p[k]??'';});
+    wireOther(form.elements.country,form.elements.country_other);wireOther(form.elements.current_role_title,form.elements.current_role_other);wireOther(form.elements.industry,form.elements.industry_other);
+    const name=p.display_name||'Your Profile';namePreview.textContent=name;avatar.innerHTML=p.avatar_url?`<img src="${escapeHtml(p.avatar_url)}" alt="">`:(name.trim().split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase()||'?');
+    wireChipSet(document.getElementById('careerInterests'),options.careerInterests,p.career_interests||[],p.career_interests_other||'');wireChipSet(document.getElementById('careerGoals'),options.careerGoals,(p.career_goals||'').split('|').filter(Boolean),p.career_goals_other||'');wireChipSet(document.getElementById('strengths'),options.strengths,(p.strengths||'').split('|').filter(Boolean),p.strengths_other||'');wireChipSet(document.getElementById('weaknesses'),options.developmentAreas,(p.weaknesses||'').split('|').filter(Boolean),p.weaknesses_other||'');wireChipSet(document.getElementById('learningPreferences'),options.learningPreferences,(p.learning_preferences||'').split('|').filter(Boolean),p.learning_preferences_other||'');
+  }
+  function collectEducation(){return Array.from(educationBox.querySelectorAll('.education-record')).map(card=>({education_level:card.querySelector('.education-level').value,education_level_other:card.querySelector('.education-level-other').value.trim(),field_of_study:card.querySelector('.field-of-study').value,field_of_study_other:card.querySelector('.field-of-study-other').value.trim(),institution:card.querySelector('.institution').value.trim(),graduation_year:card.querySelector('.graduation-year').value,is_current:card.querySelector('.is-current').checked}));}
+  function collectExperience(){return Array.from(experienceBox.querySelectorAll('.experience-record')).map(card=>({domain:card.querySelector('.domain').value,domain_other:card.querySelector('.domain-other').value.trim(),exposure_type:card.querySelector('.exposure-type').value,exposure_level:card.querySelector('.exposure-level').value,role_family:card.querySelector('.role-family').value,role_family_other:card.querySelector('.role-family-other').value.trim(),years_bucket:card.querySelector('.years-bucket').value}));}
+  function selectInit(){
+    form.elements.country.innerHTML=optionList(options.countries,'','Select country');form.elements.current_role_title.innerHTML=optionList(options.roleFamilies,'','Select current role');form.elements.industry.innerHTML=optionList(options.industries,'','Select industry');form.elements.experience_years.innerHTML=optionList(options.experienceBuckets,'','Select experience');
+  }
+  document.getElementById('addEducation').addEventListener('click',()=>{if(educationBox.children.length<5)addEducationRecord();});
+  document.getElementById('addExperience').addEventListener('click',()=>{if(experienceBox.children.length<5)addExperienceRecord();});
+  selectInit();
+  try{
+    const [profile, education, experience]=await Promise.all([auth.getProfile(),auth.getEducationRecords(),auth.getExperienceRecords()]);
+    fillProfile(profile||{});
+    education.forEach(addEducationRecord); if(!education.length)addEducationRecord();
+    experience.forEach(addExperienceRecord); if(!experience.length)addExperienceRecord();
+  }catch(e){status.textContent='Could not load your profile yet.';status.className='profile-gate-status err';}
+  form.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const d=new FormData(form);
+    const interests=chipValues('careerInterests');
+    const goals=chipValues('careerGoals');const strengths=chipValues('strengths');const weaknesses=chipValues('weaknesses');const learning=chipValues('learningPreferences');
+    const otherValue=id=>{const el=document.querySelector(`#${id}`).parentElement.querySelector('.other-wrap input');return el?el.value.trim():''};
+    const values={display_name:(d.get('display_name')||'').trim(),avatar_url:(d.get('avatar_url')||'').trim(),country:d.get('country')||null,country_other:(d.get('country_other')||'').trim(),current_role_title:d.get('current_role_title')||null,current_role_other:(d.get('current_role_other')||'').trim(),industry:d.get('industry')||null,industry_other:(d.get('industry_other')||'').trim(),experience_years:d.get('experience_years')||null,career_interests:interests,career_interests_other:otherValue('careerInterests'),career_goals:goals.join('|'),career_goals_other:otherValue('careerGoals'),strengths:strengths.join('|'),strengths_other:otherValue('strengths'),weaknesses:weaknesses.join('|'),weaknesses_other:otherValue('weaknesses'),learning_preferences:learning.join('|'),learning_preferences_other:otherValue('learningPreferences'),audience:profileAudience(profile||{})};
+    try{
+      const saved=await auth.saveProfile(values);await auth.saveBackground({education:collectEducation(),experience:collectExperience()});fillProfile(saved);status.textContent='Profile saved.';status.className='profile-gate-status ok';
+    }catch(err){status.textContent=err.message||'Could not save your profile.';status.className='profile-gate-status err';}
+  });
+  function profileAudience(p){return p&&p.audience?p.audience:null;}
+})();
+</script><script src="assets/design-system-v2.js"></script></body></html>

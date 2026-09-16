@@ -1,0 +1,7 @@
+{
+  "name": "@careerasana/api-types",
+  "version": "0.0.0",
+  "private": true,
+  "types": "./src/index.ts",
+  "description": "TypeScript types GENERATED from the frozen OpenAPI contract. Do not hand-edit src/generated.ts."
+}

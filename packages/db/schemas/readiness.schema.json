@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "readiness/v1",
+  "_comment": "MANDATORY pg_jsonschema validation target for readiness JSONB (DB v1.3, D6). STUB.",
+  "type": "object",
+  "required": ["careerReadiness", "dimensions", "specVersion"],
+  "properties": {
+    "careerReadiness": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "dimensions": {
+      "type": "object",
+      "required": ["clarity", "capability", "execution", "opportunity"],
+      "properties": {
+        "clarity": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "capability": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "execution": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "opportunity": { "type": "integer", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "specVersion": { "type": "string" }
+  }
+}

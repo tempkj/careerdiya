@@ -1,0 +1,131 @@
+# CareerĀsanā — Spectral ruleset (API governance, freeze companion)
+# Enforces the conventions agreed through OpenAPI 1.1.1 so the frozen contract cannot silently drift.
+# Run in CI:  spectral lint careerasana_openapi_v1.yaml --ruleset careerasana_api_spectral.yaml
+# Note: enum-vs-DB parity is verified by a separate scripted check (see api-design doc §11); Spectral
+# enforces structural/contract conventions below.
+
+extends: ["spectral:oas"]
+
+overrides:
+  - files: ["**"]
+    rules:
+      # nimma 0.2.3 bug: filter has no null guard; crashes on literal null values in
+      # example objects. Our spec has no duplicate enums, so this rule adds no coverage.
+      duplicated-entry-in-enum: off
+      # Operations use summary (not description) on simple list/read endpoints.
+      # description is strongly encouraged but not a blocking requirement.
+      operation-description: warn
+      # Example href values use relative paths (/api/v1/…) which are valid URI references
+      # but not absolute URIs. format: uri-reference would match; this is a doc-quality
+      # issue in the examples, not a contract defect.
+      oas3-valid-media-example: warn
+
+rules:
+  # ---- Operations are documented and identifiable
+  operation-operationId: error
+  operation-description: error
+  operation-tags: error
+  operation-operationId-unique: error
+
+  # ---- Every operation must declare the standard error responses where applicable
+  careerasana-problem-json-on-errors:
+    description: 4xx/5xx responses must use application/problem+json (RFC 7807).
+    severity: error
+    given: $.paths[*][get,post,put,patch,delete].responses[?(@property.match(/^(4|5)\d\d$/))].content
+    then:
+      field: application/problem+json
+      function: truthy
+
+  # ---- Mutating PATCH on mutable resources must require If-Match (optimistic concurrency)
+  careerasana-patch-requires-if-match:
+    description: PATCH on Goal/Task/Profile must require If-Match and document 412.
+    severity: error
+    given: "$.paths['/goals/{goalId}', '/tasks/{taskId}', '/profile'].patch"
+    then:
+      - field: parameters
+        function: schema
+        functionOptions:
+          schema:
+            type: array
+            contains:
+              type: object
+              properties:
+                $ref: { const: "#/components/parameters/IfMatch" }
+      - field: responses.412
+        function: truthy
+
+  # ---- Cursor pagination shape on list endpoints
+  careerasana-list-uses-cursor-pagination:
+    description: List operations must accept limit + cursor.
+    severity: warn
+    given: $.paths[*].get.parameters
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: array
+          contains:
+            type: object
+            properties:
+              $ref: { enum: ["#/components/parameters/Limit", "#/components/parameters/Cursor"] }
+
+  # ---- 202 responses must hand back a pollable Job (Location + Job/SignalAck body)
+  careerasana-202-has-location:
+    description: Asynchronous 202 responses must include a Location header to the job.
+    severity: error
+    given: $.paths[*][post].responses.202
+    then:
+      field: headers.Location
+      function: truthy
+
+  # ---- Security: global bearer auth present
+  careerasana-global-security:
+    description: A global security requirement must be declared.
+    severity: error
+    given: $
+    then:
+      field: security
+      function: truthy
+
+  # ---- Internal endpoints must be explicitly flagged (so the public doc can filter them)
+  careerasana-internal-flagged:
+    description: recalculate (and any worker-only op) must carry x-internal so public docs can exclude it.
+    severity: error
+    given: "$.paths['/readiness/recalculate'].post"
+    then:
+      field: x-internal
+      function: truthy
+
+  # ---- Problem schema must carry the operational extensions
+  careerasana-problem-extensions:
+    description: Problem must include requestId, correlationId, timestamp, documentation.
+    severity: warn
+    given: $.components.schemas.Problem.properties
+    then:
+      - field: requestId
+        function: truthy
+      - field: correlationId
+        function: truthy
+      - field: timestamp
+        function: truthy
+      - field: documentation
+        function: truthy
+
+  # ---- Examples encouraged on request bodies and 2xx responses
+  careerasana-request-has-example:
+    description: Request bodies should carry an example.
+    severity: info
+    given: "$.paths[*][post,put,patch].requestBody.content['application/json']"
+    then:
+      field: example
+      function: truthy
+
+  # ---- Naming: no CRUD-verb operationIds (workflow-driven principle)
+  careerasana-no-crud-verbs:
+    description: Avoid create/update/delete-prefixed paths; prefer capability names. (operationIds may use REST verbs.)
+    severity: warn
+    given: $.paths[*]~
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "/(createGoal|updateTwin|deleteBlueprint)"

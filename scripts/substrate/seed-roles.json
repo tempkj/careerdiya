@@ -1,0 +1,177 @@
+[
+  {
+    "role_key": "product manager",
+    "display_name": "Product Manager",
+    "onet_code": "11-2021.00",
+    "region": "IN",
+    "notes": "Core SaaS/startup hire; high demand across Bangalore/Pune/Delhi NCR"
+  },
+  {
+    "role_key": "software engineer",
+    "display_name": "Software Engineer",
+    "onet_code": "15-1252.00",
+    "region": "IN",
+    "notes": "Anchor role; very high volume; India is global supply hub"
+  },
+  {
+    "role_key": "data scientist",
+    "display_name": "Data Scientist",
+    "onet_code": "15-2051.00",
+    "region": "IN",
+    "notes": "Strong demand; India skill profile diverges from global (SQL-heavy)"
+  },
+  {
+    "role_key": "ux designer",
+    "display_name": "UX Designer",
+    "onet_code": "27-1021.00",
+    "region": "IN",
+    "notes": "Growing in product-led orgs; less mature market than US/UK"
+  },
+  {
+    "role_key": "full stack developer",
+    "display_name": "Full Stack Developer",
+    "onet_code": "15-1252.00",
+    "region": "IN",
+    "notes": "Distinct from SWE in India job market; React+Node dominant stack"
+  },
+  {
+    "role_key": "devops engineer",
+    "display_name": "DevOps Engineer",
+    "onet_code": "15-1244.00",
+    "region": "IN",
+    "notes": "Cloud-first adoption curve; AWS-heavy in India enterprises"
+  },
+  {
+    "role_key": "ai ml engineer",
+    "display_name": "AI / ML Engineer",
+    "onet_code": null,
+    "region": "IN",
+    "notes": "Highest velocity demand 2024-2026; O*NET code absent for this variant"
+  },
+  {
+    "role_key": "data analyst",
+    "display_name": "Data Analyst",
+    "onet_code": "15-2041.00",
+    "region": "IN",
+    "notes": "Feeder to data scientist; distinct role with SQL/Excel/BI focus"
+  },
+  {
+    "role_key": "business analyst",
+    "display_name": "Business Analyst",
+    "onet_code": "13-1111.00",
+    "region": "IN",
+    "notes": "Large consulting + enterprise IT services market in India"
+  },
+  {
+    "role_key": "management consultant",
+    "display_name": "Management Consultant",
+    "onet_code": "13-1111.00",
+    "region": "IN",
+    "notes": "McKinsey/BCG/Big4 pipeline; MBA-heavy entry; India offices large"
+  },
+  {
+    "role_key": "chartered accountant",
+    "display_name": "Chartered Accountant (CA)",
+    "onet_code": null,
+    "region": "IN",
+    "notes": "India-specific ICAI credential-gated role; O*NET absent; aspirant base ~8L/yr"
+  },
+  {
+    "role_key": "financial analyst",
+    "display_name": "Financial Analyst",
+    "onet_code": "13-2051.00",
+    "region": "IN",
+    "notes": "BFSI dominant; Mumbai/Pune cluster; CFA preferred"
+  },
+  {
+    "role_key": "investment banker",
+    "display_name": "Investment Banker",
+    "onet_code": "13-2051.00",
+    "region": "IN",
+    "notes": "Boutique + BB India offices; deal context differs from US"
+  },
+  {
+    "role_key": "growth marketing manager",
+    "display_name": "Growth Marketing Manager",
+    "onet_code": null,
+    "region": "IN",
+    "notes": "PLG / D2C boom; novel role mix of analytics + distribution"
+  },
+  {
+    "role_key": "digital marketing manager",
+    "display_name": "Digital Marketing Manager",
+    "onet_code": "11-2021.00",
+    "region": "IN",
+    "notes": "Broader than growth; SEO/SEM/social; high volume in India"
+  },
+  {
+    "role_key": "content strategist",
+    "display_name": "Content Strategist",
+    "onet_code": "27-3043.00",
+    "region": "IN",
+    "notes": "Creator economy + brand content; India vernacular content angle"
+  },
+  {
+    "role_key": "sales manager b2b saas",
+    "display_name": "Sales Manager (B2B SaaS)",
+    "onet_code": "41-3099.00",
+    "region": "IN",
+    "notes": "High demand; India SaaS motion distinct from US (outbound-heavy)"
+  },
+  {
+    "role_key": "customer success manager",
+    "display_name": "Customer Success Manager",
+    "onet_code": null,
+    "region": "IN",
+    "notes": "Emerging with SaaS growth; India delivery centre role common"
+  },
+  {
+    "role_key": "human resources business partner",
+    "display_name": "HR Business Partner (HRBP)",
+    "onet_code": "13-1071.00",
+    "region": "IN",
+    "notes": "Scale-up HRBPs; distinct from recruiter; India compliance-heavy"
+  },
+  {
+    "role_key": "operations manager",
+    "display_name": "Operations Manager",
+    "onet_code": "11-1021.00",
+    "region": "IN",
+    "notes": "Ops-heavy D2C, logistics, SaaS; breadth role"
+  },
+  {
+    "role_key": "supply chain analyst",
+    "display_name": "Supply Chain Analyst",
+    "onet_code": "13-1081.00",
+    "region": "IN",
+    "notes": "Manufacturing + ecommerce; India supply chain complexity"
+  },
+  {
+    "role_key": "cybersecurity analyst",
+    "display_name": "Cybersecurity Analyst",
+    "onet_code": "15-1212.00",
+    "region": "IN",
+    "notes": "BFSI + IT services demand; CERT-In compliance driver"
+  },
+  {
+    "role_key": "startup founder",
+    "display_name": "Startup Founder",
+    "onet_code": null,
+    "region": "IN",
+    "notes": "Novel role; no O*NET; aspirant base huge in India; skills = distribution + GTM + resilience"
+  },
+  {
+    "role_key": "vc analyst",
+    "display_name": "VC / Investment Analyst",
+    "onet_code": null,
+    "region": "IN",
+    "notes": "Small but high-signal aspiration set; India VC ecosystem specifics"
+  },
+  {
+    "role_key": "freelance consultant",
+    "display_name": "Freelance Consultant",
+    "onet_code": null,
+    "region": "IN",
+    "notes": "Growing independent-work track; novel blend of delivery + client management"
+  }
+]

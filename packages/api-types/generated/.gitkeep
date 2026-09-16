@@ -1,0 +1,2 @@
+# openapi-typescript writes generated.ts here (gitignored). Kept separate from hand-written
+# src/ so generated and authored code never sit side by side. Re-exported via src/index.ts.

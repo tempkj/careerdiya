@@ -1,0 +1,37 @@
+{
+  "_comment": "Controlled vocabularies from Database Design Spec v1.3 §6.6. This is the DB-side source of truth for enums. scripts/check-enum-parity.mjs asserts the OpenAPI contract matches this. Changing a value here is a Contract change (governance).",
+  "specVersion": "db-vocab/v1.3",
+  "vocab": {
+    "confidence.basis": ["grounded", "inferred", "stated"],
+    "twin_signal.significance": ["minor", "major"],
+    "twin_signal.source": ["conversation", "reflection", "task_completion", "outcome", "system"],
+    "outcome.outcome_class": ["hard", "soft"],
+    "outcome.type.hard": ["promotion", "salary_increase", "job_offer", "job_change", "certification", "interview_success"],
+    "outcome.type.soft": ["confidence_increase", "role_clarity", "skill_mastery", "portfolio_completion"],
+    "outcome.capture": ["reported", "inferred"],
+    "goal.status": ["active", "paused", "achieved", "dropped"],
+    "task.status": ["todo", "scheduled", "completed", "skipped"],
+    "coach_turn.role": ["user", "assistant", "tool"],
+    "recommendation.category": ["course", "certification", "project", "role", "community"],
+    "recommendation.status": ["suggested", "viewed", "saved", "started", "completed", "dismissed"],
+    "feedback.target_type": ["coach_turn", "recommendation"],
+    "feedback.rating": [-1, 1],
+    "consent.purpose": ["processing", "ai_personalization", "marketing", "research"]
+  },
+  "_apiEnumMap": {
+    "_comment": "Maps a DB vocab key to the OpenAPI schema path (components.schemas.X.properties.Y.enum) it must equal.",
+    "confidence.basis": "Confidence.basis",
+    "twin_signal.significance": "SignalAck.significance",
+    "twin_signal.source": "SignalCreate.source",
+    "outcome.outcome_class": "Outcome.outcomeClass",
+    "outcome.capture": "Outcome.capture",
+    "goal.status": "Goal.status",
+    "task.status": "Task.status",
+    "coach_turn.role": "CoachTurn.role",
+    "recommendation.category": "Recommendation.category",
+    "recommendation.status": "Recommendation.status",
+    "feedback.target_type": "FeedbackCreate.targetType",
+    "feedback.rating": "FeedbackCreate.rating",
+    "consent.purpose": "ConsentUpdate.purpose"
+  }
+}

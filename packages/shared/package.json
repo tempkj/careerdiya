@@ -1,0 +1,2 @@
+{ "name": "@careerasana/shared", "version": "0.0.0", "private": true, "types": "./src/index.ts",
+  "description": "Domain primitives, branded types, enums, common validation. Reserved — populate on second real consumer." }

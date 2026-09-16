@@ -1,0 +1,7 @@
+{
+  "name": "@careerasana/prompts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Versioned prompt templates — first-class artifacts that back prompt_registry.template_ref / template_hash.",
+  "types": "./src/index.ts"
+}

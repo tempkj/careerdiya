@@ -1,0 +1,39 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@modules/*": [
+        "./src/modules/*"
+      ],
+      "@api-types": [
+        "../../packages/api-types/src/index.ts"
+      ],
+      "@careerasana/prompts": [
+        "../../packages/prompts/src/index.ts"
+      ],
+      "@careerasana/shared": [
+        "../../packages/shared/src/index.ts"
+      ]
+    },
+    "allowJs": true,
+    "noEmit": true
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

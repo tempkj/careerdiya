@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "twin/v1",
+  "_comment": "MANDATORY pg_jsonschema validation target for core.twin.twin (DB v1.3, D6). STUB — fill in Phase 0 step 3.",
+  "type": "object",
+  "required": ["schemaVersion"],
+  "properties": {
+    "schemaVersion": { "const": "twin/v1" },
+    "identity": { "type": "object" },
+    "capability": { "type": "object" },
+    "aspiration": { "type": "object" },
+    "constraints": { "type": "object" },
+    "growth": { "type": "object" }
+  },
+  "$defs": {
+    "fact": {
+      "type": "object",
+      "required": ["value", "confidence", "source", "capturedAt"],
+      "properties": {
+        "confidence": {
+          "type": "object",
+          "required": ["value", "basis"],
+          "properties": {
+            "value": { "type": "number", "minimum": 0, "maximum": 1 },
+            "basis": { "enum": ["grounded", "inferred", "stated"] }
+          }
+        },
+        "source": { "type": "string", "format": "uuid" },
+        "capturedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

@@ -1,0 +1,5 @@
+# Migrations land here in Phase 0 step 3, in the order defined by DB Design Spec v1.3 §10:
+# 1 extensions → 2 schemas+roles → 3 shared fns+jsonschemas → 4 anchors/config+audit →
+# 5 knowledge → 6 twin → 7 readiness_spec/blueprint/readiness_history → 8 planner →
+# 9 outcome → 10 coach → 11 recommendation → 12 feedback → 13 indexes → 14 RLS →
+# 15 triggers → 16 seed.

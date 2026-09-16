@@ -1,0 +1,2236 @@
+openapi: 3.1.0
+info:
+  title: CareerĀsanā API
+  version: 1.7.0
+  summary: Workflow-driven API for the CareerĀsanā Career Operating System.
+  description: |
+    The CareerĀsanā API exposes **business capabilities**, not CRUD tables. It is the contract
+    over Blueprint v1.3.1 and Database Design Spec v1.3.
+
+    ## Design tenets
+    - **Workflow-driven.** Endpoints name capabilities (`/activation/complete`, `/blueprint/regenerate`,
+      `/readiness/recalculate`, `/outcomes/{id}/confirm`) rather than persistence (`/createGoal`).
+    - **The Twin is never mutated directly.** It changes only via `POST /twin/signals`; the Coach
+      emits signals, it does not write the Twin. There is intentionally no `PUT /twin`.
+    - **Provenance & confidence are first-class.** Every Twin fact carries `confidence {value, basis}`
+      and provenance (`source` → signal, `capturedAt`). Readiness carries a `specVersion`; AI artifacts
+      carry generation metadata.
+    - **Asynchrony is explicit.** LLM-bound capabilities (`/blueprint/regenerate`) return `202` with a
+      job; cheap pure computations (`/readiness/recalculate`) return `200` synchronously.
+
+    ## Security
+    Bearer JWT issued by Supabase Auth. All endpoints require auth unless noted. Tenant isolation is
+    enforced server-side by Postgres **Row-Level Security** keyed to the authenticated user; the API
+    never exposes another user's rows regardless of parameters.
+
+    ## Errors
+    All errors use **RFC 7807 Problem Details** (`application/problem+json`). `422` carries a structured
+    `errors[]` array for field-level validation.
+
+    ## Pagination
+    **Cursor-based.** List endpoints accept `limit` (default 20, max 100) and `cursor` (opaque), and
+    return `{ data: [...], page: { nextCursor, hasMore, limit } }`. Offsets are not used.
+
+    ## Idempotency
+    Mutating `POST`s accept an `Idempotency-Key` header. A replay with the same key returns the original
+    result (and sets `Idempotency-Replayed: true`). Keys are scoped per user per endpoint and retained 24h.
+
+    ## Asynchrony
+    LLM/queue-bound capabilities (`/twin/signals`, `/blueprint/regenerate`, `/reflections`) return `202`
+    with a `Job` and a `Location` header pointing at `GET /jobs/{jobId}`. Clients poll the job until
+    `status: done` (then follow `result.href`) or `failed` (read `failureReason`). Cheap pure computations
+    (`/readiness/recalculate`) and model calls the user is actively waiting on (`/coach/messages`,
+    `/activation/start`) are synchronous `200`.
+
+    ## Observability headers (all responses)
+    Every response carries `X-Request-Id` (server-generated) and echoes `X-Correlation-Id` (client-supplied
+    or generated, for tracing the coach→tool→LLM hops). Rate-limit state is surfaced on all responses via
+    `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` (IETF draft). Errors (RFC 7807) additionally
+    echo `requestId`/`correlationId`/`timestamp`/`documentation` in the body.
+
+    ## Optimistic concurrency
+    Mutable resources (Goal, Task, Profile) return an `ETag` (derived from row version/`updated_at`). Their
+    `PATCH` **requires** `If-Match`; a stale value yields `412 Precondition Failed`. This prevents silent
+    last-write-wins when the Coach and one or more clients edit the same resource concurrently.
+
+    ## Versioning
+    URI-versioned at `/api/v1`. Changes within a major version are additive only; breaking changes ship
+    `/api/v2` with a dual-publish window and `Deprecation`/`Sunset` headers. Document payloads also carry
+    their own `schemaVersion` (e.g., `twin/v1`, `readiness/v1`) and governance versions
+    (`readiness-spec/v1`, prompt versions) so producers and consumers can evolve independently.
+  contact:
+    name: CareerĀsanā Platform
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://api.careerasana.com/api/v1
+    description: Production (India region)
+  - url: https://staging.api.careerasana.com/api/v1
+    description: Staging
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Authentication
+    description: Session and identity (Supabase Auth).
+  - name: Activation
+    description: Immediate Value Layer — 60-second Current→Target→Gap→First Action.
+  - name: Career Twin
+    description: The user's living career model. Read + signal intake only; never mutated directly.
+  - name: Blueprint
+    description: The single living career document, regenerated from the Twin.
+  - name: Readiness
+    description: Career Readiness Score — composite + dimensions + spec-versioned history.
+  - name: Planner
+    description: Goals, Tasks (direct children of goals), Reflections.
+  - name: Outcomes
+    description: Hard and soft outcomes; confirm/decay for inferred soft outcomes.
+  - name: Recommendations
+    description: Opportunity recommendations and their lifecycle.
+  - name: Coach
+    description: Single-agent conversational interface. Emits signals; cannot write the Twin.
+  - name: Feedback
+    description: Thumbs up/down on coach turns and recommendations.
+  - name: User Profile
+    description: Profile, locale/region, and DPDP consent.
+  - name: Jobs
+    description: Retrieval of asynchronous operation status (the poll target for 202 responses).
+
+paths:
+  # ---------------------------------------------------------------- Authentication
+  /auth/session:
+    post:
+      tags: [Authentication]
+      operationId: createSession
+      summary: Establish or refresh a session
+      description: |
+        Exchanges credentials or a refresh token for an access/refresh token pair via Supabase Auth.
+        Most clients use the Supabase SDK directly; this endpoint documents the contract for first-party clients.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SessionRequest' }
+            examples:
+              password:
+                value: { grantType: password, email: asha@example.com, password: "••••••••" }
+              refresh:
+                value: { grantType: refresh_token, refreshToken: "rt_abc123" }
+      responses:
+        '200':
+          description: Session established.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/ServerError' }
+  /auth/me:
+    get:
+      tags: [Authentication]
+      operationId: getMe
+      summary: Get the authenticated principal
+      description: Returns the identity and onboarding state of the current user.
+      responses:
+        '200':
+          description: The authenticated user.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+              example:
+                userId: 4f1c2a9e-1111-4aaa-8bbb-000000000001
+                onboardingState: activated
+                region: IN
+                locale: en-IN
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ---------------------------------------------------------------- Activation
+  /activation:
+    get:
+      tags: [Activation]
+      operationId: listActivationSessions
+      summary: List all activation sessions (drafts and saved explorations)
+      description: |
+        Returns all activation sessions for the authenticated user, newest first.
+        Clients distinguish draft (`completedAt` null) from saved (`completedAt` set).
+        `activeGoalSessionId` identifies which saved session currently drives `aspiration.targetRole`
+        in the Twin, resolved server-side via signal provenance (`twin_signal.source_ref`). Null if the
+        Twin has no aspiration or if it was set by a pre-v1.2.0 signal with no session provenance.
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: List of activation sessions.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActivationSessionList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /activation/start:
+    post:
+      tags: [Activation]
+      operationId: startActivation
+      summary: Start the Immediate Value Layer
+      description: |
+        Accepts a stated goal (current + desired role) and a light micro-intake, and returns the
+        60-second value: normalized desired position, **gap analysis**, and a concrete **first action**.
+        Creates a draft `activation_session` (historical onboarding artifact; not a source of truth).
+        Does **not** touch the Twin — to feed this exploration into the Twin, save it then call
+        `POST /activation/{sessionId}/promote`. Synchronous (the user is waiting).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ActivationStartRequest' }
+            example:
+              currentRole: QA Manager
+              desiredRole: AI Product Manager
+              weeklyHours: 5
+      responses:
+        '200':
+          description: Immediate value computed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActivationResult' }
+              example:
+                sessionId: 9a7b6c5d-2222-4ccc-9ddd-000000000002
+                currentPosition: { role: QA Manager, topSkills: [test strategy, team leadership] }
+                desiredPosition: { role: AI Product Manager, onetCode: "11-2021.00" }
+                gap:
+                  - { skill: product discovery, have: false, confidence: { value: 0.42, basis: inferred } }
+                  - { skill: data fluency, have: false, confidence: { value: 0.51, basis: inferred } }
+                firstAction: Complete a 1-hour product discovery primer this week.
+                completed: false
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /activation/complete:
+    post:
+      tags: [Activation]
+      operationId: completeActivation
+      summary: Save the activation session (exploration)
+      description: |
+        Saves the activation session (sets `completedAt`) and confirms the first-action choice.
+        **Does not flush signals or touch the Twin.** A saved session is a stored exploration.
+        To promote it to your active goal and feed facts into the Twin, call
+        `POST /activation/{sessionId}/promote`. This is the activation-funnel save event.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ActivationCompleteRequest' }
+            example:
+              sessionId: 9a7b6c5d-2222-4ccc-9ddd-000000000002
+              acceptedFirstAction: true
+      responses:
+        '200':
+          description: Activation completed.
+          headers:
+            Location:
+              schema: { type: string, format: uri }
+              description: Canonical URI of the completed session (`/activation/{sessionId}`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActivationSession' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /activation/{sessionId}:
+    parameters:
+      - $ref: '#/components/parameters/SessionId'
+    get:
+      tags: [Activation]
+      operationId: getActivationSession
+      summary: Get a specific activation session (canonical retrieval)
+      description: |
+        Canonical retrieval of an activation artifact by id — the stable handle a returning user's client
+        uses to re-display their Current→Target→Gap→First-Action result. Preferred over `/activation/latest`
+        (which is a convenience and ambiguous if multiple sessions exist).
+      responses:
+        '200':
+          description: The activation session.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActivationSession' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Activation]
+      operationId: promoteActivationSession
+      summary: Promote a saved exploration to the Twin (set as goal)
+      description: |
+        The **only** action that flushes activation facts into the Twin. Reads the saved session and
+        posts `desired_role` (major), `current_role` (major, if present), and each `gap_item` (minor)
+        as signals to the Twin signal log, then recomputes the Twin. Idempotent — re-promoting the same
+        session overwrites Twin facts via last-write-wins (`occurred_at` wins). Provenance of each signal
+        traces back to this session via `twin_signal.source_ref = sessionId`.
+        Returns 409 if `completedAt` is null — save the exploration first.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Exploration promoted; Twin updated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PromoteAck' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /activation/latest:
+    get:
+      tags: [Activation]
+      operationId: getLatestActivation
+      summary: Get the most recent activation session (convenience)
+      description: Convenience accessor for the newest session. For a stable handle, prefer `GET /activation/{sessionId}`.
+      responses:
+        '200':
+          description: Latest activation session (or empty if none).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActivationSession' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- Career Twin
+  /twin:
+    get:
+      tags: [Career Twin]
+      operationId: getTwin
+      summary: Get the current Career Twin
+      description: Returns the `TwinContext` — the shaped, read-only view of the user's Twin with per-fact confidence and provenance.
+      responses:
+        '200':
+          description: The current Twin.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TwinContext' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /twin/signals:
+    post:
+      tags: [Career Twin]
+      operationId: submitTwinSignal
+      summary: Submit a signal to the Twin
+      description: |
+        The **only** way the Twin changes. The signal is appended to the immutable signal log, classified
+        as `minor` or `major`, and applied asynchronously. A `major` signal triggers Blueprint regeneration;
+        a `minor` signal recomputes scores only.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SignalCreate' }
+            example:
+              source: reflection
+              payload: { note: "Realized I enjoy leading discovery far more than QA." }
+      responses:
+        '202':
+          description: Signal accepted for asynchronous application.
+          headers:
+            Location:
+              schema: { type: string, format: uri }
+              description: Job URI to poll (`/jobs/{jobId}`). On completion the job result links to `/twin` (and a blueprint job if a major signal triggered regeneration).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SignalAck' }
+              example:
+                signalId: 1f0e2d3c-3333-4eee-8fff-000000000003
+                jobId: 5e6f7a8b-9999-4000-9666-000000000009
+                accepted: true
+                significance: major
+                regenerated: false
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    get:
+      tags: [Career Twin]
+      operationId: listTwinSignals
+      summary: List Twin signals (provenance history)
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - name: significance
+          in: query
+          schema: { type: string, enum: [minor, major] }
+      responses:
+        '200':
+          description: Page of signals, newest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SignalList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /twin/explain:
+    get:
+      tags: [Career Twin]
+      operationId: explainTwinFact
+      summary: Explain a Twin fact (provenance)
+      description: |
+        Answers "why do we believe this?" for a single Twin fact by resolving its provenance —
+        the originating signal, capture time, and confidence basis (invariant A16).
+      parameters:
+        - name: path
+          in: query
+          required: true
+          description: Dotted path to the fact, e.g. `aspiration.targetRoles[0]`.
+          schema: { type: string }
+          example: aspiration.targetRoles[0]
+      responses:
+        '200':
+          description: The fact with resolved provenance.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TwinFactExplanation' }
+              example:
+                path: aspiration.targetRoles[0]
+                fact:
+                  value: Product Management
+                  confidence: { value: 0.7, basis: stated }
+                  source: 1f0e2d3c-3333-4eee-8fff-000000000003
+                  capturedAt: 2026-06-21T00:00:00Z
+                signal:
+                  source: reflection
+                  occurredAt: 2026-06-21T00:00:00Z
+                  excerpt: "Realized I enjoy leading discovery..."
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- Blueprint
+  /blueprint:
+    get:
+      tags: [Blueprint]
+      operationId: getBlueprint
+      summary: Get the current Blueprint
+      description: Returns the single living Blueprint document plus its readiness snapshot.
+      responses:
+        '200':
+          description: The current Blueprint.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Blueprint' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /blueprint/regenerate:
+    post:
+      tags: [Blueprint]
+      operationId: regenerateBlueprint
+      summary: Regenerate the Blueprint
+      description: |
+        Triggers a full LLM regeneration of the Blueprint from the current Twin. Asynchronous — returns a
+        job; poll `GET /blueprint` for the result. Normally fired automatically by a `major` signal; this
+        endpoint is the explicit, user-initiated path.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '202':
+          description: Regeneration accepted.
+          headers:
+            Location:
+              schema: { type: string, format: uri }
+              description: Job URI to poll (`/jobs/{jobId}`); on completion the result links to `/blueprint`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Job' }
+              example: { jobId: 7c6b5a4d-4444-4000-9111-000000000004, status: queued }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /blueprint/explanation:
+    get:
+      tags: [Blueprint]
+      operationId: getBlueprintExplanation
+      summary: Explain how the Blueprint was generated
+      description: Returns AI-generation provenance — model, prompt version, parameters fingerprint, and timestamp.
+      responses:
+        '200':
+          description: Generation provenance.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GenerationMeta' }
+              example:
+                generatedByModel: claude-sonnet-5
+                
+                promptVersion: blueprint-gen/v2
+                paramsHash: "sha256:9f2a…"
+                inputFingerprint: "sha256:1b7c…"
+                generatedAt: 2026-06-21T12:00:00Z
+        '404': { $ref: '#/components/responses/NotFound' }
+  /blueprint/substrate-skills:
+    get:
+      tags: [Blueprint]
+      operationId: getBlueprintSubstrateSkills
+      summary: Fetch the to-role substrate's skill list, for the relevant-experience checklist (ADR-013 sub-slice 3)
+      description: |
+        Reads the desired role from the given activation_session (same session-attachment model
+        as POST /blueprint/identify) and returns its substrate's skill names, to populate the
+        Blueprint gates screen's "which of these do you already have experience with?" checklist.
+        Substrate-derived options avoid per-role option curation and can't misattribute (structured
+        selections, not free-text guesswork) — see planning/Backlog.md's relevant-experience input
+        redesign decision. Calling this for a role with no seeded substrate triggers on-demand
+        substrate generation (substrate-generator v1, LiveSubstrateGenerator) as a side effect —
+        first call for a novel role can take ~15-20s; every subsequent call for that role, any
+        user, is served from the now-warm cache.
+      parameters:
+        - name: sessionId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The to-role substrate's skills.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BlueprintSubstrateSkillsResult' }
+              example:
+                skills:
+                  - { name: "product discovery & user research" }
+                  - { name: "roadmapping & prioritization" }
+                  - { name: "stakeholder management" }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /blueprint/identify:
+    post:
+      tags: [Blueprint]
+      operationId: identifyBlueprintTasks
+      summary: Identify the task list for a roadmap (ADR-013 — upstream of derive)
+      description: |
+        Reads the current/desired role from the given activation_session (RLS-scoped — same
+        session-attachment model as POST /blueprint/promote, ADR-012's 2026-07-09 amendment),
+        computes the gap (substrate lookup + transition delta), and identifies the confirmed-
+        candidate task list, grounded in the gap, the from-role, and the gate answers (ADR-013).
+        Session-scoped rather than free-text roles deliberately: roles live on the session in the
+        from-goal flow and are not re-entered, and the live identifier needs session context
+        (Twin, history, from-role leverage) that only the session handle provides. Replaces the
+        gap-skill selection that used to live inside POST /blueprint/derive. Returns the numbered
+        list for user review/consent; nothing is persisted. Synchronous (deterministic mock task
+        identification; live reasoning is a later slice). gateAnswers.checkedSkills is typically
+        populated from a prior GET /blueprint/substrate-skills call against the same session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BlueprintIdentifyRequest' }
+            example:
+              sessionId: 9a7b6c5d-2222-4ccc-9ddd-000000000002
+              weeklyHours: 15
+              gateAnswers:
+                timeline: "3 months"
+                checkedSkills: [stakeholder management]
+                relevantExperienceText: "also ran cross-functional planning at my last job"
+      responses:
+        '200':
+          description: Identified task list, pending user confirmation.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BlueprintIdentifyResult' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /blueprint/dispute:
+    post:
+      tags: [Blueprint]
+      operationId: disputeBlueprintTask
+      summary: Dispute an identified task and get a coach-posture response (ADR-013 §4)
+      description: |
+        Evaluates the user's stated reason for disputing a single identified task. A sound reason
+        is agreed with immediately; a genuine counter-consideration is offered once, humbly, biased
+        toward deferring to the user's self-knowledge — never argued twice. The user's follow-up
+        decision (not modeled here) is final; this endpoint only produces the one coach response.
+        Deterministic mock in this slice (no live AI call yet — see ADR-013 §5).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BlueprintDisputeRequest' }
+      responses:
+        '200':
+          description: The coach's one response to the disputed task.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BlueprintDisputeResult' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /blueprint/derive:
+    post:
+      tags: [Blueprint]
+      operationId: deriveBlueprintPaths
+      summary: Package a confirmed task list into three candidate roadmap paths (Organize phase)
+      description: |
+        Packages an already-identified, user-confirmed task list (from POST /blueprint/identify)
+        into three candidate paths — fastest / optimal / longest (ADR-012) — by sampling depth/
+        effort/venture-framing at three levels (ADR-013). Membership-invariant: every confirmed
+        task appears in all three paths; only depth/effort vary. Paths are ephemeral output;
+        promoting a chosen, edited path to a stored Blueprint is POST /blueprint/promote.
+        Synchronous (deterministic L1/L2 computation, no LLM call in mock mode).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BlueprintDeriveRequest' }
+            example:
+              toRoleKey: product manager
+              weeklyHours: 15
+              tasks: []
+      responses:
+        '200':
+          description: Three derived paths.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BlueprintDerivePaths' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /blueprint/promote:
+    post:
+      tags: [Blueprint]
+      operationId: promoteBlueprint
+      summary: Promote a chosen, edited path to a stored Blueprint
+      description: |
+        Persists the user's chosen and edited path (from POST /blueprint/derive) as a stored,
+        versioned Blueprint attached to the given activation_session (ADR-012's 2026-07-09
+        amendment — not core.goal). Supersedes any prior active version for that session.
+        Emits a Twin event with provenance (A16). Synchronous.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BlueprintPromoteRequest' }
+            example:
+              sessionId: 9a7b6c5d-2222-4ccc-9ddd-000000000002
+              path:
+                strategy: optimal
+                tasks: []
+                probabilityBand: medium_high
+                basis: inferred
+                landingDefinition: Land a well-rounded Product Manager role, balancing speed and depth.
+                effortTotalHours: 120
+                calendarRange: { minWeeks: 7, maxWeeks: 12 }
+                intensityHoursPerWeek: 15
+      responses:
+        '200':
+          description: The stored Blueprint.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoredBlueprint' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ---------------------------------------------------------------- Readiness
+  /readiness/current:
+    get:
+      tags: [Readiness]
+      operationId: getCurrentReadiness
+      summary: Get the current Career Readiness Score
+      description: Composite (0–100), four dimensions, the active spec version, and confidence. Always decomposed.
+      responses:
+        '200':
+          description: Current readiness.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReadinessScore' }
+              example:
+                careerReadiness: 67
+                dimensions: { clarity: 80, capability: 55, execution: 70, opportunity: 62 }
+                specVersion: readiness-spec/v1
+                confidence: { value: 0.6, basis: inferred }
+                asOf: 2026-06-21T12:00:00Z
+        '404': { $ref: '#/components/responses/NotFound' }
+  /readiness/history:
+    get:
+      tags: [Readiness]
+      operationId: getReadinessHistory
+      summary: Get the readiness trend
+      description: Append-only score history for the trend line. Each point is stamped with the spec version that produced it.
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Page of readiness history points, newest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReadinessHistoryList' }
+              example:
+                data:
+                  - { composite: 61, dimensions: { clarity: 78, capability: 50, execution: 66, opportunity: 58 }, specVersion: readiness-spec/v1, asOf: 2026-04-30T00:00:00Z }
+                  - { composite: 55, dimensions: { clarity: 70, capability: 45, execution: 60, opportunity: 52 }, specVersion: readiness-spec/v1, asOf: 2026-03-31T00:00:00Z }
+                page: { nextCursor: "eyJvIjoyfQ==", hasMore: true, limit: 20 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /readiness/recalculate:
+    post:
+      tags: [Readiness]
+      operationId: recalculateReadiness
+      summary: Recalculate readiness (system/worker-initiated)
+      x-internal: true
+      description: |
+        **Implementation/operational endpoint.** Readiness normally recomputes automatically via the cascade
+        (task completed / outcome recorded / signal applied → recompute). This explicit trigger exists for
+        workers and for a rare user-facing "refresh my score" affordance; it is **hard rate-limited** and
+        should not be a routine client call. Recomputes from current inputs (Twin, Planner, Outcomes,
+        Recommendation fit) using the active spec, and appends a history point. Synchronous.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Recalculated readiness.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReadinessScore' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ---------------------------------------------------------------- Planner
+  /goals:
+    post:
+      tags: [Planner]
+      operationId: createGoal
+      summary: Create a goal
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GoalCreate' }
+            example: { title: Become an AI Product Manager, priority: 1, targetDate: 2027-12-01 }
+      responses:
+        '201':
+          description: Goal created.
+          headers:
+            Location: { schema: { type: string, format: uri }, description: URI of the created goal. }
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Goal' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+    get:
+      tags: [Planner]
+      operationId: listGoals
+      summary: List goals
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, paused, achieved, dropped] }
+      responses:
+        '200':
+          description: Page of goals.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GoalList' }
+  /goals/{goalId}:
+    parameters:
+      - $ref: '#/components/parameters/GoalId'
+    patch:
+      tags: [Planner]
+      operationId: updateGoal
+      summary: Update goal status or attributes
+      description: Capability-oriented update — primarily status transitions (e.g., mark achieved) and re-prioritization. Requires If-Match (optimistic concurrency).
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GoalUpdate' }
+            example: { status: achieved }
+      responses:
+        '200':
+          description: Updated goal.
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Goal' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '412': { $ref: '#/components/responses/PreconditionFailed' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /tasks:
+    post:
+      tags: [Planner]
+      operationId: createTask
+      summary: Create a task under a goal
+      description: Tasks are direct children of a goal (no milestones). `scheduledAt` places the task on the simple calendar.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TaskCreate' }
+            example: { goalId: 0a0b0c0d-5555-4000-9222-000000000005, title: Complete product discovery primer, scheduledAt: 2026-06-25T18:00:00Z }
+      responses:
+        '201':
+          description: Task created.
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Task' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+    get:
+      tags: [Planner]
+      operationId: listTasks
+      summary: List tasks
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - name: goalId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema: { type: string, enum: [todo, scheduled, completed, skipped] }
+        - name: scheduledFrom
+          in: query
+          schema: { type: string, format: date-time }
+        - name: scheduledTo
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        '200':
+          description: Page of tasks.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskList' }
+  /tasks/{taskId}:
+    parameters:
+      - $ref: '#/components/parameters/TaskId'
+    patch:
+      tags: [Planner]
+      operationId: updateTask
+      summary: Update a task (complete, schedule, skip)
+      description: |
+        Capability-oriented. Completing a task (`status: completed`) recomputes momentum/readiness, appends
+        a Twin signal, and may infer a soft outcome (subject to confirm/decay). Requires If-Match.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TaskUpdate' }
+            example: { status: completed }
+      responses:
+        '200':
+          description: Updated task.
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Task' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '412': { $ref: '#/components/responses/PreconditionFailed' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /reflections:
+    post:
+      tags: [Planner]
+      operationId: createReflection
+      summary: Submit a reflection
+      description: Reflections emit a Twin signal and may capture self-reported soft or hard outcomes.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReflectionCreate' }
+            example: { goalId: 0a0b0c0d-5555-4000-9222-000000000005, wentWell: Shipped a discovery doc, difficult: Saying no to scope, learned: I like framing problems }
+      responses:
+        '202':
+          description: Reflection accepted (signal emitted asynchronously).
+          headers:
+            Location:
+              schema: { type: string, format: uri }
+              description: Job URI to poll (`/jobs/{jobId}`) for the emitted signal's application.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Reflection' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+    get:
+      tags: [Planner]
+      operationId: listReflections
+      summary: List reflections
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Page of reflections, newest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReflectionList' }
+
+  # ---------------------------------------------------------------- Outcomes
+  /outcomes:
+    post:
+      tags: [Outcomes]
+      operationId: recordOutcome
+      summary: Record an outcome (hard or soft)
+      description: |
+        Records a real-world result. Hard outcomes (promotion, salary, offer) are user-reported; soft
+        outcomes (confidence, role clarity, skill mastery, portfolio completion) may be reported or inferred.
+        Inferred soft outcomes enter at a low weight and follow confirm/decay.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OutcomeCreate' }
+            examples:
+              hard:
+                value: { outcomeClass: hard, type: job_change, capture: reported, value: { from: QA Manager, to: Associate PM } }
+              soft:
+                value: { outcomeClass: soft, type: role_clarity, capture: reported, value: { note: Much clearer on PM path } }
+      responses:
+        '201':
+          description: Outcome recorded.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Outcome' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+    get:
+      tags: [Outcomes]
+      operationId: listOutcomes
+      summary: List outcomes
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - name: outcomeClass
+          in: query
+          schema: { type: string, enum: [hard, soft] }
+      responses:
+        '200':
+          description: Page of outcomes, newest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OutcomeList' }
+  /outcomes/{outcomeId}/confirm:
+    parameters:
+      - $ref: '#/components/parameters/OutcomeId'
+    patch:
+      tags: [Outcomes]
+      operationId: confirmOutcome
+      summary: Confirm an inferred outcome
+      description: |
+        Promotes an inferred soft outcome toward reported weight by corroborating it (sets `corroboratedAt`
+        and clears `decaysAt`). No-op semantics if already confirmed.
+      responses:
+        '200':
+          description: Outcome confirmed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Outcome' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  # ---------------------------------------------------------------- Recommendations
+  /recommendations:
+    get:
+      tags: [Recommendations]
+      operationId: listRecommendations
+      summary: List recommendations
+      description: Personalized, explainable opportunities (Goal + Gap + Taxonomy driven). Each carries a fit score and confidence.
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - name: category
+          in: query
+          schema: { type: string, enum: [course, certification, project, role, community] }
+        - name: status
+          in: query
+          schema: { type: string, enum: [suggested, viewed, saved, started, completed, dismissed] }
+      responses:
+        '200':
+          description: Page of recommendations, highest fit first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecommendationList' }
+  /recommendations/{recommendationId}/status:
+    parameters:
+      - $ref: '#/components/parameters/RecommendationId'
+    patch:
+      tags: [Recommendations]
+      operationId: updateRecommendationStatus
+      summary: Advance a recommendation's lifecycle
+      description: |
+        Transitions through suggested → viewed → saved → started → completed → dismissed. These states are
+        engagement/outcome signals; `completed` may create a soft outcome and `dismissed` emits a Twin signal.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RecommendationStatusUpdate' }
+            example: { status: started }
+      responses:
+        '200':
+          description: Updated recommendation.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Recommendation' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+
+  # ---------------------------------------------------------------- Coach
+  /coach/conversations:
+    post:
+      tags: [Coach]
+      operationId: startConversation
+      summary: Start a coaching conversation
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201':
+          description: Conversation created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Conversation' }
+              example: { id: 2b3c4d5e-6666-4000-9333-000000000006, startedAt: 2026-06-24T09:00:00Z }
+    get:
+      tags: [Coach]
+      operationId: listConversations
+      summary: List conversations
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Page of conversations, newest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConversationList' }
+  /coach/messages:
+    post:
+      tags: [Coach]
+      operationId: sendCoachMessage
+      summary: Send a message to the Coach
+      description: |
+        Sends a user turn and returns the assistant turn. The single Coach agent reads the TwinContext,
+        may call tools, and **emits signals** for anything that should update the Twin — it never writes the
+        Twin directly. Response includes citations, suggested actions, and a count of emitted signals.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CoachMessageRequest' }
+            example:
+              conversationId: 2b3c4d5e-6666-4000-9333-000000000006
+              message: Should I pursue an MBA?
+      responses:
+        '200':
+          description: Assistant turn.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CoachMessageResponse' }
+              example:
+                turn:
+                  id: 3c4d5e6f-7777-4000-9444-000000000007
+                  conversationId: 2b3c4d5e-6666-4000-9333-000000000006
+                  role: assistant
+                  content: "An MBA is one path; given your discovery strength, a PM associate role may move you faster…"
+                  generatedByModel: claude-sonnet-5
+                  promptVersion: coach-prompt/v3
+                  createdAt: 2026-06-24T09:00:05Z
+                citations:
+                  - { type: recommendation, id: 8d9e0f1a-8888-4000-9555-000000000008 }
+                suggestedActions:
+                  - { type: create_goal, label: Explore PM associate roles, payload: { title: Explore PM path } }
+                signalsEmitted: 2
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /coach/conversations/{conversationId}:
+    parameters:
+      - $ref: '#/components/parameters/ConversationId'
+    get:
+      tags: [Coach]
+      operationId: getConversation
+      summary: Get a conversation with its turns
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Conversation with a page of turns.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConversationDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- Feedback
+  /feedback:
+    post:
+      tags: [Feedback]
+      operationId: submitFeedback
+      summary: Submit thumbs up/down
+      description: Rates a coach turn or a recommendation. Upserts — one rating per target per user.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FeedbackCreate' }
+            example: { targetType: coach_turn, targetId: 3c4d5e6f-7777-4000-9444-000000000007, rating: 1 }
+      responses:
+        '201':
+          description: Feedback recorded.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Feedback' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+    get:
+      tags: [Feedback]
+      operationId: listFeedback
+      summary: List the user's feedback
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - name: targetType
+          in: query
+          schema: { type: string, enum: [coach_turn, recommendation] }
+      responses:
+        '200':
+          description: Page of feedback.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeedbackList' }
+
+  # ---------------------------------------------------------------- User Profile
+  /profile:
+    get:
+      tags: [User Profile]
+      operationId: getProfile
+      summary: Get the user profile
+      responses:
+        '200':
+          description: The profile.
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserProfile' }
+    patch:
+      tags: [User Profile]
+      operationId: updateProfile
+      summary: Update profile attributes
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProfileUpdate' }
+            example: { displayName: Asha, locale: en-IN }
+      responses:
+        '200':
+          description: Updated profile.
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserProfile' }
+        '412': { $ref: '#/components/responses/PreconditionFailed' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /profile/consent:
+    get:
+      tags: [User Profile]
+      operationId: getConsent
+      summary: Get current consent state
+      responses:
+        '200':
+          description: Consent state per purpose.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConsentState' }
+    put:
+      tags: [User Profile]
+      operationId: setConsent
+      summary: Grant or revoke a consent purpose
+      description: Appends a new consent record (history is immutable). Revoking blocks further processing but does not erase data.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConsentUpdate' }
+            example: { purpose: ai_personalization, state: granted, policyVersion: "2026-01" }
+      responses:
+        '200':
+          description: Updated consent state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConsentState' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+
+  # ---------------------------------------------------------------- Jobs (async poll target)
+  /jobs/{jobId}:
+    parameters:
+      - $ref: '#/components/parameters/JobId'
+    get:
+      tags: [Jobs]
+      operationId: getJob
+      summary: Get asynchronous job status
+      description: |
+        Poll target for every `202` response. Returns the job's status; when `done`, `result.href` links to
+        the produced/affected resource (e.g., `/blueprint` or `/twin`); when `failed`, `failureReason` explains why.
+      responses:
+        '200':
+          description: Job status.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Job' }
+              examples:
+                running:
+                  value:
+                    jobId: 7c6b5a4d-4444-4000-9111-000000000004
+                    kind: blueprint_regeneration
+                    status: running
+                    progress: { stage: Generating goals, percent: 80 }
+                done:
+                  value:
+                    jobId: 7c6b5a4d-4444-4000-9111-000000000004
+                    kind: blueprint_regeneration
+                    status: done
+                    entity: { type: blueprint, id: null, href: /api/v1/blueprint }
+                    progress: { stage: Complete, percent: 100 }
+                    completedAt: 2026-06-24T09:01:00Z
+                failed:
+                  value: { jobId: 7c6b5a4d-4444-4000-9111-000000000004, kind: blueprint_regeneration, status: failed, failureReason: upstream_model_timeout }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase-issued access token. Row-Level Security scopes every query to the token's user.
+
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      description: Page size (default 20, max 100).
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    Cursor:
+      name: cursor
+      in: query
+      description: Opaque pagination cursor from a prior `page.nextCursor`.
+      schema: { type: string }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Client-generated key (UUID recommended). Replays return the original result.
+      schema: { type: string, maxLength: 255 }
+    GoalId:
+      name: goalId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    OutcomeId:
+      name: outcomeId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    RecommendationId:
+      name: recommendationId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ConversationId:
+      name: conversationId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    JobId:
+      name: jobId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    CorrelationId:
+      name: X-Correlation-Id
+      in: header
+      required: false
+      description: Client-supplied trace id, echoed on the response. Generated server-side if omitted.
+      schema: { type: string, maxLength: 128 }
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: ETag of the version the client intends to modify (optimistic concurrency). Stale value → 412.
+      schema: { type: string }
+
+  headers:
+    ETag:
+      description: Entity version tag for optimistic concurrency. Supply in If-Match on the next PATCH.
+      schema: { type: string }
+    X-Request-Id:
+      description: Server-generated unique id for this response. Present on all responses.
+      schema: { type: string }
+    X-Correlation-Id:
+      description: Trace id correlating related requests (echoed from request or generated). Present on all responses.
+      schema: { type: string }
+    RateLimit-Limit:
+      description: Request quota for the current window (IETF draft). Present on all responses.
+      schema: { type: integer }
+    RateLimit-Remaining:
+      description: Requests remaining in the current window.
+      schema: { type: integer }
+    RateLimit-Reset:
+      description: Seconds until the rate-limit window resets.
+      schema: { type: integer }
+    Retry-After:
+      description: Seconds to wait before retrying.
+      schema: { type: integer }
+    Idempotency-Replayed:
+      description: Present and true when the response was served from an idempotent replay.
+      schema: { type: boolean }
+    Deprecation:
+      description: RFC 8594 deprecation date for the endpoint/version.
+      schema: { type: string }
+
+  responses:
+    BadRequest:
+      description: Malformed request.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example: { type: "https://errors.careerasana.com/bad-request", title: Bad Request, status: 400, detail: Malformed JSON body. }
+    Unauthorized:
+      description: Missing or invalid credentials.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example: { type: "https://errors.careerasana.com/unauthorized", title: Unauthorized, status: 401, detail: Bearer token missing or expired. }
+    Forbidden:
+      description: Authenticated but not permitted (e.g., consent not granted, or RLS denies the row).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example: { type: "https://errors.careerasana.com/forbidden", title: Forbidden, status: 403, detail: ai_personalization consent is required for this operation. }
+    NotFound:
+      description: Resource not found (or not visible to this user).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example: { type: "https://errors.careerasana.com/not-found", title: Not Found, status: 404 }
+    Conflict:
+      description: State conflict (e.g., already completed/confirmed, idempotency key reused with a different body).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example: { type: "https://errors.careerasana.com/conflict", title: Conflict, status: 409, detail: Idempotency-Key reused with a different payload. }
+    PreconditionFailed:
+      description: If-Match ETag is stale — the resource changed since the client last read it.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example: { type: "https://errors.careerasana.com/precondition-failed", title: Precondition Failed, status: 412, detail: Resource was modified; re-fetch and retry with the current ETag. }
+    UnprocessableEntity:
+      description: Validation failed.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ValidationProblem' }
+          example:
+            type: "https://errors.careerasana.com/validation"
+            title: Unprocessable Entity
+            status: 422
+            detail: One or more fields are invalid.
+            errors:
+              - { field: rating, code: out_of_range, message: rating must be -1 or 1 }
+    TooManyRequests:
+      description: Rate limit exceeded.
+      headers:
+        Retry-After: { $ref: '#/components/headers/Retry-After' }
+        RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
+        RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
+        RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example: { type: "https://errors.careerasana.com/rate-limit", title: Too Many Requests, status: 429 }
+    ServerError:
+      description: Unexpected server error.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example: { type: "https://errors.careerasana.com/internal", title: Internal Server Error, status: 500 }
+
+  schemas:
+    # ---- Error models (RFC 7807)
+    Problem:
+      type: object
+      description: RFC 7807 Problem Details, extended with operational fields.
+      properties:
+        type: { type: string, format: uri, description: A URI identifying the problem type. }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string, format: uri }
+        code: { type: string, description: Stable machine-readable error code. }
+        requestId: { type: string, description: Matches the X-Request-Id response header for support correlation. }
+        correlationId: { type: string, description: Trace id correlating related requests. }
+        timestamp: { type: string, format: date-time }
+        documentation: { type: string, format: uri, description: Link to docs for this error type. }
+      required: [type, title, status]
+    ValidationProblem:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          properties:
+            errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  field: { type: string }
+                  code: { type: string }
+                  message: { type: string }
+                required: [field, message]
+
+    # ---- Shared atoms
+    Confidence:
+      type: object
+      description: Coarse, sourced, labeled confidence — not a calibrated probability.
+      properties:
+        value: { type: number, minimum: 0, maximum: 1 }
+        basis: { type: string, enum: [grounded, inferred, stated] }
+      required: [value, basis]
+    Provenance:
+      type: object
+      description: Per-fact lineage (invariant A16).
+      properties:
+        source: { type: string, format: uuid, description: Originating twin signal id. }
+        capturedAt: { type: string, format: date-time }
+      required: [source, capturedAt]
+    TwinFact:
+      type: object
+      properties:
+        value: {}
+        confidence: { $ref: '#/components/schemas/Confidence' }
+        source: { type: string, format: uuid }
+        capturedAt: { type: string, format: date-time }
+      required: [value, confidence, source, capturedAt]
+    GenerationMeta:
+      type: object
+      description: AI-generation provenance attached to AI-produced artifacts.
+      properties:
+        generatedByModel: { type: string }
+        promptVersion: { type: string, description: FK to the prompt registry. }
+        paramsHash: { type: string }
+        inputFingerprint: { type: string }
+        generatedAt: { type: string, format: date-time }
+    PageMeta:
+      type: object
+      properties:
+        nextCursor: { type: [string, 'null'] }
+        hasMore: { type: boolean }
+        limit: { type: integer }
+      required: [hasMore, limit]
+    Job:
+      type: object
+      description: Asynchronous operation handle returned by 202 responses; poll via GET /jobs/{jobId}.
+      properties:
+        jobId: { type: string, format: uuid }
+        kind: { type: string, enum: [signal_application, blueprint_regeneration, reflection_processing] }
+        status: { type: string, enum: [queued, running, done, failed] }
+        entity:
+          type: [object, 'null']
+          description: The resource this job produces/affects (present once known).
+          properties:
+            type: { type: string, enum: [blueprint, twin, none] }
+            id: { type: [string, 'null'], format: uuid }
+            href: { type: string, format: uri }
+        progress:
+          type: [object, 'null']
+          description: Best-effort progress. `stage` is authoritative; `percent` is an approximate hint.
+          properties:
+            stage: { type: string, example: Generating goals }
+            percent: { type: integer, minimum: 0, maximum: 100 }
+        failureReason: { type: [string, 'null'], description: Present when status is failed. }
+        createdAt: { type: string, format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+      required: [jobId, status]
+
+    # ---- Authentication
+    SessionRequest:
+      type: object
+      properties:
+        grantType: { type: string, enum: [password, refresh_token] }
+        email: { type: string, format: email }
+        password: { type: string }
+        refreshToken: { type: string }
+      required: [grantType]
+    Session:
+      type: object
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        tokenType: { type: string, enum: [bearer] }
+        expiresIn: { type: integer, description: Seconds until access token expiry. }
+      required: [accessToken, tokenType, expiresIn]
+    Me:
+      type: object
+      properties:
+        userId: { type: string, format: uuid }
+        onboardingState: { type: string, enum: [registered, activated] }
+        region: { type: string }
+        locale: { type: string }
+      required: [userId, onboardingState]
+
+    # ---- Activation
+    ActivationStartRequest:
+      type: object
+      properties:
+        currentRole: { type: string }
+        desiredRole: { type: string }
+        weeklyHours: { type: integer, minimum: 0 }
+      required: [desiredRole]
+    GapItem:
+      type: object
+      properties:
+        skill: { type: string }
+        have: { type: boolean }
+        confidence: { $ref: '#/components/schemas/Confidence' }
+      required: [skill, have]
+    ActivationResult:
+      type: object
+      properties:
+        sessionId: { type: string, format: uuid }
+        currentPosition:
+          type: object
+          properties:
+            role: { type: string }
+            topSkills: { type: array, items: { type: string } }
+        desiredPosition:
+          type: object
+          properties:
+            role: { type: string }
+            onetCode: { type: [string, 'null'] }
+        gap: { type: array, items: { $ref: '#/components/schemas/GapItem' } }
+        firstAction: { type: string }
+        completed: { type: boolean }
+      required: [sessionId, desiredPosition, gap, firstAction, completed]
+    ActivationCompleteRequest:
+      type: object
+      properties:
+        sessionId: { type: string, format: uuid }
+        acceptedFirstAction: { type: boolean }
+      required: [sessionId]
+    ActivationSessionList:
+      type: object
+      description: Paginated list of activation sessions with active-goal provenance.
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/ActivationSession' }
+        activeGoalSessionId:
+          type: [string, 'null']
+          format: uuid
+          description: >
+            ID of the session whose facts currently drive aspiration.targetRole in the Twin,
+            resolved via signal provenance (twin_signal.source_ref). Null if the Twin has no
+            aspiration, or if it was set by a pre-v1.2.0 signal with no session provenance.
+        page: { $ref: '#/components/schemas/PageMeta' }
+      required: [data, page, activeGoalSessionId]
+    PromoteAck:
+      type: object
+      description: Confirmation that a saved exploration was promoted to the Twin.
+      properties:
+        sessionId: { type: string, format: uuid }
+        signalsCreated:
+          type: integer
+          description: Number of signals flushed (1 desired_role + 0–1 current_role + N gap items).
+        firstSignalId:
+          type: string
+          format: uuid
+          description: ID of the desired_role signal, for provenance lookup via GET /twin/explain.
+        accepted: { type: boolean }
+      required: [sessionId, signalsCreated, firstSignalId, accepted]
+    ActivationSession:
+      type: object
+      description: |
+        Activation artifact (DB invariant A17 — immutable once saved). A **draft** has `completedAt` null;
+        a **saved exploration** has `completedAt` set. Only a saved exploration can be promoted to the Twin
+        via `POST /activation/{sessionId}/promote`. `journey[]` records onboarding steps; the `signals_created`
+        step is a legacy value present in pre-v1.2.0 sessions — new sessions do not emit it.
+      properties:
+        id: { type: string, format: uuid }
+        currentRole: { type: [string, 'null'] }
+        desiredRole: { type: [string, 'null'] }
+        onetCode: { type: [string, 'null'] }
+        gap: { type: array, items: { $ref: '#/components/schemas/GapItem' } }
+        firstAction: { type: [string, 'null'] }
+        journey:
+          type: array
+          description: Ordered onboarding steps, each an immutable record with optional outbound reference.
+          items:
+            type: object
+            properties:
+              step:
+                type: string
+                enum: [questions_answered, current_position, desired_position, gap_analysis, first_action, blueprint_generated, signals_created]
+              at: { type: string, format: date-time }
+              ref:
+                type: [object, 'null']
+                properties:
+                  type: { type: string, enum: [blueprint, signal, none] }
+                  id: { type: [string, 'null'], format: uuid }
+                  href: { type: [string, 'null'], format: uri }
+            required: [step, at]
+        completedAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+      required: [id, createdAt]
+
+    # ---- Career Twin
+    EvolveVector:
+      type: object
+      properties:
+        engage: { type: number, minimum: 0, maximum: 1 }
+        voice: { type: number, minimum: 0, maximum: 1 }
+        orient: { type: number, minimum: 0, maximum: 1 }
+        learn: { type: number, minimum: 0, maximum: 1 }
+        venture: { type: number, minimum: 0, maximum: 1 }
+        elevate: { type: number, minimum: 0, maximum: 1 }
+    TwinContext:
+      type: object
+      description: Shaped read view of the Twin. Every leaf is a TwinFact (value + confidence + provenance).
+      properties:
+        schemaVersion: { type: string, example: twin/v1 }
+        identity: { type: object, additionalProperties: true }
+        capability: { type: object, additionalProperties: true }
+        aspiration: { type: object, additionalProperties: true }
+        constraints: { type: object, additionalProperties: true }
+        growth: { type: object, additionalProperties: true }
+        evolveVector: { $ref: '#/components/schemas/EvolveVector' }
+        version: { type: integer }
+        updatedAt: { type: string, format: date-time }
+      required: [schemaVersion, version]
+    SignalCreate:
+      type: object
+      properties:
+        source: { type: string, enum: [conversation, reflection, task_completion, outcome, system] }
+        sourceRef: { type: [string, 'null'], format: uuid }
+        payload: { type: object, additionalProperties: true }
+      required: [source, payload]
+    SignalAck:
+      type: object
+      properties:
+        signalId: { type: string, format: uuid }
+        jobId: { type: string, format: uuid, description: "Poll via GET /jobs/{jobId} for application and any triggered regeneration." }
+        accepted: { type: boolean }
+        significance: { type: string, enum: [minor, major] }
+        regenerated: { type: boolean, description: Whether a Blueprint regeneration was triggered synchronously (false in MVP — async via the job). }
+      required: [signalId, accepted, significance]
+    Signal:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        source: { type: string, enum: [conversation, reflection, task_completion, outcome, system] }
+        significance: { type: string, enum: [minor, major] }
+        applied: { type: boolean }
+        occurredAt: { type: string, format: date-time }
+      required: [id, source, significance, occurredAt]
+    SignalList:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/Signal' } }
+        page: { $ref: '#/components/schemas/PageMeta' }
+      required: [data, page]
+    TwinFactExplanation:
+      type: object
+      properties:
+        path: { type: string }
+        fact: { $ref: '#/components/schemas/TwinFact' }
+        signal:
+          type: object
+          properties:
+            source: { type: string }
+            occurredAt: { type: string, format: date-time }
+            excerpt: { type: string }
+      required: [path, fact]
+
+    # ---- Blueprint
+    BlueprintDocument:
+      type: object
+      properties:
+        schemaVersion: { type: string, example: blueprint/v1 }
+        vision:
+          type: object
+          properties: { text: { type: string }, confidence: { $ref: '#/components/schemas/Confidence' } }
+        currentState:
+          type: object
+          properties: { summary: { type: string }, confidence: { $ref: '#/components/schemas/Confidence' } }
+        targetState:
+          type: object
+          properties:
+            role: { type: string }
+            onetCode: { type: [string, 'null'] }
+            confidence: { $ref: '#/components/schemas/Confidence' }
+        gaps:
+          type: array
+          items: { $ref: '#/components/schemas/GapItem' }
+        goals:
+          type: array
+          items:
+            type: object
+            properties: { goalId: { type: string, format: uuid }, title: { type: string } }
+        nextActions:
+          type: array
+          items:
+            type: object
+            properties: { text: { type: string }, taskId: { type: [string, 'null'], format: uuid } }
+      required: [schemaVersion]
+    Blueprint:
+      type: object
+      properties:
+        document: { $ref: '#/components/schemas/BlueprintDocument' }
+        readiness: { $ref: '#/components/schemas/ReadinessScore' }
+        generatedAt: { type: string, format: date-time }
+        generatedByModel: { type: [string, 'null'] }
+        promptVersion: { type: [string, 'null'] }
+      required: [document, generatedAt]
+
+    # ---- Blueprint derive (ADR-012 — Organize phase, paths are ephemeral)
+    #
+    # CONSCIOUS CONTRACT-POLICY DEVIATION (v1.5.0, ADR-013 sub-slice 2):
+    # In-place breaking reshape of an already-shipped schema (currentRole/desiredRole
+    # replaced by tasks/toRoleKey) — not additive. The contract's stated policy
+    # ("changes within a major version are additive only") exists to protect external
+    # consumers; a breaking change would normally ship /v2. Judged safe here because:
+    # (1) zero external consumers of this pre-launch API — sole caller is BlueprintForm,
+    # updated in the same slice; (2) accepting the old roles-shape alongside the new one
+    # would preserve an architecturally wrong claim — derive no longer identifies tasks
+    # (that moved to POST /blueprint/identify); an endpoint still accepting roles would
+    # either silently re-run identification (duplicating /identify) or ignore the roles
+    # it claims to accept. Recorded here deliberately rather than silently reshaped.
+    BlueprintDeriveRequest:
+      type: object
+      properties:
+        tasks:
+          type: array
+          items: { $ref: '#/components/schemas/DraftTask' }
+        toRoleKey: { type: string }
+        weeklyHours: { type: integer, minimum: 0 }
+      required: [tasks, toRoleKey]
+    # ---- Blueprint identify (ADR-013 — task identification, upstream of derive)
+    #
+    # CONSCIOUS CONTRACT-POLICY DEVIATION (v1.7.0, ADR-013 sub-slice 3):
+    # In-place breaking reshape of gateAnswers (relevantExperience: string, required ->
+    # checkedSkills: string[] + relevantExperienceText?: string, both optional) — not additive,
+    # same deviation class as BlueprintDeriveRequest's reshape above. Judged safe for the same
+    # reasons: (1) zero external consumers pre-launch — sole caller is BlueprintForm, updated in
+    # the same slice; (2) keeping the old free-text-only field alongside the new checklist would
+    # preserve an architecturally wrong claim — the UI no longer collects a single free-text
+    # answer, it collects substrate-derived checked skills (see planning/Backlog.md's relevant-
+    # experience input redesign decision) plus an optional elaboration. A request accepting both
+    # shapes would leave it ambiguous which one is authoritative. Recorded here deliberately
+    # rather than silently reshaped.
+    BlueprintIdentifyRequest:
+      type: object
+      properties:
+        sessionId: { type: string, format: uuid }
+        weeklyHours: { type: integer, minimum: 0 }
+        gateAnswers:
+          type: object
+          description: >-
+            Fixed restructuring slots (ADR-013 §1). The relevant-experience input is entirely
+            optional/skippable — both checkedSkills and relevantExperienceText may be omitted.
+          properties:
+            # Deliberately optional, not removed: the mock identifier ignores gateAnswers
+            # entirely (no restructuring/feasibility logic yet), so collecting an answer the
+            # UI can't act on is a small trust cost for no benefit. Field stays documented for
+            # its two real jobs once the live identifier lands (ADR-013 §1: restructuring
+            # input; feasibility check against weeklyHours) — deferred, not deleted.
+            timeline: { type: string, example: "3 months" }
+            checkedSkills:
+              type: array
+              items: { type: string }
+              description: >-
+                Skill names the user checked from the to-role substrate's checklist (verbatim
+                from GET /blueprint/substrate-skills). Structured context for the counsellor's
+                reasoning, NOT a delta-modifier — the computed gap stays substrate-grounded
+                regardless of what's checked (ADR-013 sub-slice 3; avoids an over-claim risk
+                where a checked-but-not-really-held skill would otherwise mask a real gap).
+            relevantExperienceText:
+              type: string
+              description: >-
+                Optional free-text elaboration, for off-taxonomy leverage the substrate checklist
+                structurally can't capture (e.g. relevant experience from outside this field
+                entirely). Also read as context, not as instructions to follow literally.
+          required: []
+      required: [sessionId, gateAnswers]
+    BlueprintIdentifyResult:
+      type: object
+      properties:
+        toRoleKey: { type: string }
+        # Flat, canonical task list — unchanged consumer (derivePathsFromTasks, any
+        # existing caller that only wants tasks). Deterministically derived server-side
+        # from assessment.taskGroups (same objects, not an independently maintained
+        # copy), so the two can never drift.
+        tasks:
+          type: array
+          items: { $ref: '#/components/schemas/DraftTask' }
+        # Added 1.6.0 — the counsellor prose the model actually produces (framing,
+        # grouped tasks with rationale, throughLine). Always present, including in mock
+        # mode (empty prose fields — no fabricated placeholder text; see
+        # CounsellorAssessment). UI consumes this for the counsellor-assessment view;
+        # tasks above stays the flat view for the derive pipeline.
+        assessment: { $ref: '#/components/schemas/CounsellorAssessment' }
+      required: [toRoleKey, tasks, assessment]
+    # ---- Blueprint substrate-skills (ADR-013 sub-slice 3 — relevant-experience checklist)
+    BlueprintSubstrateSkillsResult:
+      type: object
+      properties:
+        skills:
+          type: array
+          items: { $ref: '#/components/schemas/SubstrateSkillOption' }
+      required: [skills]
+    SubstrateSkillOption:
+      type: object
+      description: >-
+        Minimal projection of a knowledge.role_substrate skill, for checklist rendering only.
+        Deliberately excludes proficiency/criticality/basis — those are for the delta computation
+        server-side (knowledge module's SubstrateSkill), not needed for the checkbox label/UI.
+      properties:
+        name: { type: string }
+        canonical_name: { type: [string, 'null'] }
+      required: [name]
+    # ---- Blueprint dispute (ADR-013 §4 — the defer-biased edit loop)
+    BlueprintDisputeRequest:
+      type: object
+      properties:
+        task: { $ref: '#/components/schemas/DraftTask' }
+        reason: { type: string }
+      required: [task, reason]
+    BlueprintDisputeResult:
+      type: object
+      properties:
+        disposition: { type: string, enum: [agreed, counter] }
+        message: { type: string }
+      required: [disposition, message]
+    DraftTask:
+      type: object
+      properties:
+        id: { type: string }
+        libraryTaskId: { type: [string, 'null'] }
+        title: { type: string }
+        description: { type: [string, 'null'] }
+        evolveCategory: { type: string, enum: [engage, visualize, organize, learn, venture, elevate] }
+        dependencies: { type: array, items: { type: string } }
+        effortHours: { type: number, minimum: 0 }
+        basis: { type: string, enum: [grounded, inferred] }
+        # ADR-013 — added to the domain type in sub-slice 1 but missed in the contract
+        # at the time; found and fixed here (sub-slice 2). Null for system-added tasks
+        # (the venture task), which have no substrate skill behind them.
+        criticality: { type: [string, 'null'], enum: [required, preferred, differentiating, null] }
+        targetProficiency: { type: [string, 'null'], enum: [awareness, working, expert, null] }
+        skillName: { type: [string, 'null'] }
+        taskType: { type: [string, 'null'], enum: [compound, solo_study, cant_practice_alone, near_free, evidence, null] }
+      required: [id, title, evolveCategory, dependencies, effortHours, basis]
+    # ---- Counsellor assessment (added 1.6.0 — the prose layer alongside BlueprintIdentifyResult.tasks)
+    CounsellorTaskGroup:
+      type: object
+      properties:
+        title: { type: string }
+        rationale: { type: string }
+        tasks:
+          type: array
+          items: { $ref: '#/components/schemas/DraftTask' }
+      required: [title, rationale, tasks]
+    CounsellorAssessment:
+      type: object
+      properties:
+        framing: { type: string }
+        taskGroups:
+          type: array
+          items: { $ref: '#/components/schemas/CounsellorTaskGroup' }
+        throughLine: { type: string }
+      required: [framing, taskGroups, throughLine]
+    CalendarRange:
+      type: object
+      properties:
+        minWeeks: { type: integer, minimum: 0 }
+        maxWeeks: { type: integer, minimum: 0 }
+      required: [minWeeks, maxWeeks]
+    DerivedPath:
+      type: object
+      properties:
+        strategy: { type: string, enum: [fastest, optimal, longest] }
+        tasks:
+          type: array
+          items: { $ref: '#/components/schemas/DraftTask' }
+        probabilityBand: { type: string, enum: [medium, medium_high, high] }
+        basis: { type: string, enum: [grounded, inferred] }
+        landingDefinition: { type: string }
+        effortTotalHours: { type: number, minimum: 0 }
+        calendarRange: { $ref: '#/components/schemas/CalendarRange' }
+        intensityHoursPerWeek: { type: number, minimum: 0 }
+      required: [strategy, tasks, probabilityBand, basis, landingDefinition, effortTotalHours, calendarRange, intensityHoursPerWeek]
+    BlueprintDerivePaths:
+      type: object
+      properties:
+        paths:
+          type: array
+          items: { $ref: '#/components/schemas/DerivedPath' }
+      required: [paths]
+
+    # ---- Blueprint promote (ADR-012 — attaches to activation_session, not core.goal)
+    BlueprintPromoteRequest:
+      type: object
+      properties:
+        sessionId: { type: string, format: uuid }
+        path: { $ref: '#/components/schemas/DerivedPath' }
+      required: [sessionId, path]
+    StoredBlueprint:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        sessionId: { type: string, format: uuid }
+        # Includes 'custom' unlike DerivedPath.strategy — a promoted path may have
+        # been user-edited beyond the three named strategies derivePaths produces.
+        pathStrategy: { type: string, enum: [fastest, optimal, longest, custom] }
+        version: { type: integer, minimum: 1 }
+        status: { type: string, enum: [active, superseded] }
+      required: [id, sessionId, pathStrategy, version, status]
+
+    # ---- Readiness
+    ReadinessDimensions:
+      type: object
+      properties:
+        clarity: { type: integer, minimum: 0, maximum: 100 }
+        capability: { type: integer, minimum: 0, maximum: 100 }
+        execution: { type: integer, minimum: 0, maximum: 100 }
+        opportunity: { type: integer, minimum: 0, maximum: 100 }
+      required: [clarity, capability, execution, opportunity]
+    ReadinessScore:
+      type: object
+      properties:
+        careerReadiness: { type: integer, minimum: 0, maximum: 100 }
+        dimensions: { $ref: '#/components/schemas/ReadinessDimensions' }
+        specVersion: { type: string, example: readiness-spec/v1 }
+        confidence: { $ref: '#/components/schemas/Confidence' }
+        asOf: { type: string, format: date-time }
+      required: [careerReadiness, dimensions, specVersion, asOf]
+    ReadinessHistoryPoint:
+      type: object
+      properties:
+        composite: { type: integer, minimum: 0, maximum: 100 }
+        dimensions: { $ref: '#/components/schemas/ReadinessDimensions' }
+        specVersion: { type: string }
+        asOf: { type: string, format: date-time }
+      required: [composite, specVersion, asOf]
+    ReadinessHistoryList:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/ReadinessHistoryPoint' } }
+        page: { $ref: '#/components/schemas/PageMeta' }
+      required: [data, page]
+
+    # ---- Planner
+    Goal:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        priority: { type: integer, minimum: 1, maximum: 5 }
+        targetDate: { type: [string, 'null'], format: date }
+        status: { type: string, enum: [active, paused, achieved, dropped] }
+        createdAt: { type: string, format: date-time }
+      required: [id, title, status, createdAt]
+    GoalCreate:
+      type: object
+      properties:
+        title: { type: string }
+        priority: { type: integer, minimum: 1, maximum: 5, default: 3 }
+        targetDate: { type: [string, 'null'], format: date }
+      required: [title]
+    GoalUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string }
+        priority: { type: integer, minimum: 1, maximum: 5 }
+        targetDate: { type: [string, 'null'], format: date }
+        status: { type: string, enum: [active, paused, achieved, dropped] }
+    Task:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        goalId: { type: string, format: uuid }
+        title: { type: string }
+        status: { type: string, enum: [todo, scheduled, completed, skipped] }
+        scheduledAt: { type: [string, 'null'], format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+      required: [id, goalId, title, status, createdAt]
+    TaskCreate:
+      type: object
+      properties:
+        goalId: { type: string, format: uuid }
+        title: { type: string }
+        scheduledAt: { type: [string, 'null'], format: date-time }
+      required: [goalId, title]
+    TaskUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string }
+        status: { type: string, enum: [todo, scheduled, completed, skipped] }
+        scheduledAt: { type: [string, 'null'], format: date-time }
+    Reflection:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        goalId: { type: [string, 'null'], format: uuid }
+        wentWell: { type: [string, 'null'] }
+        difficult: { type: [string, 'null'] }
+        learned: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+      required: [id, createdAt]
+    ReflectionCreate:
+      type: object
+      properties:
+        goalId: { type: [string, 'null'], format: uuid }
+        wentWell: { type: string }
+        difficult: { type: string }
+        learned: { type: string }
+    ReflectionList:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/Reflection' } }
+        page: { $ref: '#/components/schemas/PageMeta' }
+      required: [data, page]
+    GoalList:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/Goal' } }
+        page: { $ref: '#/components/schemas/PageMeta' }
+      required: [data, page]
+    TaskList:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/Task' } }
+        page: { $ref: '#/components/schemas/PageMeta' }
+      required: [data, page]
+
+    # ---- Outcomes
+    Outcome:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        outcomeClass: { type: string, enum: [hard, soft] }
+        type: { type: string }
+        capture: { type: string, enum: [reported, inferred] }
+        value: { type: [object, 'null'], additionalProperties: true }
+        confidence: { $ref: '#/components/schemas/Confidence' }
+        corroboratedAt: { type: [string, 'null'], format: date-time }
+        decaysAt: { type: [string, 'null'], format: date-time }
+        occurredAt: { type: string, format: date-time }
+      required: [id, outcomeClass, type, capture, occurredAt]
+    OutcomeCreate:
+      type: object
+      properties:
+        outcomeClass: { type: string, enum: [hard, soft] }
+        type:
+          type: string
+          description: One of the hard set (promotion, salary_increase, job_offer, job_change, certification, interview_success) or soft set (confidence_increase, role_clarity, skill_mastery, portfolio_completion).
+        capture: { type: string, enum: [reported, inferred], default: reported }
+        value: { type: object, additionalProperties: true }
+      required: [outcomeClass, type]
+    OutcomeList:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/Outcome' } }
+        page: { $ref: '#/components/schemas/PageMeta' }
+      required: [data, page]
+
+    # ---- Recommendations
+    Recommendation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        category: { type: string, enum: [course, certification, project, role, community] }
+        title: { type: string }
+        score: { type: number, minimum: 0, maximum: 1 }
+        confidence: { $ref: '#/components/schemas/Confidence' }
+        status: { type: string, enum: [suggested, viewed, saved, started, completed, dismissed] }
+        createdAt: { type: string, format: date-time }
+      required: [id, category, title, score, status]
+    RecommendationStatusUpdate:
+      type: object
+      properties:
+        status: { type: string, enum: [suggested, viewed, saved, started, completed, dismissed] }
+      required: [status]
+    RecommendationList:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/Recommendation' } }
+        page: { $ref: '#/components/schemas/PageMeta' }
+      required: [data, page]
+
+    # ---- Coach
+    Citation:
+      type: object
+      properties:
+        type: { type: string, enum: [recommendation, twin_fact, knowledge] }
+        id: { type: string }
+      required: [type, id]
+    SuggestedAction:
+      type: object
+      properties:
+        type: { type: string, enum: [create_goal, create_task, record_outcome, view_recommendation] }
+        label: { type: string }
+        payload: { type: object, additionalProperties: true }
+      required: [type, label]
+    CoachTurn:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        conversationId: { type: string, format: uuid }
+        role: { type: string, enum: [user, assistant, tool] }
+        content: { type: [string, 'null'] }
+        toolCalls: { type: [object, 'null'], additionalProperties: true }
+        citations: { type: array, items: { $ref: '#/components/schemas/Citation' } }
+        generatedByModel: { type: [string, 'null'] }
+        promptVersion: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+      required: [id, conversationId, role, createdAt]
+    CoachMessageRequest:
+      type: object
+      properties:
+        conversationId: { type: string, format: uuid }
+        message: { type: string, minLength: 1 }
+      required: [conversationId, message]
+    CoachMessageResponse:
+      type: object
+      properties:
+        turn: { $ref: '#/components/schemas/CoachTurn' }
+        citations: { type: array, items: { $ref: '#/components/schemas/Citation' } }
+        suggestedActions: { type: array, items: { $ref: '#/components/schemas/SuggestedAction' } }
+        signalsEmitted: { type: integer, minimum: 0 }
+      required: [turn, signalsEmitted]
+    Conversation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        startedAt: { type: string, format: date-time }
+        endedAt: { type: [string, 'null'], format: date-time }
+      required: [id, startedAt]
+    ConversationDetail:
+      allOf:
+        - $ref: '#/components/schemas/Conversation'
+        - type: object
+          properties:
+            turns:
+              type: object
+              properties:
+                data: { type: array, items: { $ref: '#/components/schemas/CoachTurn' } }
+                page: { $ref: '#/components/schemas/PageMeta' }
+    ConversationList:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/Conversation' } }
+        page: { $ref: '#/components/schemas/PageMeta' }
+      required: [data, page]
+
+    # ---- Feedback
+    Feedback:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        targetType: { type: string, enum: [coach_turn, recommendation] }
+        targetId: { type: string, format: uuid }
+        rating: { type: integer, enum: [-1, 1] }
+        note: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+      required: [id, targetType, targetId, rating, createdAt]
+    FeedbackCreate:
+      type: object
+      properties:
+        targetType: { type: string, enum: [coach_turn, recommendation] }
+        targetId: { type: string, format: uuid }
+        rating: { type: integer, enum: [-1, 1] }
+        note: { type: string }
+      required: [targetType, targetId, rating]
+    FeedbackList:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/Feedback' } }
+        page: { $ref: '#/components/schemas/PageMeta' }
+      required: [data, page]
+
+    # ---- Profile & consent
+    UserProfile:
+      type: object
+      properties:
+        userId: { type: string, format: uuid }
+        displayName: { type: [string, 'null'] }
+        region: { type: string }
+        locale: { type: string }
+        onboardingState: { type: string, enum: [registered, activated] }
+      required: [userId, region, locale]
+    ProfileUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        displayName: { type: string }
+        region: { type: string }
+        locale: { type: string }
+    ConsentState:
+      type: object
+      additionalProperties: false
+      properties:
+        purposes:
+          type: array
+          items:
+            type: object
+            properties:
+              purpose: { type: string, enum: [processing, ai_personalization, marketing, research] }
+              state: { type: string, enum: [granted, revoked] }
+              occurredAt: { type: string, format: date-time }
+              policyVersion: { type: string }
+            required: [purpose, state]
+      required: [purposes]
+    ConsentUpdate:
+      type: object
+      properties:
+        purpose: { type: string, enum: [processing, ai_personalization, marketing, research] }
+        state: { type: string, enum: [granted, revoked] }
+        policyVersion: { type: string }
+      required: [purpose, state, policyVersion]

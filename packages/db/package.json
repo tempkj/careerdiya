@@ -1,0 +1,6 @@
+{
+  "name": "@careerasana/db",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Supabase migrations, pg_jsonschema schemas, and controlled vocabulary (DB Design Spec v1.3)."
+}

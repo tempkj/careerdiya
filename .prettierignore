@@ -1,0 +1,5 @@
+node_modules
+.next
+dist
+coverage
+packages/api-types/generated/generated.ts
