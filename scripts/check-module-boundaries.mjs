@@ -28,6 +28,13 @@ const ALLOWED = {
   knowledge: ['identity'],
   feedback: ['identity'],
   identity: [],
+  // Free CareerDiya surface (not part of the CareerAsana paid contract) — auth comes from
+  // apps/web/middleware.ts + @/lib/supabase/server, not the identity module, so no
+  // cross-module dependency is needed today. Named 'careerdiya' (no hyphen), not
+  // 'career-diya' — moduleRefRe below only matches [a-z]+, so a hyphenated module name
+  // would be silently truncated to 'career' and this check would stop meaning anything
+  // for it.
+  careerdiya: [],
 };
 
 const modules = readdirSync(MODULES_DIR).filter((d) => statSync(join(MODULES_DIR, d)).isDirectory());
