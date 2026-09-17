@@ -4,6 +4,7 @@ import {
   CareerDiyaLlmCacheStore,
   computeEnrichmentCacheKeyHash,
   extractShadowDirection,
+  findOtherDirectionReference,
   normalizeRoleText,
   validateAndRepairEnrichment,
 } from './enrichmentCache';
@@ -137,6 +138,65 @@ describe('validateAndRepairEnrichment', () => {
 
   it('throws when neither advice nor course recommendations survive validation', () => {
     expect(() => validateAndRepairEnrichment({ advice: '', courseRecommendations: [] })).toThrow();
+  });
+});
+
+describe('findOtherDirectionReference', () => {
+  it('returns null when the advice stays on the chosen direction', () => {
+    const result = findOtherDirectionReference(
+      { advice: 'Start with a small Software Engineering project this week.', courseRecommendations: [] },
+      'software',
+    );
+    expect(result).toBeNull();
+  });
+
+  it('catches the full direction label ("pivot to People, Education & HR")', () => {
+    const result = findOtherDirectionReference(
+      { advice: 'Your direction is Software Engineering — but consider pivoting to People, Education & HR instead.', courseRecommendations: [] },
+      'software',
+    );
+    expect(result).toBe('people');
+  });
+
+  it('catches the bare acronym ("HR")', () => {
+    const result = findOtherDirectionReference(
+      { advice: 'You should really pivot to HR given your people-oriented answers.', courseRecommendations: [] },
+      'software',
+    );
+    expect(result).toBe('people');
+  });
+
+  it('catches an off-topic reference inside a course recommendation, not just advice', () => {
+    const result = findOtherDirectionReference(
+      { advice: 'Keep building your Software Engineering fundamentals.', courseRecommendations: [{ title: 'HR Fundamentals', provider: 'Coursera', type: 'course' }] },
+      'software',
+    );
+    expect(result).toBe('people');
+  });
+
+  it('does not false-positive on common English words that happen to be part of another label (Research, Care, Service, Business, Policy)', () => {
+    const result = findOtherDirectionReference(
+      {
+        advice: 'Do some research on system design, take care to test your code, and think about how your work provides business value under company policy — this is a service-oriented approach to Software Engineering.',
+        courseRecommendations: [],
+      },
+      'software',
+    );
+    expect(result).toBeNull();
+  });
+
+  it('is case-insensitive and word-boundary-safe (does not match "hr" inside another word)', () => {
+    const clean = findOtherDirectionReference(
+      { advice: 'Explore chromatic color theory as part of your visual design polish.', courseRecommendations: [] }, // "chromatic" contains the substring "hr", but not as a standalone word
+      'software',
+    );
+    expect(clean).toBeNull();
+
+    const dirty = findOtherDirectionReference(
+      { advice: 'Consider a move into hr instead.', courseRecommendations: [] },
+      'software',
+    );
+    expect(dirty).toBe('people');
   });
 });
 

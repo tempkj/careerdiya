@@ -37,6 +37,37 @@ For an "Other" (free-text) role, an unmapped role, or any LLM failure/timeout/in
 the page renders the existing pure-deterministic result unchanged. This path never blocks
 page render and never produces a blank or broken result.
 
+### Off-topic-direction prose screen
+The direction *field* can't be overridden by construction (above), but the model can still
+write advice/course-recommendation *prose* that argues for a different direction while
+leaving the field alone ("your direction is Software Engineering... here's why you should
+pivot to HR"). That is the same confidently-wrong failure the eligibility gate exists to
+prevent, arriving through text instead of a field, so it is closed the same way: as a
+validation failure, not a display concern.
+
+- **Prompt constraint:** the system prompt explicitly forbids suggesting, recommending, or
+  arguing for a different direction in the advice/course fields — the model's own
+  independent view belongs only in `shadowDirection`, never in prose. Cheap, catches the
+  common case, not relied on alone.
+- **Validation + fallback (the actual guarantee):** `findOtherDirectionReference`
+  (`enrichmentCache.ts`) screens the validated advice + every course-recommendation field for
+  a reference to any direction other than the chosen one. Match terms per direction are
+  derived, not hand-authored: the direction's own label (`DIRECTION_LABELS`), the Career
+  Library category phrasing career-mapping.js's `DIRECTION_ID_ALIASES` resolves to
+  (`DIRECTION_CANONICAL_SLUG_WORDS`), and any ALL-CAPS segment of the label (mechanically
+  pulled out — `HR`, `UX`) — deliberately *not* every comma-separated word (`Research`,
+  `Care`, `Service`, `Business`, `Policy` are common English words that would false-positive
+  on unrelated, perfectly on-topic advice).
+- On a hit, `getEnrichment` regenerates **once** (`generateAndScreenOnce`, same inputs). If
+  the retry is clean, that response ships and the call still counts as an overall success. If
+  the retry is *also* off-topic, `getEnrichment` throws and the route falls back to the
+  deterministic result exactly like any other enrichment failure — never contradictory prose.
+- Every firing is logged as `llm_offtopic_direction` (with an `attempt` field distinguishing
+  a self-healed first hit from a terminal second one), alongside the existing
+  `llm_cache_hit` / `llm_success` / `llm_timeout` / `llm_invalid` / `llm_error` outcomes.
+- This prompt change bumped `CAREER_DIYA_ENRICHMENT_PROMPT_VERSION` to
+  `career-diya-enrichment/v2` — no stale pre-screen answer is served under the new version.
+
 ### Shadow-logged LLM direction pick (measurement only)
 Each bounded-role call also asks the model which single direction (from the same closed
 enum) it would have picked independently, given the same inputs. This is stored server-side
@@ -48,8 +79,10 @@ without a code change.
 
 ### Server-side, cheap model, capped, cached
 The call lives in a new Next.js route, `POST /api/v1/career-diya/recommend`
-(`apps/web/app/api/v1/career-diya/recommend/route.ts`), inside a new `career-diya` module
-(`apps/web/src/modules/career-diya/`). It is not part of CareerAsana's frozen OpenAPI
+(`apps/web/app/api/v1/career-diya/recommend/route.ts`), inside a new `careerdiya` module
+(`apps/web/src/modules/careerdiya/` — no hyphen: `scripts/check-module-boundaries.mjs`'s
+module-ref regex only matches `[a-z]+`, so a hyphenated module name would be silently
+unchecked). It is not part of CareerAsana's frozen OpenAPI
 contract (`contracts/careerasana_openapi_v1.yaml`) — it is a free CareerDiya surface, not a
 paid CareerAsana endpoint.
 
@@ -82,7 +115,7 @@ the new version.
 
 ## Consequences
 - New Contract-Freeze migration requiring sign-off (see Status).
-- New `career-diya` module boundary entry in `scripts/check-module-boundaries.mjs`.
+- New `careerdiya` module boundary entry in `scripts/check-module-boundaries.mjs`.
 - The "never confidently wrong" and "no fabricated precision" invariants are structurally
   enforced by construction: the LLM cannot change the direction, and the score bar/percentage
   already rendered comes from the deterministic engine untouched.

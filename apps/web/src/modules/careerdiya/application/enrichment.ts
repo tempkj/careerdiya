@@ -7,6 +7,7 @@ import {
   CAREER_DIYA_ENRICHMENT_PROMPT_VERSION,
   computeEnrichmentCacheKeyHash,
   extractShadowDirection,
+  findOtherDirectionReference,
   normalizeRoleText,
   validateAndRepairEnrichment,
   CareerDiyaLlmCacheStore,
@@ -43,11 +44,23 @@ class EnrichmentInvalidOutputError extends Error {
   }
 }
 
+// The direction FIELD can't leak (no such field on CareerDiyaEnrichment) — this is the
+// prose channel: the model wrote advice/course text arguing for a direction other than
+// the one it was told is fixed. Same confidently-wrong failure the deterministic
+// eligibility gate exists to prevent; treated as a validation failure so it goes through
+// the same regenerate-once-then-fail path as any other invalid output.
+class EnrichmentOffTopicDirectionError extends Error {
+  constructor(public readonly referencedDirectionId: DirectionId) {
+    super(`callEnrichmentModel: enrichment prose references '${referencedDirectionId}' instead of the fixed direction`);
+    this.name = 'EnrichmentOffTopicDirectionError';
+  }
+}
+
 // One structured, greppable line per terminal outcome — this is the entire hit-rate/
 // failure-mix signal until this repo has real metrics infra (packages/observability is
 // still an empty stub). event is always one of the values below; never invent a new one
 // inline, so a log query for "event":"llm_x" stays exhaustive.
-type EnrichmentEvent = 'llm_cache_hit' | 'llm_success' | 'llm_timeout' | 'llm_invalid' | 'llm_error';
+type EnrichmentEvent = 'llm_cache_hit' | 'llm_success' | 'llm_timeout' | 'llm_invalid' | 'llm_offtopic_direction' | 'llm_error';
 
 function logEnrichmentEvent(event: EnrichmentEvent, fields: Record<string, unknown>): void {
   const line = JSON.stringify({ event, ts: new Date().toISOString(), ...fields });
@@ -93,10 +106,14 @@ async function callEnrichmentModel(
           "You are a career-exploration assistant for a free, low-stakes tool. A separate " +
           'deterministic system has already chosen the career direction below from a fixed ' +
           'list — you do not choose or change it. Your only job is to write brief, concrete ' +
-          "advice and course-type recommendations for that direction, grounded in the user's " +
-          'answers. Never state a specific percentage or measured confidence — this is an ' +
-          'exploration signal, not a validated assessment. Return ONLY valid JSON — no prose, ' +
-          'no markdown fences.',
+          "advice and course-type recommendations for advancing toward that direction, " +
+          "grounded in the user's answers. Never suggest, recommend, or argue for a " +
+          'different career direction in the advice or course recommendations, even if the ' +
+          "answers seem to point elsewhere — that is not yours to raise here; the model's " +
+          'own independent view belongs only in the separate shadowDirection field, never ' +
+          'in the advice text or course recommendations. Never state a specific percentage ' +
+          'or measured confidence — this is an exploration signal, not a validated ' +
+          'assessment. Return ONLY valid JSON — no prose, no markdown fences.',
         messages: [
           {
             role: 'user',
@@ -147,13 +164,42 @@ Rules:
   }
 }
 
-// Orchestrates mock vs. live, and for live: cache-first, model-on-miss, validate,
+// One full attempt: call the model, validate its shape, then screen the validated prose
+// for a reference to a direction other than the fixed one. Throws
+// EnrichmentOffTopicDirectionError for the screen specifically, so the caller can retry
+// just that case — every other failure (timeout, invalid shape, network) is not retried,
+// unchanged from before this fix.
+async function generateAndScreenOnce(
+  role: string,
+  answers: BoundedAnswers,
+  chosenDirectionId: DirectionId,
+): Promise<{ validated: CareerDiyaEnrichment; rawOutput: unknown }> {
+  const rawOutput = await callEnrichmentModel(role, answers, chosenDirectionId);
+
+  let validated: CareerDiyaEnrichment;
+  try {
+    validated = validateAndRepairEnrichment(rawOutput);
+  } catch (err) {
+    throw new EnrichmentInvalidOutputError(err instanceof Error ? err.message : String(err));
+  }
+
+  const offTopicDirection = findOtherDirectionReference(validated, chosenDirectionId);
+  if (offTopicDirection) {
+    throw new EnrichmentOffTopicDirectionError(offTopicDirection);
+  }
+
+  return { validated, rawOutput };
+}
+
+// Orchestrates mock vs. live, and for live: cache-first, model-on-miss, validate, screen,
 // write-through — the cache check happens BEFORE the model call, so a hit never spends a
-// token (mirrors getGapAnalysis in activation/application/start.ts). Throws on any
-// failure (network, timeout, missing text block, invalid/degenerate JSON) rather than
-// returning a fake success — the caller (the route handler) turns that into a clean error
-// response, and the browser falls back to the pure-deterministic render. Never silently
-// swallowed — every terminal outcome (including this one) is also logged via
+// token (mirrors getGapAnalysis in activation/application/start.ts). A prose reference to
+// another direction gets exactly one regeneration attempt (generateAndScreenOnce); any
+// other failure (network, timeout, missing text block, invalid/degenerate JSON), or a
+// second off-topic hit, throws rather than returning a fake success — the caller (the
+// route handler) turns that into a clean error response, and the browser falls back to
+// the pure-deterministic render (never contradictory prose, never a broken page). Never
+// silently swallowed — every terminal outcome (including this one) is also logged via
 // logEnrichmentEvent below, which is the only hit-rate/failure-mix visibility this
 // feature has (packages/observability is still an empty stub).
 export async function getEnrichment(
@@ -185,15 +231,16 @@ export async function getEnrichment(
   }
 
   try {
-    const rawOutput = await callEnrichmentModel(role, answers, chosenDirectionId);
-
-    let validated: CareerDiyaEnrichment;
+    let generated: { validated: CareerDiyaEnrichment; rawOutput: unknown };
     try {
-      validated = validateAndRepairEnrichment(rawOutput);
+      generated = await generateAndScreenOnce(role, answers, chosenDirectionId);
     } catch (err) {
-      throw new EnrichmentInvalidOutputError(err instanceof Error ? err.message : String(err));
+      if (!(err instanceof EnrichmentOffTopicDirectionError)) throw err;
+      logEnrichmentEvent('llm_offtopic_direction', { ...logFields, attempt: 1, referencedDirectionId: err.referencedDirectionId });
+      generated = await generateAndScreenOnce(role, answers, chosenDirectionId); // one retry; any failure here (including off-topic again) propagates to the outer catch
     }
 
+    const { validated, rawOutput } = generated;
     const shadowLlmDirection = SHADOW_DIRECTION_ENABLED ? extractShadowDirection(rawOutput) : null;
 
     await cache.put({
@@ -210,8 +257,18 @@ export async function getEnrichment(
     return validated;
   } catch (err) {
     const event: EnrichmentEvent =
-      err instanceof EnrichmentTimeoutError ? 'llm_timeout' : err instanceof EnrichmentInvalidOutputError ? 'llm_invalid' : 'llm_error';
-    logEnrichmentEvent(event, { ...logFields, message: err instanceof Error ? err.message : String(err) });
+      err instanceof EnrichmentTimeoutError
+        ? 'llm_timeout'
+        : err instanceof EnrichmentOffTopicDirectionError
+          ? 'llm_offtopic_direction'
+          : err instanceof EnrichmentInvalidOutputError
+            ? 'llm_invalid'
+            : 'llm_error';
+    const extra =
+      err instanceof EnrichmentOffTopicDirectionError
+        ? { attempt: 2, referencedDirectionId: err.referencedDirectionId }
+        : { message: err instanceof Error ? err.message : String(err) };
+    logEnrichmentEvent(event, { ...logFields, ...extra });
     throw err;
   }
 }

@@ -1,11 +1,12 @@
 import { createHash } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { DIRECTION_IDS, isDirectionId, type DirectionId } from '../domain/directions';
+import { DIRECTION_CANONICAL_SLUG_WORDS, DIRECTION_IDS, DIRECTION_LABELS, isDirectionId, type DirectionId } from '../domain/directions';
 import type { BoundedAnswers, CareerDiyaEnrichment, CourseRecommendation } from '../domain/types';
 
-// Bump this to invalidate the entire cache on a prompt change — mirrors
-// TASK_IDENTIFICATION_PROMPT_VERSION / GAP_ANALYSIS_PROMPT_VERSION.
-export const CAREER_DIYA_ENRICHMENT_PROMPT_VERSION = 'career-diya-enrichment/v1';
+// v2: system prompt now explicitly forbids arguing for a direction other than the fixed
+// one (the off-topic-direction screen below). Bump this to invalidate the entire cache on
+// a prompt change — mirrors TASK_IDENTIFICATION_PROMPT_VERSION / GAP_ANALYSIS_PROMPT_VERSION.
+export const CAREER_DIYA_ENRICHMENT_PROMPT_VERSION = 'career-diya-enrichment/v2';
 
 // ── Key hashing ──────────────────────────────────────────────────────────────────
 
@@ -88,6 +89,64 @@ export function validateAndRepairEnrichment(raw: unknown): CareerDiyaEnrichment 
   }
 
   return { advice, courseRecommendations };
+}
+
+// ── Off-topic-direction screen ─────────────────────────────────────────────────────
+//
+// The direction FIELD is already impossible to override by construction (no such field
+// exists on CareerDiyaEnrichment). This screen closes the other channel: the model can
+// still write prose that argues for a different direction while leaving the field alone
+// ("your direction is Software Engineering... here's why you should pivot to HR").
+// That's the same confidently-wrong failure the deterministic eligibility gate exists to
+// prevent, just arriving through text instead of a field — so it is treated as a
+// validation failure, not a display concern.
+//
+// Match terms per direction are DERIVED, not hand-authored: DIRECTION_LABELS (already the
+// enrichment prompt's own vocabulary) plus DIRECTION_CANONICAL_SLUG_WORDS (the Career
+// Library category phrasing career-mapping.js's DIRECTION_ID_ALIASES resolves to — a
+// second, differently-phrased name for the same direction) plus any ALL-CAPS segment of
+// the label (mechanically pulled out — 'HR' from 'People, Education & HR', 'UX' from
+// 'Design, UX & Creative Technology'). Deliberately NOT every comma-separated word in a
+// label (e.g. NOT 'Research', 'Care', 'Service', 'Business', 'Policy' in isolation) —
+// those are common English words that appear constantly in perfectly on-topic advice for
+// an unrelated direction, and word-level matching on them would false-positive on nearly
+// every response.
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function allCapsSegments(label: string): string[] {
+  return label
+    .split(/[,&]/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 1 && s === s.toUpperCase() && /[A-Z]/.test(s))
+    .map((s) => s.toLowerCase());
+}
+
+function matchTermsForDirection(id: DirectionId): string[] {
+  const label = DIRECTION_LABELS[id].toLowerCase();
+  return [label, DIRECTION_CANONICAL_SLUG_WORDS[id], ...allCapsSegments(DIRECTION_LABELS[id])];
+}
+
+// Returns the OTHER direction id referenced in the text, or null if the text stays on
+// the chosen direction. Screens advice + every course recommendation field — a course
+// titled "HR Fundamentals" is just as much an off-topic pivot as a sentence about it.
+export function findOtherDirectionReference(enrichment: CareerDiyaEnrichment, chosenDirectionId: DirectionId): DirectionId | null {
+  const haystack = [
+    enrichment.advice,
+    ...enrichment.courseRecommendations.flatMap((c) => [c.title, c.provider, c.type]),
+  ]
+    .join(' ')
+    .toLowerCase();
+
+  for (const id of DIRECTION_IDS) {
+    if (id === chosenDirectionId) continue;
+    for (const term of matchTermsForDirection(id)) {
+      if (!term || term.length < 2) continue;
+      if (new RegExp(`\\b${escapeRegExp(term)}\\b`, 'i').test(haystack)) return id;
+    }
+  }
+  return null;
 }
 
 // Measurement-only extraction (ADR-CAREERDIY-0015). Never throws — an absent or invalid

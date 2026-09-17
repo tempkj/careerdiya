@@ -18,6 +18,26 @@ export const DIRECTION_LABELS = {
   entrepreneurship: 'Entrepreneurship & Independent Work',
 } as const;
 
+// Word-ified form of career-mapping.js's DIRECTION_ID_ALIASES target ids (its canonical
+// Career Library category slugs, e.g. 'people' -> 'people_education_hr'), duplicated by
+// hand for the same cross-runtime reason as DIRECTION_LABELS above. A second, differently-
+// phrased name per direction — used only as extra recall for the off-topic-direction prose
+// screen (enrichmentCache.ts's findOtherDirectionReference), never for display.
+export const DIRECTION_CANONICAL_SLUG_WORDS = {
+  software: 'technology engineering',
+  data: 'data science research',
+  product: 'product business operations',
+  finance: 'finance economics risk',
+  design: 'design media communication',
+  marketing: 'marketing media communication',
+  people: 'people education hr',
+  law: 'law policy public affairs',
+  health: 'health life sciences care',
+  built: 'architecture built applied',
+  hospitality: 'hospitality travel service',
+  entrepreneurship: 'entrepreneurship independent',
+} as const;
+
 export type DirectionId = keyof typeof DIRECTION_LABELS;
 
 export const DIRECTION_IDS = Object.keys(DIRECTION_LABELS) as DirectionId[];
