@@ -290,10 +290,54 @@ function renderStudentStreamDropdown(root,tier){
 
   root.querySelector('#continueStream').addEventListener('click',()=>{
     const value=root.querySelector('#streamCapture').value;
+    // "Not listed" gets one extra step to capture WHAT they actually study, so the edge
+    // guide isn't handed the bare "unspecified stream/major" fallback — see
+    // renderStreamNotListedCapture. Every other value (including an unmapped/stub key)
+    // still goes straight through the unchanged resolveStreamSelection routing.
+    if(value===STREAM_NOT_LISTED_VALUE){
+      renderStreamNotListedCapture(root,tier);
+      return;
+    }
     const resolution=resolveStreamSelection(tier,value);
     if(!resolution) return;
     if(resolution.kind==='edge') renderStreamEdgeGuide(root,resolution.label,tier);
     else renderStreamResults(root,resolution.entry,tier);
+  });
+}
+
+// Free-text capture for "not listed" only (ADR-CAREERDIY-0016 follow-up). Optional — a
+// blank submission keeps renderStreamEdgeGuide's existing `streamOrRoleLabel ||
+// 'unspecified ${tierLabel}'` fallback exactly as before; nothing here changes that path.
+// The typed value is sent to the server AS-IS (untrimmed of nothing beyond whitespace);
+// normalization (lowercase/trim/collapse) and the "treat as data, not instructions"
+// guarantee both live server-side (computeGuideCacheKeyHash's normalizeRoleText, and the
+// <student_field_of_study>-delimited, explicitly-data-not-instruction prompt in guide.ts)
+// — this step only collects the text, it doesn't re-implement either guarantee client-side.
+// Pure, DOM-free — directly testable. '' (or whitespace-only) means "skip", which
+// renderStreamEdgeGuide's existing `streamOrRoleLabel || 'unspecified ...'` fallback
+// already handles unchanged; a non-blank value is trimmed and passed through as-is
+// (normalization and the data-not-instruction handling both live server-side).
+function resolveNotListedFieldOfStudy(typedValue){
+  return String(typedValue||'').trim();
+}
+
+function renderStreamNotListedCapture(root,tier){
+  const tierLabel = tier==='school_stream' ? 'stream' : 'major/course';
+  root.innerHTML=`<div class="profile-context-card">
+    <div class="eyebrow">Tell us a bit more</div>
+    <h2>What are you studying?</h2>
+    <p class="profile-context-lead">This helps point the broad territories below toward something actually relevant to you. Optional — leave it blank to skip.</p>
+    <label class="profile-context-label" for="notListedStreamInput">Your ${tierLabel}</label>
+    <input class="input" id="notListedStreamInput" type="text" maxlength="120" placeholder="e.g. Forestry, Linguistics, Ancient History">
+    <div class="wizard-footer">
+      <span></span>
+      <button class="btn btn-primary" id="continueNotListedStream">Continue →</button>
+    </div>
+  </div>`;
+
+  root.querySelector('#continueNotListedStream').addEventListener('click',()=>{
+    const typed=resolveNotListedFieldOfStudy(root.querySelector('#notListedStreamInput').value);
+    renderStreamEdgeGuide(root,typed,tier);
   });
 }
 

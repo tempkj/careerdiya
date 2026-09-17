@@ -92,6 +92,34 @@ only, cache-first. Two closed layers against ever issuing a personalised verdict
   exists yet, and professional GROW's "none of these" is explicitly **not** one (it stays
   LLM-free per the section above).
 
+### Free-text field of study for "not listed" (follow-up)
+Selecting "not listed" originally sent the literal string `"unspecified stream"` /
+`"unspecified major"` to the edge guide — zero information about the student's actual
+field. `renderStreamNotListedCapture` (`decision-engine.js`) now asks one optional
+free-text question ("What are you studying?") first; a blank submission still falls back
+to the original `"unspecified ..."` string unchanged.
+
+The typed value is untrusted user input entering an LLM prompt, so it is treated as data,
+not instruction, on both layers used elsewhere in this file:
+- **Prompt constraint (cheap, catches the common case):** the value is delimited in
+  `<student_field_of_study>` tags in the user message, with an explicit system-prompt
+  instruction to treat its contents strictly as a reported fact and never as a directive,
+  even if it reads as one. Bumped `CAREER_DIYA_GUIDE_PROMPT_VERSION` to
+  `career-diya-guide/v2` (new cache key, no stale pre-hardening answer served).
+- **Structural guarantee (the actual guarantee):** even in the worst case — a model that
+  *does* appear to comply with an injected instruction — the existing
+  `validateAndRepairGuideOutput` + `containsVerdictLanguage` screen still catch a
+  verdict-shaped response exactly like any other, because that check runs on the output
+  regardless of why the model produced it. Tested directly (`guide.test.ts`): an
+  instruction-shaped field of study, with a model response that appears to comply,
+  still gets rejected as a verdict.
+
+Normalization was already handled server-side (`computeGuideCacheKeyHash` /
+`CareerDiyaGuideCacheStore.put` both call the existing `normalizeRoleText`) — the free-text
+value flows into the cache key the same way any fixed dataset label already did; no new
+normalization code, and deliberately no synonym canonicalization ("Biotech" ≈
+"Biotechnology") at this volume.
+
 ### Dataset
 `apps/web/public/assets/student-stream-careers-data.js` — a `<script>`-tag-loaded global
 (`STUDENT_STREAM_CAREERS`), matching `decision-data.js`/`career-mapping.js`'s existing
