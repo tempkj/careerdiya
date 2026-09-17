@@ -55,8 +55,11 @@ export async function POST(request: Request) {
   } catch (err) {
     // Never a fake 200 — an empty/invalid/failed enrichment is a real failure. The
     // browser catches this and falls back to the pure-deterministic render; it must
-    // never see a broken page.
-    console.error('[career-diya/recommend] enrichment failed', err);
+    // never see a broken page. getEnrichment already logged the specific cause
+    // (llm_timeout / llm_invalid / llm_error) — this line marks that a request actually
+    // reached the point of falling back, distinct from the cause, so hit-rate/failure-mix
+    // can be read straight from logs once traffic starts.
+    console.error(JSON.stringify({ event: 'llm_fell_back', ts: new Date().toISOString(), directionId: body.chosenDirectionId }));
     return InternalError();
   }
 }
