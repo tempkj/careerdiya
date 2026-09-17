@@ -239,6 +239,13 @@ const GUIDE_DISCLAIMER_HTML = `<div class="notice guide-disclaimer"><b>These are
 // First question of the stream lens: which tier of the dataset applies. Reuses
 // STUDENT_QUESTIONS' own 'stage' question verbatim (same options, same copy) rather than
 // re-authoring a parallel one — one source of truth for "where are you right now."
+// Pure markup builder — directly testable without a DOM. Both buttons share the exact
+// same class list (btn btn-primary entry-choice-btn): "equal prominence" is a structural
+// property of this markup, not a claim that depends on separately-authored CSS.
+function buildStudentEntryChoiceHtml(startCopy){
+  return `<div class="engine-start"><div class="eyebrow">${startCopy.eyebrow}</div><h2>${startCopy.title}</h2><p>${startCopy.copy}</p><div class="engine-benefits">${startCopy.benefits.map(x=>`<span>${x}</span>`).join('')}</div><div class="entry-choice-grid"><button class="btn btn-primary entry-choice-btn" id="startStreamPath"><span class="entry-choice-title">Explore careers from your stream →</span><span class="entry-choice-sub">Fast and concrete — based on your current stream or major</span></button><button class="btn btn-primary entry-choice-btn" id="startPreferencePath"><span class="entry-choice-title">See what actually fits you →</span><span class="entry-choice-sub">7 quick questions — a personalised read, not just your major</span></button></div></div>`;
+}
+
 function renderStudentStageStep(root){
   const stageQuestion = STUDENT_QUESTIONS.find(q=>q.id==='stage');
   root.innerHTML=`<div class="wizard-head"><div class="eyebrow">Explore careers from your stream</div><h2>${stageQuestion.title}</h2><p>${stageQuestion.subtitle}</p></div><div class="wizard-options">${stageQuestion.options.map(([v,l])=>`<button class="wizard-option" data-value="${v}"><span class="radio-dot"></span><span>${l}</span></button>`).join('')}</div>`;
@@ -290,10 +297,10 @@ function renderStudentStreamDropdown(root,tier){
   });
 }
 
-// Deterministic — no LLM, no auth gate: this is the "fast, concrete" lens, a direct read
-// of the curated dataset. (The edge-guide path below DOES require auth, because it's a
-// cost-bearing server call; this path has nothing to gate.)
-function renderStreamResults(root,entry,tier){
+// Pure markup builder — directly testable without a DOM. The "beyond my field" action is
+// always present here regardless of how many careers resolved (ADR-CAREERDIY-0016:
+// co-primary, always-visible, never a buried escape hatch).
+function buildStreamResultsHtml(entry,tier){
   const tierLabel = tier==='school_stream' ? 'stream' : 'major';
   const cards = entry.careerIds.map(id=>{
     const career = typeof canonicalCareerById==='function' ? canonicalCareerById(id) : null;
@@ -304,7 +311,7 @@ function renderStreamResults(root,entry,tier){
       : `<div class="mini-result disabled" aria-disabled="true"><strong>${escHtml(name)}</strong><span>Career options being mapped</span></div>`;
   }).join('');
 
-  root.innerHTML=`<div class="results-wrap">
+  return `<div class="results-wrap">
     <div class="eyebrow">Careers from ${escHtml(entry.label)}</div>
     <h2>Careers that commonly follow from ${escHtml(entry.label)}</h2>
     <p class="results-lead">This is a starting signal based on your ${tierLabel} — not a personalised read, and not a destiny.</p>
@@ -316,8 +323,28 @@ function renderStreamResults(root,entry,tier){
       <div class="actions"><button class="btn btn-primary" id="exploreBeyondField">Explore paths beyond my field →</button></div>
     </div>
   </div>`;
+}
 
+// Deterministic — no LLM, no auth gate: this is the "fast, concrete" lens, a direct read
+// of the curated dataset. (The edge-guide path below DOES require auth, because it's a
+// cost-bearing server call; this path has nothing to gate.)
+function renderStreamResults(root,entry,tier){
+  root.innerHTML=buildStreamResultsHtml(entry,tier);
   root.querySelector('#exploreBeyondField').addEventListener('click',()=>renderWizard(root,null));
+}
+
+// Pure markup builder — directly testable without a DOM. The disclaimer is part of this
+// STATIC initial markup, built before any fetch runs, so "present even if the model omits
+// it" is true by construction: there is no code path that renders this screen without it.
+function buildStreamEdgeGuideHtml(){
+  return `<div class="results-wrap">
+    <div class="eyebrow">Exploring beyond our curated list</div>
+    <h2>Broad territory worth exploring</h2>
+    <p class="results-lead" id="guideStatus">Finding some broad directions to start with…</p>
+    <div class="result-panel" id="guideTerritories" hidden><span class="tag">Worth exploring</span><ul id="guideTerritoriesList"></ul></div>
+    ${GUIDE_DISCLAIMER_HTML}
+    <div class="result-panel next-step"><span class="tag">Prefer the personalised read?</span><h3>Explore paths beyond my field →</h3><div class="actions"><button class="btn btn-primary" id="exploreBeyondFieldGuide">Explore paths beyond my field →</button></div></div>
+  </div>`;
 }
 
 // The one path with no deterministic floor to anchor to — hence the non-removable
@@ -326,14 +353,7 @@ function renderStreamResults(root,entry,tier){
 // dead end, never a broken page, never a shipped verdict.
 async function renderStreamEdgeGuide(root,streamOrRoleLabel,tier){
   const tierLabel = tier==='school_stream' ? 'stream' : 'major';
-  root.innerHTML=`<div class="results-wrap">
-    <div class="eyebrow">Exploring beyond our curated list</div>
-    <h2>Broad territory worth exploring</h2>
-    <p class="results-lead" id="guideStatus">Finding some broad directions to start with…</p>
-    <div class="result-panel" id="guideTerritories" hidden><span class="tag">Worth exploring</span><ul id="guideTerritoriesList"></ul></div>
-    ${GUIDE_DISCLAIMER_HTML}
-    <div class="result-panel next-step"><span class="tag">Prefer the personalised read?</span><h3>Explore paths beyond my field →</h3><div class="actions"><button class="btn btn-primary" id="exploreBeyondFieldGuide">Explore paths beyond my field →</button></div></div>
-  </div>`;
+  root.innerHTML=buildStreamEdgeGuideHtml();
 
   root.querySelector('#exploreBeyondFieldGuide').addEventListener('click',()=>renderWizard(root,null));
 
@@ -644,7 +664,7 @@ async function initDecisionEngine(){
   } else if(audience==='student'){
     // ADR-CAREERDIY-0016: co-primary — both buttons use the SAME class (btn btn-primary),
     // same markup weight, side by side. Neither is styled as the fallback off the other.
-    root.innerHTML=`<div class="engine-start"><div class="eyebrow">${startCopy.eyebrow}</div><h2>${startCopy.title}</h2><p>${startCopy.copy}</p><div class="engine-benefits">${startCopy.benefits.map(x=>`<span>${x}</span>`).join('')}</div><div class="entry-choice-grid"><button class="btn btn-primary entry-choice-btn" id="startStreamPath"><span class="entry-choice-title">Explore careers from your stream →</span><span class="entry-choice-sub">Fast and concrete — based on your current stream or major</span></button><button class="btn btn-primary entry-choice-btn" id="startPreferencePath"><span class="entry-choice-title">See what actually fits you →</span><span class="entry-choice-sub">7 quick questions — a personalised read, not just your major</span></button></div></div>`;
+    root.innerHTML=buildStudentEntryChoiceHtml(startCopy);
   } else {
     root.innerHTML=`<div class="engine-start"><div class="eyebrow">${startCopy.eyebrow}</div><h2>${startCopy.title}</h2><p>${startCopy.copy}</p><div class="engine-benefits">${startCopy.benefits.map(x=>`<span>${x}</span>`).join('')}</div><button class="btn btn-primary" id="startEngine">Start my exploration →</button></div>`;
   }
