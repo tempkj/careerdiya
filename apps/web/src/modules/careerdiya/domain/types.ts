@@ -34,3 +34,29 @@ export interface RecommendRequestBody {
   answers: BoundedAnswers;
   chosenDirectionId: DirectionId;
 }
+
+// ── Edge guide (ADR-CAREERDIY-0016) ─────────────────────────────────────────────────
+
+// Closed on purpose — today's only caller is the student "stream not listed" case. The
+// route's shape is generic (streamOrRole/intent, not studentStream specifically) so a
+// future second caller doesn't need a contract change, but nothing else is wired to it
+// yet; don't widen this set speculatively.
+export const GUIDE_INTENTS = ['stream_unlisted'] as const;
+export type GuideIntent = (typeof GUIDE_INTENTS)[number];
+
+export function isGuideIntent(value: unknown): value is GuideIntent {
+  return typeof value === 'string' && (GUIDE_INTENTS as readonly string[]).includes(value);
+}
+
+// The one thing the edge-guide model is allowed to produce. Deliberately has no field for
+// a single named career, a fit score, or a confidence claim — territories is the only
+// output shape, so there is no schema slot for a personalised verdict to occupy even
+// before containsVerdictLanguage (guideCache.ts) screens the text itself.
+export interface CareerDiyaGuideOutput {
+  territories: string[];
+}
+
+export interface GuideRequestBody {
+  streamOrRole: string;
+  intent: GuideIntent;
+}
