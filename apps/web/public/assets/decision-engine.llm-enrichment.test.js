@@ -19,8 +19,11 @@
   };
   const base={stage:'mid',work:'people',environment:'collaborative',priority:'impact',learning:'mentor',commitment:'plan'};
 
+  // Checks "bumped past the ADR-CD-001 baseline", not an exact string — later fixes
+  // (e.g. Fix A's target-role anchoring) legitimately bump this further; pinning to one
+  // exact value here would make this assertion go stale on every future, unrelated bump.
   assert('FREE_ENGINE_CONFIG.version bumped for the LLM-enrichment envelope change',
-    FREE_ENGINE_CONFIG.version==='1.2-llm-enrichment', FREE_ENGINE_CONFIG.version);
+    FREE_ENGINE_CONFIG.version!=='1.1-context-routing', FREE_ENGINE_CONFIG.version);
 
   // Same fixture as ADR-CD-001's regression test, re-run here: the deterministic gate
   // that decides the rendered direction is completely untouched by this change.

@@ -566,7 +566,10 @@ function renderResults(root,answers,audience,profileMessage='',currentRole=null,
   // anywhere else was the leak. See resolveEffectiveCurrentRole for the isolated, testable
   // form of this rule.
   const effectiveCurrentRole=resolveEffectiveCurrentRole(currentRole);
-  const result=generateRecommendations(answers,audience,effectiveCurrentRole);
+  // Fix A: computed before generateRecommendations so the to-role can be passed into
+  // scoring, not just stored for display.
+  const effectiveTargetRole=(targetRole||'').trim()||null;
+  const result=generateRecommendations(answers,audience,effectiveCurrentRole,effectiveTargetRole);
   const isBoundedRole=!!(effectiveCurrentRole && audience==='professional' && typeof isBoundedRoleValue==='function' && isBoundedRoleValue(effectiveCurrentRole));
   if(window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.setCurrentRole){
     // audience is passed through so setCurrentRole's own backstop guard (profile-auth.js)
@@ -576,8 +579,11 @@ function renderResults(root,answers,audience,profileMessage='',currentRole=null,
   }const top=result.chosen[0].direction;const alternatives=result.chosen.slice(1);const plan=skillPlan(top,answers);const isParent=audience==='parent';
   const signal=result.signal;
   const rationale=result.topSignals.length?result.topSignals.join(', '):'the mix of preferences you selected';
-  const explanation=result.routingNote ? `${result.routingNote} Within that set, your answers highlighted ${rationale}.` : `Your answers highlighted ${rationale}.`;
-  const effectiveTargetRole=(targetRole||'').trim()||null;
+  // Fix A: describe the actual decision path — when the target role anchored the
+  // primary slot, say so explicitly, rather than letting the routing-note text imply
+  // the winner was purely preference-driven when it wasn't.
+  const anchorNote=result.anchoredDirectionId ? ` You told us you're growing toward ${effectiveTargetRole}, so ${top.name} is your primary direction.` : '';
+  const explanation=(result.routingNote ? `${result.routingNote} Within that set, your answers highlighted ${rationale}.` : `Your answers highlighted ${rationale}.`)+anchorNote;
   const storedResult={profileCreated:true,audience,currentRole:effectiveCurrentRole,targetRole:effectiveTargetRole,answers,recommendationMatrixVersion:FREE_ENGINE_CONFIG.version,score:result.chosen[0].score,signal,margin:result.margin,userProfile:result.userProfile,contextRouting:result.context?{intent:result.context.intent,roleFamily:result.context.roleFamily,currentRole:result.context.currentRole}:null,recommendations:result.chosen.map(x=>({id:x.direction.id,name:x.direction.name,score:x.score,similarities:x.similarities,penalty:x.penalty})),recs:result.chosen.map(x=>({id:x.direction.id,name:x.direction.name,skills:x.direction.skills||[],score:x.score,similarities:x.similarities,penalty:x.penalty})),updatedAt:new Date().toISOString()};
   localStorage.setItem('careerdiya_profile',JSON.stringify(storedResult));
   localStorage.removeItem('careerdiya_pending_exploration');

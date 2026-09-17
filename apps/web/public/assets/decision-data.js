@@ -8,9 +8,13 @@ const FREE_ENGINE_CONFIG = {
   // ADR-CAREERDIY-0015: bounded (dropdown) roles now get an additional LLM-enrichment
   // pass (advice + course recommendations) layered on top of the unchanged deterministic
   // pick — the result envelope's meaning changes even though the scoring/gating math
-  // below does not. Historical core.career_diya_exploration rows are immutable snapshots
-  // and are never recomputed against this newer version.
-  version: '1.2-llm-enrichment',
+  // below does not.
+  // Fix A: under GROW, an explicitly-selected to-role now anchors the primary slot
+  // instead of losing to an adjacent direction on raw cosine score (generateRecommendations'
+  // targetRole argument). The eligibility gate itself is unchanged. Historical
+  // core.career_diya_exploration rows are immutable snapshots and are never recomputed
+  // against a newer version.
+  version: '1.3-target-role-anchor',
   categoryWeights: {
     interest: 0.20,
     strengths: 0.20,
@@ -466,7 +470,16 @@ function selectDiverse(recs,n=3){
   return selected;
 }
 
-function generateRecommendations(answers,audience,currentRole=null){
+// Fix A — reverse lookup of ROLE_FAMILY_BY_DIRECTION (existing, already-shipped data;
+// no new taxonomy). Returns the direction id belonging to a given role family, or null.
+function directionIdForRoleFamily(family){
+  for(const [directionId,famId] of Object.entries(ROLE_FAMILY_BY_DIRECTION)){
+    if(famId===family) return directionId;
+  }
+  return null;
+}
+
+function generateRecommendations(answers,audience,currentRole=null,targetRole=null){
   const kind=audience==='parent'?'parent':'adult';
   const directions=DIRECTION_PROFILES[kind];
   const userProfile=buildFreeProfile(answers,audience);
@@ -483,7 +496,36 @@ function generateRecommendations(answers,audience,currentRole=null){
   const primaryPool=context.eligibleFamilies
     ? scored.filter(x=>x.primaryEligible)
     : scored;
-  const ranked=primaryPool.length?primaryPool:scored;
+  let ranked=primaryPool.length?primaryPool:scored;
+
+  // Fix A — target-role anchoring. The eligibility gate above is completely untouched:
+  // this only ever reorders WITHIN the already-gated `ranked` list, never widens or
+  // narrows it, and only applies under GROW with a target role actually selected (the
+  // to-role interstitial is professional+GROW-only, so this is a no-op for every other
+  // case by construction). The user told us which specific role they're growing toward —
+  // that direction wins the primary slot regardless of raw cosine score, so the result
+  // never contradicts a target they explicitly picked. A genuinely stronger adjacent
+  // signal is preserved, not suppressed: it simply moves to the next slot (still surfaced
+  // as "also worth exploring"), rather than displacing the stated target as primary.
+  let anchoredDirectionId=null;
+  if(kind==='adult' && context.intent==='GROW' && targetRole){
+    const targetFamily=roleFamilyForRole(targetRole);
+    const targetDirectionId=targetFamily?directionIdForRoleFamily(targetFamily):null;
+    if(targetDirectionId){
+      const idx=ranked.findIndex(x=>x.direction.id===targetDirectionId);
+      if(idx>0){
+        const anchored=ranked[idx];
+        ranked=[anchored,...ranked.slice(0,idx),...ranked.slice(idx+1)];
+        anchoredDirectionId=targetDirectionId;
+      } else if(idx===0){
+        anchoredDirectionId=targetDirectionId; // already winning on its own merits
+      }
+      // idx===-1: the target's family isn't in the eligible pool at all — shouldn't
+      // happen (the to-role dropdown is built from this exact same pool), but if it ever
+      // does, fail open: no anchoring, ranking proceeds exactly as if no target was set.
+    }
+  }
+
   const chosen=selectDiverse(ranked,3);
   const margin=chosen.length>1?chosen[0].score-chosen[1].score:chosen[0].score;
   const signal=signalFor(chosen[0].score,margin);
@@ -493,7 +535,7 @@ function generateRecommendations(answers,audience,currentRole=null){
   return {
     userProfile,scored,chosen,signal,
     topSignals:topSignals(userProfile,chosen[0].direction),
-    margin,context,routingNote
+    margin,context,routingNote,anchoredDirectionId
   };
 }
 
