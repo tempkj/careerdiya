@@ -41,7 +41,11 @@ async function wireRelatedCareerOptions(){
   try{
     if(window.CareerDiyaProfileAuth.isAuthenticated()){
       const profile=await window.CareerDiyaProfileAuth.getProfile();
-      currentRole=profile?.current_role_title || profile?.current_role || localStorage.getItem('careerdiya_current_role') || null;
+      // Fix B (state-contamination): no localStorage fallback — profile.current_role_title
+      // is now write-gated to professional explorations only (setCurrentRole,
+      // profile-auth.js), so it's the sole trustworthy source here. A parent/student
+      // account correctly has no current role to offer CareerAsana.
+      currentRole=profile?.current_role_title || profile?.current_role || null;
     }
   }catch(_){}
   buttons.forEach(button=>{

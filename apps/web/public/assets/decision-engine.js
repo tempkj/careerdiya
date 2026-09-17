@@ -202,7 +202,6 @@ function renderCurrentRoleStep(root, audience, onContinue){
     });
     root.querySelector('#continueRole').addEventListener('click',()=>{
       if(check.checked){
-        localStorage.setItem('careerdiya_current_role','');
         onContinue(null);
         return;
       }
@@ -213,7 +212,16 @@ function renderCurrentRoleStep(root, audience, onContinue){
         (select.value===OTHER_ROLE_VALUE?other:select).focus();
         return;
       }
-      localStorage.setItem('careerdiya_current_role',value);
+      // Fix B (state-contamination): this value is threaded through as a function
+      // argument the whole way (renderWizard -> renderToRoleStep/gateBeforeResults ->
+      // renderResults) — it is NOT persisted to a global localStorage key anymore. A
+      // global 'careerdiya_current_role' key used to exist here and was read as a
+      // fallback by renderResults/openCareerAsana/career.html whenever their own
+      // currentRole argument was falsy — which leaked a professional's role into
+      // parent/student explorations and the CareerAsana handoff in the same browser,
+      // since the key was never scoped per audience/exploration or cleared. Removed
+      // entirely rather than patched with a clear-on-new-exploration reset, which would
+      // not have closed the concurrent-tab/OAuth-redirect variant of the same leak.
       onContinue(value);
     });
   };
@@ -536,17 +544,35 @@ function gateBeforeResults(root,answers,audience,currentRole=null,targetRole=nul
   });
 }
 
+// Fix B (state-contamination) — pure, directly testable. Trusts ONLY the argument
+// threaded through the current exploration's own call chain; deliberately no fallback to
+// any shared/global storage. A falsy currentRole (parent/student, or a professional who
+// chose "fresher") resolves to null, full stop — never silently backfilled from a
+// different exploration, audience, or browser tab.
+function resolveEffectiveCurrentRole(currentRole){
+  return (currentRole||'').trim() || null;
+}
+
 function renderResults(root,answers,audience,profileMessage='',currentRole=null,targetRole=null){
   const authenticated = !!(window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.isAuthenticated());
   if(!authenticated){
     gateBeforeResults(root,answers,audience);
     return;
   }
-  const effectiveCurrentRole=(currentRole || localStorage.getItem('careerdiya_current_role') || '').trim() || null;
+  // Fix B (state-contamination): no global-localStorage-key fallback. `currentRole` is
+  // already the complete, correctly-threaded value for THIS exploration (professional's
+  // own flow passes it all the way through from renderCurrentRoleStep; parent/student
+  // flows never capture one, so it's legitimately null/absent here) — resolving it from
+  // anywhere else was the leak. See resolveEffectiveCurrentRole for the isolated, testable
+  // form of this rule.
+  const effectiveCurrentRole=resolveEffectiveCurrentRole(currentRole);
   const result=generateRecommendations(answers,audience,effectiveCurrentRole);
   const isBoundedRole=!!(effectiveCurrentRole && audience==='professional' && typeof isBoundedRoleValue==='function' && isBoundedRoleValue(effectiveCurrentRole));
   if(window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.setCurrentRole){
-    window.CareerDiyaProfileAuth.setCurrentRole(effectiveCurrentRole, {isOther: !!effectiveCurrentRole && !isBoundedRole}).catch(err=>console.warn('Career Diya current-role persistence failed:',err));
+    // audience is passed through so setCurrentRole's own backstop guard (profile-auth.js)
+    // can refuse a write for any non-professional render, even if this call site were
+    // ever changed to pass a non-null role for one.
+    window.CareerDiyaProfileAuth.setCurrentRole(effectiveCurrentRole, {isOther: !!effectiveCurrentRole && !isBoundedRole, audience}).catch(err=>console.warn('Career Diya current-role persistence failed:',err));
   }const top=result.chosen[0].direction;const alternatives=result.chosen.slice(1);const plan=skillPlan(top,answers);const isParent=audience==='parent';
   const signal=result.signal;
   const rationale=result.topSignals.length?result.topSignals.join(', '):'the mix of preferences you selected';

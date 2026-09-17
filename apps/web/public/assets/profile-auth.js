@@ -177,7 +177,16 @@
   // ADR-CAREERDIY-0015: isOther distinguishes a bounded dropdown pick from free-typed
   // "Other" text — current_role_title/current_role_other are kept mutually exclusive so
   // a later switch between the two doesn't leave a stale value in the other column.
-  async function setCurrentRole(currentRole = null, { isOther = false } = {}) {
+  //
+  // Fix B (state-contamination): `audience` is a required backstop, not an optional
+  // hint. Only a professional exploration ever legitimately has a current role to
+  // persist — a parent/student render must never write current_role_title/other, even
+  // if some future caller passed a non-null role for one (e.g. via a re-introduced
+  // fallback). This guard runs BEFORE touching the Supabase client at all, so a
+  // misdirected call for a non-professional audience is a clean no-op, not a partial
+  // write or a thrown error that a caller's .catch() would just swallow.
+  async function setCurrentRole(currentRole = null, { isOther = false, audience = null } = {}) {
+    if (audience !== 'professional') return null;
     const client = getSupabaseClient();
     const { data: sessionData, error: sessionError } = await client.auth.getSession();
     if (sessionError) throw sessionError;
@@ -355,13 +364,23 @@
     return data || null;
   }
 
+  // Fix B (state-contamination) — pure, directly testable, exported below for tests.
+  // Trusts ONLY the argument the calling page passed; no fallback to any shared storage.
+  function resolveHandoffCurrentRole(currentRole) {
+    return (currentRole || '').trim() || null;
+  }
+
   async function openCareerAsana({ desiredRole, currentRole = null, careerId = null } = {}) {
     const client = getSupabaseClient();
     const { data, error } = await client.auth.getSession();
     if (error) throw error;
     const session = data && data.session;
-    const effectiveCurrentRole =
-      (currentRole || localStorage.getItem('careerdiya_current_role') || '').trim() || null;
+    // Fix B (state-contamination): no global-localStorage-key fallback. The CareerAsana
+    // handoff must never carry a currentRole the calling page's own exploration didn't
+    // produce — callers pass profile.current_role_title (now write-gated to professional
+    // explorations only, see setCurrentRole) or nothing at all; this function trusts only
+    // that argument.
+    const effectiveCurrentRole = resolveHandoffCurrentRole(currentRole);
     const next = `/activate?source=careerdiya&desiredRole=${encodeURIComponent(desiredRole || '')}&currentRole=${encodeURIComponent(effectiveCurrentRole || '')}&careerId=${encodeURIComponent(careerId || '')}`;
 
     if (!session || !session.access_token || !session.refresh_token) {
@@ -387,5 +406,5 @@
     }
   }
 
-  window.CareerDiyaProfileAuth = { openCareerAsana, setCurrentRole, signUp, signIn, signInWithProvider, handleOAuthReturn, refreshLocalSession, ensureProfile, getProfile, saveProfile, getEducationRecords, getExperienceRecords, saveBackground, saveExploration, getSavedExploration, setAudience, signOut, getSession, isAuthenticated };
+  window.CareerDiyaProfileAuth = { openCareerAsana, setCurrentRole, resolveHandoffCurrentRole, signUp, signIn, signInWithProvider, handleOAuthReturn, refreshLocalSession, ensureProfile, getProfile, saveProfile, getEducationRecords, getExperienceRecords, saveBackground, saveExploration, getSavedExploration, setAudience, signOut, getSession, isAuthenticated };
 })();
