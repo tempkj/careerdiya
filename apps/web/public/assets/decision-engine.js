@@ -220,6 +220,164 @@ function renderCurrentRoleStep(root, audience, onContinue){
   draw(initialRole, false);
 }
 
+// ── ADR-CAREERDIY-0016: student co-primary entry ──────────────────────────────────
+//
+// "Explore careers from your stream" and "See what actually fits you" (the unmodified
+// 7-question wizard) are CO-PRIMARY — same button class, same visual weight, wired in
+// initDecisionEngine's start-screen click handler. Neither demotes the other. A student
+// who picks the stream lens still gets an always-visible "beyond my field" option on the
+// results screen below, into the exact same preference wizard.
+
+const STREAM_NOT_LISTED_VALUE='__stream_not_listed__';
+
+// Non-removable per ADR-CAREERDIY-0016: injected into the template unconditionally,
+// before the guide fetch even starts, and never touched by fetch success/failure — the
+// model's own output has no way to omit or alter this text because it is never sourced
+// from the model at all.
+const GUIDE_DISCLAIMER_HTML = `<div class="notice guide-disclaimer"><b>These are general starting points, not a personalised read.</b> For a direction matched to you specifically, <a href="explore.html?audience=student&amp;start=1">run the free explorer →</a> or <a href="counselling.html">talk to a counsellor →</a>.</div>`;
+
+// First question of the stream lens: which tier of the dataset applies. Reuses
+// STUDENT_QUESTIONS' own 'stage' question verbatim (same options, same copy) rather than
+// re-authoring a parallel one — one source of truth for "where are you right now."
+function renderStudentStageStep(root){
+  const stageQuestion = STUDENT_QUESTIONS.find(q=>q.id==='stage');
+  root.innerHTML=`<div class="wizard-head"><div class="eyebrow">Explore careers from your stream</div><h2>${stageQuestion.title}</h2><p>${stageQuestion.subtitle}</p></div><div class="wizard-options">${stageQuestion.options.map(([v,l])=>`<button class="wizard-option" data-value="${v}"><span class="radio-dot"></span><span>${l}</span></button>`).join('')}</div>`;
+  elsLocal('.wizard-option',root).forEach(b=>b.addEventListener('click',()=>{
+    const tier = b.dataset.value==='late_school' ? 'school_stream' : 'ug_major';
+    renderStudentStreamDropdown(root,tier);
+  }));
+}
+
+// Pure, DOM-free decision logic — directly testable without a browser. Given a tier and
+// the selected dropdown value, decides whether to show deterministic stream results or
+// fall through to the edge guide. Never returns something that would produce a blank
+// screen: an unmapped key AND a known-but-content-empty key both route to 'edge', exactly
+// like an explicit "not listed" pick (ADR-CAREERDIY-0016).
+function resolveStreamSelection(tier,value){
+  if(!value) return null;
+  if(value===STREAM_NOT_LISTED_VALUE) return {kind:'edge', label:''};
+  const entry = typeof streamCareersFor==='function' ? streamCareersFor(tier,value) : null;
+  if(!entry || !entry.careerIds || !entry.careerIds.length) return {kind:'edge', label: entry ? entry.label : ''};
+  return {kind:'results', entry};
+}
+
+function renderStudentStreamDropdown(root,tier){
+  const options = typeof streamOptionsFor==='function' ? streamOptionsFor(tier) : null;
+  const tierLabel = tier==='school_stream' ? 'stream' : 'major';
+  const optionsHtml = (options||[]).map(o=>`<option value="${escHtml(o.key)}">${escHtml(o.label)}</option>`).join('');
+  root.innerHTML=`<div class="profile-context-card">
+    <div class="eyebrow">Explore careers from your ${tierLabel}</div>
+    <h2>What's your ${tierLabel}?</h2>
+    <p class="profile-context-lead">We'll show you careers that commonly follow from it. This is a starting signal, not a destiny — "Explore paths beyond my field" is always there on the next screen if you want it.</p>
+    <label class="profile-context-label" for="streamCapture">Your ${tierLabel}</label>
+    <select class="input" id="streamCapture">
+      <option value="">Select your ${tierLabel}…</option>
+      ${optionsHtml}
+      <option value="${STREAM_NOT_LISTED_VALUE}">My ${tierLabel} isn't listed</option>
+    </select>
+    <div class="wizard-footer">
+      <span></span>
+      <button class="btn btn-primary" id="continueStream">Continue →</button>
+    </div>
+  </div>`;
+
+  root.querySelector('#continueStream').addEventListener('click',()=>{
+    const value=root.querySelector('#streamCapture').value;
+    const resolution=resolveStreamSelection(tier,value);
+    if(!resolution) return;
+    if(resolution.kind==='edge') renderStreamEdgeGuide(root,resolution.label,tier);
+    else renderStreamResults(root,resolution.entry,tier);
+  });
+}
+
+// Deterministic — no LLM, no auth gate: this is the "fast, concrete" lens, a direct read
+// of the curated dataset. (The edge-guide path below DOES require auth, because it's a
+// cost-bearing server call; this path has nothing to gate.)
+function renderStreamResults(root,entry,tier){
+  const tierLabel = tier==='school_stream' ? 'stream' : 'major';
+  const cards = entry.careerIds.map(id=>{
+    const career = typeof canonicalCareerById==='function' ? canonicalCareerById(id) : null;
+    const name = career ? career.canonicalName : id;
+    const verified = !!(career && career.canonicalStatus==='verified');
+    return verified
+      ? `<a class="mini-result" href="career.html?direction=${encodeURIComponent(career.id)}&audience=student"><strong>${escHtml(name)}</strong><span>Explore →</span></a>`
+      : `<div class="mini-result disabled" aria-disabled="true"><strong>${escHtml(name)}</strong><span>Career options being mapped</span></div>`;
+  }).join('');
+
+  root.innerHTML=`<div class="results-wrap">
+    <div class="eyebrow">Careers from ${escHtml(entry.label)}</div>
+    <h2>Careers that commonly follow from ${escHtml(entry.label)}</h2>
+    <p class="results-lead">This is a starting signal based on your ${tierLabel} — not a personalised read, and not a destiny.</p>
+    <div class="result-panel"><span class="tag">Stream-relevant careers</span>${cards}</div>
+    <div class="result-panel next-step">
+      <span class="tag">Want the personalised read?</span>
+      <h3>Explore paths beyond my field →</h3>
+      <p>Your ${tierLabel} is a starting point, not your only option. The 7-question path looks at how you actually think and work, not just what you studied.</p>
+      <div class="actions"><button class="btn btn-primary" id="exploreBeyondField">Explore paths beyond my field →</button></div>
+    </div>
+  </div>`;
+
+  root.querySelector('#exploreBeyondField').addEventListener('click',()=>renderWizard(root,null));
+}
+
+// The one path with no deterministic floor to anchor to — hence the non-removable
+// disclaimer (injected below, unconditionally, before the fetch even starts) and a
+// static, LLM-free fallback on ANY failure, including no active session at all: never a
+// dead end, never a broken page, never a shipped verdict.
+async function renderStreamEdgeGuide(root,streamOrRoleLabel,tier){
+  const tierLabel = tier==='school_stream' ? 'stream' : 'major';
+  root.innerHTML=`<div class="results-wrap">
+    <div class="eyebrow">Exploring beyond our curated list</div>
+    <h2>Broad territory worth exploring</h2>
+    <p class="results-lead" id="guideStatus">Finding some broad directions to start with…</p>
+    <div class="result-panel" id="guideTerritories" hidden><span class="tag">Worth exploring</span><ul id="guideTerritoriesList"></ul></div>
+    ${GUIDE_DISCLAIMER_HTML}
+    <div class="result-panel next-step"><span class="tag">Prefer the personalised read?</span><h3>Explore paths beyond my field →</h3><div class="actions"><button class="btn btn-primary" id="exploreBeyondFieldGuide">Explore paths beyond my field →</button></div></div>
+  </div>`;
+
+  root.querySelector('#exploreBeyondFieldGuide').addEventListener('click',()=>renderWizard(root,null));
+
+  const statusEl = root.querySelector('#guideStatus');
+  const renderFallback=()=>{ if(statusEl) statusEl.textContent="We couldn't generate tailored territories right now — here's how to keep exploring:"; };
+
+  const session = window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.getSession && window.CareerDiyaProfileAuth.getSession();
+  const token = session && session.access_token;
+  if(!token){
+    // No account yet — the guide call requires auth (a cost-bearing server call). Never
+    // a dead end: fall back to the static message + disclaimer + handoff, same as any
+    // other guide failure.
+    renderFallback();
+    return;
+  }
+
+  const controller=new AbortController();
+  const timeoutId=setTimeout(()=>controller.abort(),8000);
+  try{
+    const res=await fetch('/api/v1/career-diya/guide',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+      body:JSON.stringify({streamOrRole:streamOrRoleLabel||`unspecified ${tierLabel}`,intent:'stream_unlisted'}),
+      signal:controller.signal
+    });
+    if(!res.ok) throw new Error('Guide request failed with status '+res.status);
+    const data=await res.json();
+    if(!data || !Array.isArray(data.territories) || !data.territories.length) throw new Error('Guide response missing territories.');
+
+    if(statusEl) statusEl.textContent='A few broad directions to start exploring:';
+    const list=root.querySelector('#guideTerritoriesList');
+    const panel=root.querySelector('#guideTerritories');
+    if(list && panel){
+      list.innerHTML=data.territories.map(t=>`<li>${escHtml(t)}</li>`).join('');
+      panel.hidden=false;
+    }
+  }catch(err){
+    console.warn('Career Diya edge guide unavailable — showing static fallback:',err && err.message);
+    renderFallback();
+  }finally{
+    clearTimeout(timeoutId);
+  }
+}
+
 function gateBeforeResults(root,answers,audience,currentRole=null,targetRole=null){
   const existing = window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.isAuthenticated();
   if (existing) {
@@ -479,13 +637,26 @@ async function initDecisionEngine(){
     } catch(_) {}
   }
   const audience=currentAudience();
-  const startCopy=audience==='parent'?{eyebrow:'Free · a few minutes',title:'Explore your child’s direction before choosing a stream.',copy:'Answer a few questions about your child’s stage, interests and strengths. We will suggest broad directions worth exploring and a sensible next step.',benefits:['✓ Free profile to see your result','✓ No pressure to buy','✓ Use an age-designed assessment when you need deeper evidence']} : audience==='student'?{eyebrow:'Free · a few minutes',title:'Explore your direction before committing to a field.',copy:'Answer a few questions about your study stage, interests, strengths and goals. We will suggest broad directions worth exploring and a practical next step.',benefits:['✓ Free profile to see your result','✓ No pressure to buy','✓ Designed for students aged 16+']} : {eyebrow:'Free · 5–7 minutes',title:'Get a starting direction before you buy anything.',copy:'Answer a few questions about your situation, work preferences and goals. We will turn that into a short list of directions worth exploring and the most sensible next action.',benefits:['✓ Free profile to see your result','✓ No pressure to buy','✓ Skill Diya connection']};
-  if(qs().get('intent')||(!qs().get('wizard')&&qs().get('start')==='1'))renderWizard(root);else root.innerHTML=`<div class="engine-start"><div class="eyebrow">${startCopy.eyebrow}</div><h2>${startCopy.title}</h2><p>${startCopy.copy}</p><div class="engine-benefits">${startCopy.benefits.map(x=>`<span>${x}</span>`).join('')}</div><button class="btn btn-primary" id="startEngine">Start my exploration →</button></div>`;
+  const startCopy=audience==='parent'?{eyebrow:'Free · a few minutes',title:'Explore your child’s direction before choosing a stream.',copy:'Answer a few questions about your child’s stage, interests and strengths. We will suggest broad directions worth exploring and a sensible next step.',benefits:['✓ Free profile to see your result','✓ No pressure to buy','✓ Use an age-designed assessment when you need deeper evidence']} : audience==='student'?{eyebrow:'Free · a few minutes',title:'Two ways to start exploring.',copy:'Jump straight to careers that come from your stream or major, or answer 7 quick questions for a read based on how you actually think and work. Neither is the "real" one — pick whichever you want first.',benefits:['✓ Free profile to see your result','✓ No pressure to buy','✓ Designed for students aged 16+']} : {eyebrow:'Free · 5–7 minutes',title:'Get a starting direction before you buy anything.',copy:'Answer a few questions about your situation, work preferences and goals. We will turn that into a short list of directions worth exploring and the most sensible next action.',benefits:['✓ Free profile to see your result','✓ No pressure to buy','✓ Skill Diya connection']};
+  const autoStartWizard = qs().get('intent')||(!qs().get('wizard')&&qs().get('start')==='1');
+  if(autoStartWizard){
+    renderWizard(root);
+  } else if(audience==='student'){
+    // ADR-CAREERDIY-0016: co-primary — both buttons use the SAME class (btn btn-primary),
+    // same markup weight, side by side. Neither is styled as the fallback off the other.
+    root.innerHTML=`<div class="engine-start"><div class="eyebrow">${startCopy.eyebrow}</div><h2>${startCopy.title}</h2><p>${startCopy.copy}</p><div class="engine-benefits">${startCopy.benefits.map(x=>`<span>${x}</span>`).join('')}</div><div class="entry-choice-grid"><button class="btn btn-primary entry-choice-btn" id="startStreamPath"><span class="entry-choice-title">Explore careers from your stream →</span><span class="entry-choice-sub">Fast and concrete — based on your current stream or major</span></button><button class="btn btn-primary entry-choice-btn" id="startPreferencePath"><span class="entry-choice-title">See what actually fits you →</span><span class="entry-choice-sub">7 quick questions — a personalised read, not just your major</span></button></div></div>`;
+  } else {
+    root.innerHTML=`<div class="engine-start"><div class="eyebrow">${startCopy.eyebrow}</div><h2>${startCopy.title}</h2><p>${startCopy.copy}</p><div class="engine-benefits">${startCopy.benefits.map(x=>`<span>${x}</span>`).join('')}</div><button class="btn btn-primary" id="startEngine">Start my exploration →</button></div>`;
+  }
   const start=document.getElementById('startEngine');
   if(start) start.addEventListener('click',()=>{
     const aud=currentAudience();
     if(aud==='professional') renderCurrentRoleStep(root,aud,(role)=>renderWizard(root,role));
     else renderWizard(root,null);
   });
+  const startStream=document.getElementById('startStreamPath');
+  if(startStream) startStream.addEventListener('click',()=>renderStudentStageStep(root));
+  const startPreference=document.getElementById('startPreferencePath');
+  if(startPreference) startPreference.addEventListener('click',()=>renderWizard(root,null));
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initDecisionEngine);else initDecisionEngine();
