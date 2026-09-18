@@ -216,6 +216,13 @@
     const { data: sessionData } = await client.auth.getSession();
     const user = sessionData && sessionData.session && sessionData.session.user;
     if (!user) throw new Error('You need to be signed in to save your profile.');
+    // Fix (state-contamination, second write path): profile.html's "Current Role" field
+    // is shown and editable regardless of account audience — this was never touched by
+    // the earlier setCurrentRole() gate (renderResults.js), because it's a completely
+    // separate save path. Same principle applied here: current_role_title/current_role_other
+    // persist only for a professional account. A student/parent submitting the form still
+    // saves every OTHER field normally; only these two are dropped.
+    const isProfessional = values.audience === 'professional';
     const payload = {
       user_id: user.id,
       display_name: values.display_name || '',
@@ -226,8 +233,8 @@
       institution: values.institution || null,
       field_of_study: values.field_of_study || null,
       graduation_year: values.graduation_year || null,
-      current_role_title: values.current_role_title || values.current_role || null,
-      current_role_other: values.current_role_other || null,
+      current_role_title: isProfessional ? (values.current_role_title || values.current_role || null) : null,
+      current_role_other: isProfessional ? (values.current_role_other || null) : null,
       industry: values.industry || null,
       industry_other: values.industry_other || null,
       experience_years: values.experience_years || null,

@@ -12,7 +12,13 @@
  * writer, anywhere); setCurrentRole refuses to persist a role for any non-professional
  * audience, before ever touching the Supabase client; the CareerAsana handoff never
  * sources a role from anywhere but its own argument; a normal professional GROW
- * exploration still threads its own role correctly (no regression).
+ * exploration still threads its own role correctly (no regression); saveProfile
+ * (profile.html's separate "Current Role" field) also refuses to write current_role_title/
+ * current_role_other for a non-professional account, without dropping the rest of the save.
+ *
+ * The read-side fix (career.html's CareerAsana handoff buttons) is NOT covered here — see
+ * career.state-leak-fix.test.js, which needs a different (Node/vm-based) harness because
+ * career.html's inline script has auto-running logic this simpler harness doesn't stub.
  */
 (async function () {
   const failures = [];
@@ -106,6 +112,31 @@
   }
 
   localStorage.removeItem('careerdiya_current_role'); // clean up the simulated leftover
+
+  // ── Round 2: saveProfile (profile.html) — the second, separate write path ───────────
+  // Found after the first fix shipped: profile.html's "Current Role" field is shown and
+  // editable regardless of account audience, and saveProfile() wrote it unconditionally —
+  // a completely separate code path from setCurrentRole/renderResults, untouched by the
+  // first round of this fix. Same principle, applied here too.
+
+  {
+    const before = recordedUpserts.length;
+    const result = await auth.saveProfile({ display_name: 'Test Student', audience: 'student', current_role_title: 'Software Engineer' });
+    assert('saveProfile: a student account still saves successfully (only current_role_* is dropped, not the whole save)',
+      result && result.display_name === 'Test Student');
+    assert('saveProfile: student account never gets current_role_title written, even when submitted',
+      recordedUpserts[recordedUpserts.length - 1].current_role_title === null &&
+      recordedUpserts[recordedUpserts.length - 1].current_role_other === null,
+      recordedUpserts[recordedUpserts.length - 1]);
+    assert('saveProfile: an upsert did happen (for the other fields) — this is a field-level drop, not a silent no-op of the whole call',
+      recordedUpserts.length === before + 1);
+  }
+
+  {
+    const result = await auth.saveProfile({ display_name: 'Test Pro', audience: 'professional', current_role_title: 'Software Developer' });
+    assert('saveProfile: a professional account writes current_role_title exactly as submitted (regression)',
+      result && result.current_role_title === 'Software Developer');
+  }
 
   const passed = failures.length === 0;
   console.log(passed ? 'FIX-B-STATE-LEAK: ALL PASS' : 'FIX-B-STATE-LEAK: FAILURES', failures);

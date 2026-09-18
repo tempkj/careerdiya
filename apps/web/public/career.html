@@ -20,6 +20,12 @@
 const p=new URLSearchParams(location.search);
 const directionId=p.get('direction');
 const careerId=p.get('careerId');
+// Fix (state-contamination, read side): the audience this PAGE VIEW is in — propagated
+// end-to-end from explore.html/dashboard.html/paths.html. core.profile.current_role_title
+// is a single per-account value, not scoped per audience, so it must only ever be offered
+// to the CareerAsana handoff when THIS page view is explicitly professional. Missing/
+// unknown audience fails closed (no currentRole), never assumed professional.
+const audience=p.get('audience');
 const selectedCountry=(p.get('country')||localStorage.getItem('careerDiyaCountry')||'India');
 const selectedLanguage=(p.get('language')||localStorage.getItem('careerDiyaLanguage')||'English');
 const name=p.get('name');
@@ -32,19 +38,19 @@ function renderDirection(mapping){
   const verified=(mapping.careers||[]).filter(c=>c.status==='verified'); const provisional=(mapping.careers||[]).filter(c=>c.status==='provisional');
   const statusText=verified.length?'Verified career mappings available':'Career mappings not yet verified';
   const aliasNote=mapping.requestedDirectionId&&mapping.requestedDirectionId!==mapping.canonicalDirectionId?`<p class="mapping-alias-note">This exploration direction maps to the Career Diya family <strong>${escapeHtml(mapping.name)}</strong>.</p>`:'';
-  detailsEl.innerHTML=`<div class="cards career-direction-grid"><div class="career-card direction-intro"><span class="tag">Direction / family</span><h3>Explore careers within this direction</h3><p>This is a broad exploration direction, not a single Career Library career. Select an exact career below before opening a career profile.</p></div>${aliasNote}<div class="career-card direction-list-card"><div class="direction-list-head"><span class="tag">${escapeHtml(statusText)}</span><span class="mapping-count">${verified.length} verified</span></div><div class="mapping-list">${verified.length?verified.map(c=>`<a class="career-mapping-row" href="career.html?careerId=${encodeURIComponent(c.id)}&direction=${encodeURIComponent(mapping.id)}&country=${encodeURIComponent(selectedCountry)}&language=${encodeURIComponent(selectedLanguage)}"><div><strong>${escapeHtml(c.canonicalName)}</strong><small>Career profile</small></div><span>Explore →</span></a>`).join(''):'<p class="mapping-empty">No verified Career Library careers are mapped to this direction yet. Catalogue verification is required before links are added.</p>'}</div></div>${provisional.length?`<div class="career-card mapping-note"><span class="tag">Not linked yet</span><p>These are provisional candidates and are intentionally not clickable until their exact canonical Career Library records are verified.</p><div class="provisional-list">${provisional.map(c=>`<span>${escapeHtml(c.canonicalName)}</span>`).join('')}</div></div>`:''}</div>`;
+  detailsEl.innerHTML=`<div class="cards career-direction-grid"><div class="career-card direction-intro"><span class="tag">Direction / family</span><h3>Explore careers within this direction</h3><p>This is a broad exploration direction, not a single Career Library career. Select an exact career below before opening a career profile.</p></div>${aliasNote}<div class="career-card direction-list-card"><div class="direction-list-head"><span class="tag">${escapeHtml(statusText)}</span><span class="mapping-count">${verified.length} verified</span></div><div class="mapping-list">${verified.length?verified.map(c=>`<a class="career-mapping-row" href="career.html?careerId=${encodeURIComponent(c.id)}&direction=${encodeURIComponent(mapping.id)}&country=${encodeURIComponent(selectedCountry)}&language=${encodeURIComponent(selectedLanguage)}${audience?'&audience='+encodeURIComponent(audience):''}"><div><strong>${escapeHtml(c.canonicalName)}</strong><small>Career profile</small></div><span>Explore →</span></a>`).join(''):'<p class="mapping-empty">No verified Career Library careers are mapped to this direction yet. Catalogue verification is required before links are added.</p>'}</div></div>${provisional.length?`<div class="career-card mapping-note"><span class="tag">Not linked yet</span><p>These are provisional candidates and are intentionally not clickable until their exact canonical Career Library records are verified.</p><div class="provisional-list">${provisional.map(c=>`<span>${escapeHtml(c.canonicalName)}</span>`).join('')}</div></div>`:''}</div>`;
 }
 async function wireRelatedCareerOptions(){
   const buttons=document.querySelectorAll('.career-related-asana');
   if(!buttons.length||!window.CareerDiyaProfileAuth) return;
   let currentRole=null;
   try{
-    if(window.CareerDiyaProfileAuth.isAuthenticated()){
+    // audience==='professional' gate: see the `const audience=...` comment above. Even
+    // with the write side gated, profile.current_role_title can still hold a value from
+    // a genuinely-professional exploration this SAME account did earlier — that value
+    // must not follow the account into a non-professional page view.
+    if(audience==='professional' && window.CareerDiyaProfileAuth.isAuthenticated()){
       const profile=await window.CareerDiyaProfileAuth.getProfile();
-      // Fix B (state-contamination): no localStorage fallback — profile.current_role_title
-      // is now write-gated to professional explorations only (setCurrentRole,
-      // profile-auth.js), so it's the sole trustworthy source here. A parent/student
-      // account correctly has no current role to offer CareerAsana.
       currentRole=profile?.current_role_title || profile?.current_role || null;
     }
   }catch(_){}
@@ -91,7 +97,7 @@ function wireCareerAsanaBridge(career){
   if(!window.CareerDiyaProfileAuth.isAuthenticated()){
     note.textContent='Create a free Career Diya profile to carry this career choice into the deeper planning layer.';
     button.textContent='Sign in to build my path →';
-    button.onclick=()=>{ window.location.href=`auth.html?return=${encodeURIComponent('career.html?careerId='+encodeURIComponent(career.id)+'&direction='+encodeURIComponent(directionId||''))}`; };
+    button.onclick=()=>{ window.location.href=`auth.html?return=${encodeURIComponent('career.html?careerId='+encodeURIComponent(career.id)+'&direction='+encodeURIComponent(directionId||'')+(audience?'&audience='+encodeURIComponent(audience):''))}`; };
     return;
   }
   button.onclick=async()=>{
@@ -99,10 +105,15 @@ function wireCareerAsanaBridge(career){
     const old=button.textContent;
     button.textContent='Opening CareerAsana…';
     try{
-      const profile=await window.CareerDiyaProfileAuth.getProfile();
+      // audience==='professional' gate: see the `const audience=...` comment above.
+      let currentRole=null;
+      if(audience==='professional'){
+        const profile=await window.CareerDiyaProfileAuth.getProfile();
+        currentRole=profile?.current_role_title || profile?.current_role || null;
+      }
       await window.CareerDiyaProfileAuth.openCareerAsana({
         desiredRole: career.canonicalName,
-        currentRole: profile?.current_role_title || profile?.current_role || null,
+        currentRole,
         careerId: career.id
       });
     }catch(err){
@@ -135,7 +146,7 @@ async function renderCareer(career,country=selectedCountry,language=selectedLang
     document.title=`${career.canonicalName} — Career Diya`;
     const retry=document.getElementById('careerLibraryRetryTop'); if(retry) retry.addEventListener('click',()=>renderCareer(career,country,language));
   }catch(err){
-    const backParams=`direction=${encodeURIComponent(directionId||'')}&country=${encodeURIComponent(country)}&language=${encodeURIComponent(language)}`;
+    const backParams=`direction=${encodeURIComponent(directionId||'')}&country=${encodeURIComponent(country)}&language=${encodeURIComponent(language)}${audience?'&audience='+encodeURIComponent(audience):''}`;
     detailsEl.innerHTML=`<div class="career-card career-library-error"><span class="tag">Career profile unavailable</span><h3>We couldn't load this career profile right now.</h3><p>${escapeHtml(err.message||'Please try again.')}</p><div class="actions"><button class="btn btn-primary" type="button" id="careerLibraryRetry">Try again</button><a class="btn btn-secondary" href="career.html?${backParams}">Back to career direction</a></div></div>`;
     const retry=document.getElementById('careerLibraryRetry'); if(retry) retry.addEventListener('click',()=>renderCareer(career,country,language));
   }
