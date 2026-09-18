@@ -346,7 +346,11 @@
       audience,
       answers,
       result,
-      recommendation_matrix_version: result && result.recommendationMatrixVersion ? result.recommendationMatrixVersion : null,
+      // engine_version is the NOT NULL version-stamp column on core.career_diya_exploration.
+      // recommendation_matrix_version (nullable) was a drifted second name for the same
+      // FREE_ENGINE_CONFIG.version concept and is no longer written — engine_version is
+      // now the single source of truth for read and write.
+      engine_version: result && result.recommendationMatrixVersion ? result.recommendationMatrixVersion : null,
       completed_at: new Date().toISOString()
     };
     const { data, error } = await coreTable('career_diya_exploration').insert(payload).select().single();
@@ -362,7 +366,7 @@
     const session = sessionData && sessionData.session;
     if (!session || !session.user) return null;
     const { data, error } = await coreTable('career_diya_exploration')
-      .select('id,user_id,audience,answers,result,recommendation_matrix_version,completed_at')
+      .select('id,user_id,audience,answers,result,engine_version,completed_at')
       .eq('user_id', session.user.id)
       .order('completed_at', { ascending: false })
       .limit(1)
