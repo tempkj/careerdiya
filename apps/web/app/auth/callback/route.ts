@@ -8,7 +8,13 @@ import type { NextRequest } from 'next/server';
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/';
+  const requestedNext = searchParams.get('next') ?? '/';
+  // Only allow same-origin relative paths. The callback is also reachable with a
+  // user-controlled query string, so never turn an absolute/external URL into a
+  // redirect target.
+  const next = requestedNext.startsWith('/') && !requestedNext.startsWith('//') && !requestedNext.includes('\\')
+    ? requestedNext
+    : '/';
 
   if (code) {
     const cookieStore = await cookies();
