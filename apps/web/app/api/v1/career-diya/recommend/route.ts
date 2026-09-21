@@ -1,23 +1,11 @@
 import { createClient } from '@/lib/supabase/server';
 import { getEnrichment, isDirectionId, CAREER_DIYA_ENRICHMENT_PROMPT_VERSION } from '@modules/careerdiya';
+import { isBoundedAnswers } from '@modules/careerdiya';
 import type { BoundedAnswers } from '@modules/careerdiya';
+import { isBoundedRoleValue } from '@modules/careerdiya/domain/roles';
 import { Unauthorized, UnprocessableEntity, InternalError } from '@/lib/api-error';
 
-const REQUIRED_ANSWER_KEYS: (keyof BoundedAnswers)[] = [
-  'stage',
-  'intent',
-  'work',
-  'environment',
-  'priority',
-  'learning',
-  'commitment',
-];
-
-function isBoundedAnswers(value: unknown): value is BoundedAnswers {
-  if (typeof value !== 'object' || value === null) return false;
-  const row = value as Record<string, unknown>;
-  return REQUIRED_ANSWER_KEYS.every((key) => typeof row[key] === 'string' && row[key].trim().length > 0);
-}
+const REQUIRED_ANSWER_KEYS = ['stage','intent','work','environment','priority','learning','commitment'] as const;
 
 // ADR-CAREERDIY-0015: this endpoint enriches an already-chosen direction with prose — it
 // never chooses or overrides the direction itself. That guarantee is enforced by
