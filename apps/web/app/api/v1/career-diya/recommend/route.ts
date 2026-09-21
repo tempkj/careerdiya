@@ -24,9 +24,11 @@ export async function POST(request: Request) {
   }
 
   const role = body.role?.trim();
-  if (!role) return UnprocessableEntity('role is required.');
+  if (!role || !isBoundedRoleValue(role)) {
+    return UnprocessableEntity('role must be one of the approved Career Diya role values.');
+  }
   if (!isBoundedAnswers(body.answers)) {
-    return UnprocessableEntity(`answers must include all of: ${REQUIRED_ANSWER_KEYS.join(', ')}.`);
+    return UnprocessableEntity('answers must use the approved Career Diya answer values.');
   }
   if (!isDirectionId(body.chosenDirectionId)) {
     return UnprocessableEntity('chosenDirectionId must be one of the closed direction ids.');
