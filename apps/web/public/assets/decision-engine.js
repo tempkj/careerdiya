@@ -33,7 +33,7 @@ const PROFESSIONAL_QUESTIONS = [
 ];
 
 function qs(){return new URLSearchParams(location.search);}
-function currentAudience(){const a=qs().get('audience')||localStorage.getItem('careerdiyaAudience');return ['parent','student','professional'].includes(a)?a:'professional';}
+function currentAudience(){const a=qs().get('audience')||localStorage.getItem('careerdiyaAudience');return ['parent','student','professional'].includes(a)?a:null;}
 function questionsForAudience(a){return a==='parent'?PARENT_QUESTIONS:a==='student'?STUDENT_QUESTIONS:PROFESSIONAL_QUESTIONS;}
 function elsLocal(q,p){return [...p.querySelectorAll(q)];}
 function escHtml(s){return String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
