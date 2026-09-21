@@ -5,8 +5,6 @@ import type { BoundedAnswers } from '@modules/careerdiya';
 import { isBoundedRoleValue } from '@modules/careerdiya/domain/roles';
 import { Unauthorized, UnprocessableEntity, InternalError } from '@/lib/api-error';
 
-const REQUIRED_ANSWER_KEYS = ['stage','intent','work','environment','priority','learning','commitment'] as const;
-
 // ADR-CAREERDIY-0015: this endpoint enriches an already-chosen direction with prose — it
 // never chooses or overrides the direction itself. That guarantee is enforced by
 // construction: the response below only ever echoes back `chosenDirectionId` from the
