@@ -53,6 +53,16 @@
   assert('Senior Software Engineer maps to software_engineering',
     r.context.roleFamily==='software_engineering');
 
+  // Student stream lens must open the canonical Career Library career, not treat a
+  // career id such as software_engineering as a Career Diya direction id.
+  const studentStreamHtml=buildStreamResultsHtml(
+    {label:'Computer Science',careerIds:['software_engineering']},
+    'major'
+  );
+  assert('Student stream card uses careerId for canonical career navigation',
+    studentStreamHtml.includes('career.html?careerId=software_engineering&audience=student') &&
+    !studentStreamHtml.includes('career.html?direction=software_engineering&audience=student'));
+
   const passed=failures.length===0;
   console.log(passed?'ADR-CD-001: ALL PASS':'ADR-CD-001: FAILURES',failures);
   window.CAREER_DIYA_ADR_CD_001_TESTS={passed,failures};
