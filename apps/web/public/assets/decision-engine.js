@@ -359,7 +359,7 @@ function buildStreamResultsHtml(entry,tier){
     const name = career ? career.canonicalName : id;
     const verified = !!(career && career.canonicalStatus==='verified');
     return verified
-      ? `<a class="mini-result" href="career.html?direction=${encodeURIComponent(career.id)}&audience=student"><strong>${escHtml(name)}</strong><span>Explore →</span></a>`
+      ? `<a class="mini-result" href="career.html?careerId=${encodeURIComponent(career.id)}&audience=student"><strong>${escHtml(name)}</strong><span>Explore →</span></a>`
       : `<div class="mini-result disabled" aria-disabled="true"><strong>${escHtml(name)}</strong><span>Career options being mapped</span></div>`;
   }).join('');
 

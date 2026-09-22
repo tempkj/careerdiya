@@ -14,6 +14,26 @@ export interface BoundedAnswers {
   commitment: string;
 }
 
+export const BOUNDED_ANSWER_OPTIONS = {
+  stage: ['early', 'mid', 'senior'],
+  intent: ['choice', 'switch', 'growth', 'learning', 'stuck'],
+  work: ['analytical', 'builder', 'creative', 'people', 'quality'],
+  environment: ['structured', 'dynamic', 'collaborative', 'independent'],
+  priority: ['stability', 'growth', 'impact', 'flexibility'],
+  learning: ['project', 'structured', 'mentor', 'self'],
+  commitment: ['explore', 'validate', 'plan', 'act'],
+} as const;
+
+export function isBoundedAnswers(value: unknown): value is BoundedAnswers {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const row = value as Record<string, unknown>;
+  return (Object.keys(BOUNDED_ANSWER_OPTIONS) as (keyof typeof BOUNDED_ANSWER_OPTIONS)[]).every((key) => {
+    const candidate = row[key];
+    return typeof candidate === 'string' &&
+      (BOUNDED_ANSWER_OPTIONS[key] as readonly string[]).includes(candidate);
+  });
+}
+
 export interface CourseRecommendation {
   title: string;
   provider: string;

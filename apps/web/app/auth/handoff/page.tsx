@@ -14,7 +14,15 @@ export default function CareerDiyaHandoffPage() {
         const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
         const accessToken = params.get('access_token');
         const refreshToken = params.get('refresh_token');
-        const next = params.get('next') || '/activate?source=careerdiya';
+        const requestedNext = params.get('next') || '/activate?source=careerdiya';
+        // The handoff fragment is constructed client-side but is still user-controlled
+        // input. Only follow same-origin relative paths after the session is established.
+        const next =
+          requestedNext.startsWith('/') &&
+          !requestedNext.startsWith('//') &&
+          !requestedNext.includes('\\')
+            ? requestedNext
+            : '/activate?source=careerdiya';
 
         if (!accessToken || !refreshToken) {
           throw new Error('The Career Diya session handoff is missing its session data.');

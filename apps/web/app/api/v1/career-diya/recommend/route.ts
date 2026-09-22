@@ -1,23 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
 import { getEnrichment, isDirectionId, CAREER_DIYA_ENRICHMENT_PROMPT_VERSION } from '@modules/careerdiya';
+import { isBoundedAnswers } from '@modules/careerdiya';
 import type { BoundedAnswers } from '@modules/careerdiya';
+import { isBoundedRoleValue } from '@modules/careerdiya/domain/roles';
 import { Unauthorized, UnprocessableEntity, InternalError } from '@/lib/api-error';
-
-const REQUIRED_ANSWER_KEYS: (keyof BoundedAnswers)[] = [
-  'stage',
-  'intent',
-  'work',
-  'environment',
-  'priority',
-  'learning',
-  'commitment',
-];
-
-function isBoundedAnswers(value: unknown): value is BoundedAnswers {
-  if (typeof value !== 'object' || value === null) return false;
-  const row = value as Record<string, unknown>;
-  return REQUIRED_ANSWER_KEYS.every((key) => typeof row[key] === 'string' && row[key].trim().length > 0);
-}
 
 // ADR-CAREERDIY-0015: this endpoint enriches an already-chosen direction with prose — it
 // never chooses or overrides the direction itself. That guarantee is enforced by
@@ -36,9 +22,11 @@ export async function POST(request: Request) {
   }
 
   const role = body.role?.trim();
-  if (!role) return UnprocessableEntity('role is required.');
+  if (!role || !isBoundedRoleValue(role)) {
+    return UnprocessableEntity('role must be one of the approved Career Diya role values.');
+  }
   if (!isBoundedAnswers(body.answers)) {
-    return UnprocessableEntity(`answers must include all of: ${REQUIRED_ANSWER_KEYS.join(', ')}.`);
+    return UnprocessableEntity('answers must use the approved Career Diya answer values.');
   }
   if (!isDirectionId(body.chosenDirectionId)) {
     return UnprocessableEntity('chosenDirectionId must be one of the closed direction ids.');

@@ -46,6 +46,20 @@ function postRequest(body: unknown) {
 }
 
 describe('POST /api/v1/career-diya/recommend — end-to-end hostile-model proof', () => {
+  it('rejects an unbounded role before any model call', async () => {
+    const response = await POST(postRequest({ role: 'Chief Happiness Wizard', answers, chosenDirectionId: 'software' }));
+    expect(response.status).toBe(422);
+    expect(createMessagesMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects answer values outside the closed Career Diya vocabulary', async () => {
+    const invalidAnswers = { ...answers, intent: 'arbitrary-intent' };
+    const response = await POST(postRequest({ role: 'Software Engineer', answers: invalidAnswers, chosenDirectionId: 'software' }));
+    expect(response.status).toBe(422);
+    expect(createMessagesMock).not.toHaveBeenCalled();
+  });
+
+
   beforeEach(() => {
     process.env.ANTHROPIC_API_KEY = 'test-key';
     createMessagesMock.mockReset();
