@@ -111,6 +111,14 @@ function wireCareerAsanaBridge(career){
         const profile=await window.CareerDiyaProfileAuth.getProfile();
         currentRole=profile?.current_role_title || profile?.current_role_other || profile?.current_role || null;
       }
+      // Build my personalized path is the intent signal: persist the Career Direction
+      // before handing the user to CareerAsana. A temporary handoff failure must not lose it.
+      await window.CareerDiyaProfileAuth.upsertCareerDirection({
+        careerId: career.id,
+        careerName: career.canonicalName,
+        status: 'considering',
+        source: 'careerdiya'
+      });
       await window.CareerDiyaProfileAuth.openCareerAsana({
         desiredRole: career.canonicalName,
         currentRole,
