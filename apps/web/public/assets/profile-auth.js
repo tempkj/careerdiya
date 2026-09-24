@@ -409,6 +409,61 @@
     window.location.href = `/auth/handoff#${hash.toString()}`;
   }
 
+
+  async function saveVaultItem(values = {}) {
+    const client = getSupabaseClient();
+    const { data: sessionData, error: sessionError } = await client.auth.getSession();
+    if (sessionError) throw sessionError;
+    const user = sessionData && sessionData.session && sessionData.session.user;
+    if (!user) throw new Error('You need to be signed in to save a Vault item.');
+    const payload = {
+      user_id: user.id,
+      raw_text: String(values.raw_text || '').trim(),
+      item_type: values.item_type || 'other',
+      career_relationship: values.career_relationship || 'undecided',
+      status: values.status || 'active',
+      priority: values.priority || 'normal',
+      context_note: values.context_note || null,
+      linked_career_id: values.linked_career_id || null,
+      linked_direction_id: values.linked_direction_id || null,
+      updated_at: new Date().toISOString()
+    };
+    if (!payload.raw_text) throw new Error('Please enter something to remember.');
+    const { data, error } = await coreTable('career_diya_vault_item').insert(payload).select().single();
+    if (error) throw error;
+    return data;
+  }
+
+  async function getVaultItems() {
+    if (!isAuthenticated()) return [];
+    const { data, error } = await coreTable('career_diya_vault_item')
+      .select('*').order('updated_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  }
+
+  async function upsertCareerDirection({ careerId, careerName, status = 'considering', reason = null, source = 'careerdiya' } = {}) {
+    const client = getSupabaseClient();
+    const { data: sessionData, error: sessionError } = await client.auth.getSession();
+    if (sessionError) throw sessionError;
+    const user = sessionData && sessionData.session && sessionData.session.user;
+    if (!user) throw new Error('You need to be signed in to save a Career Direction.');
+    if (!careerId || !careerName) throw new Error('A canonical career is required.');
+    const { data: existing, error: existingError } = await coreTable('career_diya_direction')
+      .select('*').eq('user_id', user.id).eq('career_id', careerId)
+      .in('status', ['considering','exploring','active','paused']).limit(1).maybeSingle();
+    if (existingError) throw existingError;
+    const payload = { user_id:user.id, career_id:careerId, career_name_snapshot:careerName, status, reason, source, updated_at:new Date().toISOString() };
+    if (existing) {
+      const { data, error } = await coreTable('career_diya_direction').update(payload).eq('id', existing.id).select().single();
+      if (error) throw error;
+      return data;
+    }
+    const { data, error } = await coreTable('career_diya_direction').insert(payload).select().single();
+    if (error) throw error;
+    return data;
+  }
+
   async function signOut() {
     try { await getSupabaseClient().auth.signOut(); }
     finally {
@@ -417,5 +472,5 @@
     }
   }
 
-  window.CareerDiyaProfileAuth = { openCareerAsana, setCurrentRole, resolveHandoffCurrentRole, signUp, signIn, signInWithProvider, handleOAuthReturn, refreshLocalSession, ensureProfile, getProfile, saveProfile, getEducationRecords, getExperienceRecords, saveBackground, saveExploration, getSavedExploration, setAudience, signOut, getSession, isAuthenticated };
+  window.CareerDiyaProfileAuth = { saveVaultItem, getVaultItems, upsertCareerDirection, openCareerAsana, setCurrentRole, resolveHandoffCurrentRole, signUp, signIn, signInWithProvider, handleOAuthReturn, refreshLocalSession, ensureProfile, getProfile, saveProfile, getEducationRecords, getExperienceRecords, saveBackground, saveExploration, getSavedExploration, setAudience, signOut, getSession, isAuthenticated };
 })();
