@@ -450,7 +450,7 @@ async function renderStreamEdgeGuide(root,streamOrRoleLabel,tier){
   }
 }
 
-function gateBeforeResults(root,answers,audience,currentRole=null,targetRole=null){
+function gateBeforeResults(root,answers,audience,currentRole=null,targetRole=null,vaultItemId=null){
   const existing = window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.isAuthenticated();
   if (existing) {
     renderResults(root,answers,audience,'',currentRole,targetRole);
@@ -462,6 +462,7 @@ function gateBeforeResults(root,answers,audience,currentRole=null,targetRole=nul
     answers,
     currentRole: currentRole || null,
     targetRole: targetRole || null,
+    vaultItemId: vaultItemId || null,
     savedAt:new Date().toISOString()
   }));
 
@@ -553,10 +554,10 @@ function resolveEffectiveCurrentRole(currentRole){
   return (currentRole||'').trim() || null;
 }
 
-function renderResults(root,answers,audience,profileMessage='',currentRole=null,targetRole=null){
+function renderResults(root,answers,audience,profileMessage='',currentRole=null,targetRole=null,vaultItemId=null){
   const authenticated = !!(window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.isAuthenticated());
   if(!authenticated){
-    gateBeforeResults(root,answers,audience);
+    gateBeforeResults(root,answers,audience,currentRole,targetRole,vaultItemId);
     return;
   }
   // Fix B (state-contamination): no global-localStorage-key fallback. `currentRole` is
@@ -597,17 +598,18 @@ function renderResults(root,answers,audience,profileMessage='',currentRole=null,
   const nextCopy=isParent?`You highlighted ${rationale}. Start with ${plan.top.join(', ')} and use ${plan.plan}. Then consider the age-designed school-stage assessment for deeper evidence.`:`You highlighted ${rationale}. Start with ${plan.top.join(', ')} and use ${plan.plan}. This is a low-risk way to test whether the direction feels right.`;
   const topMapping = typeof getDirectionCareerMapping==='function' ? getDirectionCareerMapping(top.id) : null;
   const topHasVerifiedCareers = !!(topMapping && (topMapping.careers||[]).some(c=>c.status==='verified'));
+  const vaultParam=vaultItemId?`&vaultItem=${encodeURIComponent(vaultItemId)}`:'';
   const primaryAction=isParent
     ? '<a class="btn btn-primary" href="https://careerdiya.edumilestones.com/career-lab/">Explore school-stage assessment →</a>'
     : topHasVerifiedCareers
-      ? `<a class="btn btn-primary" href="career.html?direction=${encodeURIComponent(top.id)}&audience=${encodeURIComponent(audience)}">Explore careers in ${top.name} →</a>`
+      ? `<a class="btn btn-primary" href="career.html?direction=${encodeURIComponent(top.id)}&audience=${encodeURIComponent(audience)}${vaultParam}">Explore careers in ${top.name} →</a>`
       : `<span class="btn btn-secondary" aria-disabled="true" title="Career Library mappings for this direction are still being verified.">Career options being mapped</span>`;
   const extra=isParent?'<a class="btn btn-secondary" href="explore.html?audience=parent">Start another exploration</a>':`<a class="btn btn-secondary" href="assessment.html?audience=${audience}">Need more confidence?</a>`;
   const renderDirectionLink=(direction,aud) => {
     const m=typeof getDirectionCareerMapping==='function' ? getDirectionCareerMapping(direction.id) : null;
     const hasVerified=!!(m && (m.careers||[]).some(c=>c.status==='verified'));
     return hasVerified
-      ? `<a class="mini-result" href="career.html?direction=${encodeURIComponent(direction.id)}&audience=${encodeURIComponent(aud)}"><strong>${direction.name}</strong><span>Explore →</span></a>`
+      ? `<a class="mini-result" href="career.html?direction=${encodeURIComponent(direction.id)}&audience=${encodeURIComponent(aud)}${vaultParam}"><strong>${direction.name}</strong><span>Explore →</span></a>`
       : `<div class="mini-result disabled" aria-disabled="true"><strong>${direction.name}</strong><span>Career options being mapped</span></div>`;
   };
   const leadCopy="Leave your email and we'll send this exploration summary so you can revisit it — no spam, no pressure to buy.";
@@ -706,20 +708,21 @@ async function initDecisionEngine(){
   const root=document.getElementById('decisionEngine');if(!root)return;
   try { await (window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.handleOAuthReturn ? window.CareerDiyaProfileAuth.handleOAuthReturn() : Promise.resolve()); } catch(err) { /* normal page load can continue */ }
   const pendingRaw=localStorage.getItem('careerdiya_pending_exploration');
+  const vaultItemId=qs().get('vaultItem')||null;
   const resumeRequested=qs().get('resume')==='1';
   if(window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.isAuthenticated()) {
     try {
       if(pendingRaw){
         const pending=JSON.parse(pendingRaw);
         if(pending && pending.answers && pending.audience){
-          renderResults(root,pending.answers,pending.audience,'Your profile is ready — here is your exploration result.',pending.currentRole||null,pending.targetRole||null);
+          renderResults(root,pending.answers,pending.audience,'Your profile is ready — here is your exploration result.',pending.currentRole||null,pending.targetRole||null,pending.vaultItemId||null);
           return;
         }
       }
       if(resumeRequested){
         const saved=JSON.parse(localStorage.getItem('careerdiya_profile')||'null');
         if(saved && saved.answers && saved.audience){
-          renderResults(root,saved.answers,saved.audience,'Here is your saved exploration result.',saved.currentRole||null,saved.targetRole||null);
+          renderResults(root,saved.answers,saved.audience,'Here is your saved exploration result.',saved.currentRole||null,saved.targetRole||null,null);
           return;
         }
         if(window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.getSavedExploration){
