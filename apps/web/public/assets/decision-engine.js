@@ -531,7 +531,7 @@ function gateBeforeResults(root,answers,audience,currentRole=null,targetRole=nul
       if(!window.CareerDiyaProfileAuth) throw new Error('Profile authentication is not loaded.');
       const result=await window.CareerDiyaProfileAuth.signUp({name,email,password,audience});
       if(result.authenticated){
-        renderResults(root,answers,audience,'Your profile is ready — here is your exploration result.',currentRole,targetRole);
+        renderResults(root,answers,audience,'Your profile is ready — here is your exploration result.',currentRole,targetRole,vaultItemId);
         return;
       }
       // Email confirmation is enabled: take the user to the clean sign-in page.
