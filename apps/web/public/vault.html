@@ -51,15 +51,23 @@ list.innerHTML=rows.length?rows.map(x=>{
    if(thought===null)return;
    const raw=thought.trim();
    if(!raw){alert('The captured thought cannot be empty.');return;}
-   const rels=relationships.map(([id,label])=>id+' = '+label).join('\n');
-   const relationshipValue=prompt('Edit context relationship. Current: '+item.career_relationship+'\n\n'+rels,item.career_relationship);
+   const rels=relationships.map(([rid,label])=>rid+' = '+label).join('\n');
+   const relationshipValue=prompt('Edit context relationship. Current: '+item.career_relationship+'\n\nUse one of these values:\n'+rels,item.career_relationship);
    if(relationshipValue===null)return;
-   if(!relationships.some(([rid])=>rid===relationshipValue.trim())){alert('Please use one of the listed relationship values.');return;}
+   const nextRelationship=relationshipValue.trim();
+   if(!relationships.some(([rid])=>rid===nextRelationship)){alert('Please use one of the listed relationship values.');return;}
    const context=prompt('Edit additional context (optional):',item.context_note||'');
    if(context===null)return;
    b.disabled=true;
    try{
-     await updateItem(id,{raw_text:raw,career_relationship:relationshipValue.trim(),context_note:context.trim()||null});
+     const patch={raw_text:raw,career_relationship:nextRelationship,context_note:context.trim()||null};
+     // If the thought's meaning/relationship changes, its old canonical career link may
+     // no longer describe it. Do not silently carry stale career context forward.
+     if(raw!==item.raw_text.trim() || nextRelationship!==item.career_relationship){
+       patch.linked_career_id=null;
+       patch.linked_direction_id=null;
+     }
+     await updateItem(id,patch);
      await load();
    }catch(e){b.disabled=false;alert(e.message||'Could not edit this item.');}
  });
