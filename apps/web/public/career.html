@@ -26,6 +26,7 @@ const careerId=p.get('careerId');
 // to the CareerAsana handoff when THIS page view is explicitly professional. Missing/
 // unknown audience fails closed (no currentRole), never assumed professional.
 const audience=p.get('audience');
+const vaultItemId=p.get('vaultItem');
 const selectedCountry=(p.get('country')||localStorage.getItem('careerDiyaCountry')||'India');
 const selectedLanguage=(p.get('language')||localStorage.getItem('careerDiyaLanguage')||'English');
 const name=p.get('name');
@@ -113,12 +114,19 @@ function wireCareerAsanaBridge(career){
       }
       // Build my personalized path is the intent signal: persist the Career Direction
       // before handing the user to CareerAsana. A temporary handoff failure must not lose it.
-      await window.CareerDiyaProfileAuth.upsertCareerDirection({
+      const direction=await window.CareerDiyaProfileAuth.upsertCareerDirection({
         careerId: career.id,
         careerName: career.canonicalName,
         status: 'considering',
         source: 'careerdiya'
       });
+      if(vaultItemId && window.CareerDiyaProfileAuth.updateVaultItem){
+        await window.CareerDiyaProfileAuth.updateVaultItem(vaultItemId,{
+          status:'converted',
+          linked_career_id:career.id,
+          linked_direction_id:direction?.id||null
+        });
+      }
       await window.CareerDiyaProfileAuth.openCareerAsana({
         desiredRole: career.canonicalName,
         currentRole,
