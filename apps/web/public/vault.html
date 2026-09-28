@@ -20,6 +20,26 @@ function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&l
 relationships.forEach(([id,label])=>{const b=document.createElement('button');b.type='button';b.className='wizard-option';b.dataset.value=id;b.innerHTML='<span class="radio-dot"></span><span>'+esc(label)+'</span>';b.onclick=()=>{relationship=id;document.querySelectorAll('#relationshipOptions .wizard-option').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');};options.appendChild(b);});
 continueBtn.onclick=()=>{if(!textEl.value.trim()){msg.textContent='Add a thought or pursuit first.';return;}contextBlock.classList.remove('hidden');continueBtn.classList.add('hidden');saveBtn.classList.remove('hidden');};
 form.onsubmit=async e=>{e.preventDefault();if(!textEl.value.trim())return;saveBtn.disabled=true;msg.textContent='Saving…';try{await window.CareerDiyaProfileAuth.saveVaultItem({raw_text:textEl.value.trim(),career_relationship:relationship,context_note:document.getElementById('vaultContext').value.trim()||null});form.reset();contextBlock.classList.add('hidden');saveBtn.classList.add('hidden');continueBtn.classList.remove('hidden');relationship='undecided';document.querySelectorAll('#relationshipOptions .wizard-option').forEach(x=>x.classList.remove('selected'));msg.textContent='Saved. Career Diya will keep this in your Vault.';await load();}catch(err){msg.textContent=err.message||'Could not save this item.';}finally{saveBtn.disabled=false;}};
-async function load(){try{const rows=await window.CareerDiyaProfileAuth.getVaultItems();list.innerHTML=rows.length?rows.map(x=>'<div class="career-card" style="margin-bottom:12px"><span class="tag">'+esc((relationships.find(r=>r[0]===x.career_relationship)||['','Not sure yet'])[1])+'</span><h3>'+esc(x.raw_text)+'</h3>'+(x.context_note?'<p>'+esc(x.context_note)+'</p>':'')+'<small>Added '+new Date(x.created_at).toLocaleDateString()+'</small></div>').join(''):'<div class="notice">Your Vault is empty. Add the first thing that has been on your career mind.</div>';}catch(e){list.innerHTML='<div class="notice">We could not load your Vault. Please try again.</div>';}}
+async function updateItem(id,patch){return window.CareerDiyaProfileAuth.updateVaultItem(id,patch);}
+function isCareerCandidate(x){return ['side_income','future_full_time_career','career_exploration','direct_career_pursuit','career_enabler'].includes(x.career_relationship);}
+async function load(){try{
+const rows=await window.CareerDiyaProfileAuth.getVaultItems();
+list.innerHTML=rows.length?rows.map(x=>{
+ const rel=(relationships.find(r=>r[0]===x.career_relationship)||['','Not sure yet'])[1];
+ const candidate=isCareerCandidate(x);
+ return '<div class="career-card" style="margin-bottom:12px">'+
+   '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="tag">'+esc(rel)+'</span><span class="tag" style="background:#eef2fb;color:#213a8f">'+esc(x.priority||'normal')+' priority</span>'+
+   (candidate?'<span class="tag" style="background:#ecfff6;color:#26734d">Career candidate</span>':'')+'</div>'+
+   '<h3>'+esc(x.raw_text)+'</h3>'+(x.context_note?'<p>'+esc(x.context_note)+'</p>':'')+
+   '<small>Added '+new Date(x.created_at).toLocaleDateString()+' · '+esc(x.status||'active')+'</small>'+
+   '<div class="actions" style="margin-top:14px">'+
+   (candidate?'<a class="btn btn-primary" href="explore.html?vaultItem='+encodeURIComponent(x.id)+'">Explore this as a career →</a>':'')+
+   '<button class="btn btn-secondary" type="button" data-priority="'+esc(x.id)+'">'+(x.priority==='high'?'Lower priority':'Mark high priority')+'</button>'+
+   (x.status!=='archived'?'<button class="btn btn-secondary" type="button" data-archive="'+esc(x.id)+'">Archive</button>':'')+
+   '</div></div>';
+ }).join(''):'<div class="notice">Your Vault is empty. Add the first thing that has been on your career mind.</div>';
+ document.querySelectorAll('[data-priority]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{const id=b.dataset.priority;const rows=await window.CareerDiyaProfileAuth.getVaultItems();const item=rows.find(x=>x.id===id);await updateItem(id,{priority:item?.priority==='high'?'normal':'high'});await load();}catch(e){b.disabled=false;alert(e.message||'Could not update priority.');}});
+ document.querySelectorAll('[data-archive]').forEach(b=>b.onclick=async()=>{if(!confirm('Archive this Vault item? It will remain in your history.'))return;b.disabled=true;try{await updateItem(b.dataset.archive,{status:'archived'});await load();}catch(e){b.disabled=false;alert(e.message||'Could not archive this item.');}});
+}catch(e){list.innerHTML='<div class="notice">We could not load your Vault. Please try again.</div>';}}
 (async()=>{const a=window.CareerDiyaProfileAuth;if(!a||!a.isAuthenticated()){location.replace('auth.html?return=vault');return;}await load();})();
 </script></body></html>
