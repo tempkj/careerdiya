@@ -442,6 +442,20 @@
     return data || [];
   }
 
+  async function updateVaultItem(id, values = {}) {
+    if (!isAuthenticated()) throw new Error('You need to be signed in to update your Vault.');
+    if (!id) throw new Error('Vault item id is required.');
+    const allowed = {};
+    ['item_type','career_relationship','status','priority','context_note','linked_career_id','linked_direction_id'].forEach(k => {
+      if (Object.prototype.hasOwnProperty.call(values, k)) allowed[k] = values[k];
+    });
+    allowed.updated_at = new Date().toISOString();
+    const { data, error } = await coreTable('career_diya_vault_item')
+      .update(allowed).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  }
+
   async function upsertCareerDirection({ careerId, careerName, status = 'considering', reason = null, source = 'careerdiya' } = {}) {
     const client = getSupabaseClient();
     const { data: sessionData, error: sessionError } = await client.auth.getSession();
@@ -472,5 +486,5 @@
     }
   }
 
-  window.CareerDiyaProfileAuth = { saveVaultItem, getVaultItems, upsertCareerDirection, openCareerAsana, setCurrentRole, resolveHandoffCurrentRole, signUp, signIn, signInWithProvider, handleOAuthReturn, refreshLocalSession, ensureProfile, getProfile, saveProfile, getEducationRecords, getExperienceRecords, saveBackground, saveExploration, getSavedExploration, setAudience, signOut, getSession, isAuthenticated };
+  window.CareerDiyaProfileAuth = { saveVaultItem, getVaultItems, updateVaultItem, upsertCareerDirection, openCareerAsana, setCurrentRole, resolveHandoffCurrentRole, signUp, signIn, signInWithProvider, handleOAuthReturn, refreshLocalSession, ensureProfile, getProfile, saveProfile, getEducationRecords, getExperienceRecords, saveBackground, saveExploration, getSavedExploration, setAudience, signOut, getSession, isAuthenticated };
 })();
