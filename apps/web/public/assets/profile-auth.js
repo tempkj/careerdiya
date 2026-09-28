@@ -456,6 +456,14 @@
     return data;
   }
 
+  async function getCareerDirections() {
+    if (!isAuthenticated()) return [];
+    const { data, error } = await coreTable('career_diya_direction')
+      .select('*').order('updated_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  }
+
   async function upsertCareerDirection({ careerId, careerName, status = 'considering', reason = null, source = 'careerdiya' } = {}) {
     const client = getSupabaseClient();
     const { data: sessionData, error: sessionError } = await client.auth.getSession();
@@ -486,5 +494,5 @@
     }
   }
 
-  window.CareerDiyaProfileAuth = { saveVaultItem, getVaultItems, updateVaultItem, upsertCareerDirection, openCareerAsana, setCurrentRole, resolveHandoffCurrentRole, signUp, signIn, signInWithProvider, handleOAuthReturn, refreshLocalSession, ensureProfile, getProfile, saveProfile, getEducationRecords, getExperienceRecords, saveBackground, saveExploration, getSavedExploration, setAudience, signOut, getSession, isAuthenticated };
+  window.CareerDiyaProfileAuth = { saveVaultItem, getVaultItems, updateVaultItem, getCareerDirections, upsertCareerDirection, openCareerAsana, setCurrentRole, resolveHandoffCurrentRole, signUp, signIn, signInWithProvider, handleOAuthReturn, refreshLocalSession, ensureProfile, getProfile, saveProfile, getEducationRecords, getExperienceRecords, saveBackground, saveExploration, getSavedExploration, setAudience, signOut, getSession, isAuthenticated };
 })();
