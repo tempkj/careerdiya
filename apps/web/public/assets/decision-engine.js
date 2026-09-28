@@ -704,7 +704,7 @@ function wireLeadForm(root,direction,audience,answers,signal){
   });
 }
 
-async async function loadVaultExplorationContext(vaultItemId){
+async async async function loadVaultExplorationContext(vaultItemId){
   if(!vaultItemId || !window.CareerDiyaProfileAuth?.getVaultItems) return null;
   const rows=await window.CareerDiyaProfileAuth.getVaultItems();
   const item=rows.find(x=>x.id===vaultItemId);
