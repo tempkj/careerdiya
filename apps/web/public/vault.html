@@ -30,14 +30,45 @@ list.innerHTML=rows.length?rows.map(x=>{
  return '<div class="career-card" style="margin-bottom:12px">'+
    '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="tag">'+esc(rel)+'</span><span class="tag" style="background:#eef2fb;color:#213a8f">'+esc(x.priority||'normal')+' priority</span>'+
    (candidate?'<span class="tag" style="background:#ecfff6;color:#26734d">Career candidate</span>':'')+'</div>'+
+   '<div data-view="'+esc(x.id)+'">'+
    '<h3>'+esc(x.raw_text)+'</h3>'+(x.context_note?'<p>'+esc(x.context_note)+'</p>':'')+
    '<small>Added '+new Date(x.created_at).toLocaleDateString()+' · '+esc(x.status||'active')+'</small>'+
+   '</div>'+
    '<div class="actions" style="margin-top:14px">'+
-   (candidate?'<a class="btn btn-primary" href="explore.html?vaultItem='+encodeURIComponent(x.id)+'">Explore this as a career →</a>':'')+
+   (candidate?'<a class="btn btn-primary" href="explore.html?source=vault&vaultItem='+encodeURIComponent(x.id)+'">Explore this as a career →</a>':'')+
+   '<button class="btn btn-secondary" type="button" data-edit="'+esc(x.id)+'">Edit</button>'+
    '<button class="btn btn-secondary" type="button" data-priority="'+esc(x.id)+'">'+(x.priority==='high'?'Lower priority':'Mark high priority')+'</button>'+
    (x.status!=='archived'?'<button class="btn btn-secondary" type="button" data-archive="'+esc(x.id)+'">Archive</button>':'')+
+   '<button class="btn btn-secondary" type="button" data-delete="'+esc(x.id)+'">Delete</button>'+
    '</div></div>';
  }).join(''):'<div class="notice">Your Vault is empty. Add the first thing that has been on your career mind.</div>';
+ document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=async()=>{
+   const id=b.dataset.edit;
+   const rows=await window.CareerDiyaProfileAuth.getVaultItems();
+   const item=rows.find(x=>x.id===id);
+   if(!item)return;
+   const thought=prompt('Edit your captured thought:',item.raw_text);
+   if(thought===null)return;
+   const raw=thought.trim();
+   if(!raw){alert('The captured thought cannot be empty.');return;}
+   const rels=relationships.map(([id,label])=>id+' = '+label).join('\n');
+   const relationshipValue=prompt('Edit context relationship. Current: '+item.career_relationship+'\n\n'+rels,item.career_relationship);
+   if(relationshipValue===null)return;
+   if(!relationships.some(([rid])=>rid===relationshipValue.trim())){alert('Please use one of the listed relationship values.');return;}
+   const context=prompt('Edit additional context (optional):',item.context_note||'');
+   if(context===null)return;
+   b.disabled=true;
+   try{
+     await updateItem(id,{raw_text:raw,career_relationship:relationshipValue.trim(),context_note:context.trim()||null});
+     await load();
+   }catch(e){b.disabled=false;alert(e.message||'Could not edit this item.');}
+ });
+ document.querySelectorAll('[data-delete]').forEach(b=>b.onclick=async()=>{
+   if(!confirm('Delete this captured thought permanently?\n\nIf you may want to keep it for history, use Archive instead.'))return;
+   b.disabled=true;
+   try{await window.CareerDiyaProfileAuth.deleteVaultItem(b.dataset.delete);await load();}
+   catch(e){b.disabled=false;alert(e.message||'Could not delete this item.');}
+ });
  document.querySelectorAll('[data-priority]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{const id=b.dataset.priority;const rows=await window.CareerDiyaProfileAuth.getVaultItems();const item=rows.find(x=>x.id===id);await updateItem(id,{priority:item?.priority==='high'?'normal':'high'});await load();}catch(e){b.disabled=false;alert(e.message||'Could not update priority.');}});
  document.querySelectorAll('[data-archive]').forEach(b=>b.onclick=async()=>{if(!confirm('Archive this Vault item? It will remain in your history.'))return;b.disabled=true;try{await updateItem(b.dataset.archive,{status:'archived'});await load();}catch(e){b.disabled=false;alert(e.message||'Could not archive this item.');}});
 }catch(e){list.innerHTML='<div class="notice">We could not load your Vault. Please try again.</div>';}}
