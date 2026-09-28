@@ -45,8 +45,8 @@ function skillPlan(direction,answers){
   return {top,plan};
 }
 
-function renderWizard(root, currentRole = null, vaultContext = null){
-  let step=0;const answers={};const audience=currentAudience();const activeQuestions=questionsForAudience(audience);const total=activeQuestions.length;
+function renderWizard(root, currentRole = null, vaultContext = null, audienceOverride = null){
+  let step=0;const answers={};const audience=audienceOverride || currentAudience();const activeQuestions=questionsForAudience(audience);const total=activeQuestions.length;
   function draw(){
     const q=activeQuestions[step];
     const eyebrow=audience==='parent'?'Free direction exploration · parent view':audience==='student'?'Free direction exploration · 16+':'Free career exploration';
@@ -105,7 +105,7 @@ function renderToRoleStep(root,answers,audience,currentRole,vaultContext=null){
     // Defensive: a bounded role should always resolve to a family with at least one
     // other alias somewhere in its adjacent set. If it somehow doesn't, never a dead end
     // — proceed exactly as if this step didn't exist.
-    gateBeforeResults(root,answers,audience,currentRole);
+    gateBeforeResults(root,answers,audience,currentRole,null,vaultContext?.id || null);
     return;
   }
 
@@ -127,7 +127,7 @@ function renderToRoleStep(root,answers,audience,currentRole,vaultContext=null){
   });
   root.querySelector('#continueTargetRole').addEventListener('click',()=>{
     const value = root.querySelector('#targetRoleCapture').value.trim();
-    gateBeforeResults(root,answers,audience,currentRole,value||null);
+    gateBeforeResults(root,answers,audience,currentRole,value||null,vaultContext?.id || null);
   });
 }
 
@@ -787,8 +787,8 @@ async function initDecisionEngine(){
       if(item){
         const audience=await resolveVaultAudience();
         renderVaultCareerContext(root,audience,item,(vaultContext)=>{
-          if(audience==='professional') renderCurrentRoleStep(root,audience,(role)=>renderWizard(root,role,vaultContext));
-          else renderWizard(root,null,vaultContext);
+          if(audience==='professional') renderCurrentRoleStep(root,audience,(role)=>renderWizard(root,role,vaultContext,audience));
+          else renderWizard(root,null,vaultContext,audience);
         });
         return;
       }
