@@ -21,7 +21,7 @@ relationships.forEach(([id,label])=>{const b=document.createElement('button');b.
 continueBtn.onclick=()=>{if(!textEl.value.trim()){msg.textContent='Add a thought or pursuit first.';return;}contextBlock.classList.remove('hidden');continueBtn.classList.add('hidden');saveBtn.classList.remove('hidden');};
 form.onsubmit=async e=>{e.preventDefault();if(!textEl.value.trim())return;saveBtn.disabled=true;msg.textContent='Saving…';try{await window.CareerDiyaProfileAuth.saveVaultItem({raw_text:textEl.value.trim(),career_relationship:relationship,context_note:document.getElementById('vaultContext').value.trim()||null});form.reset();contextBlock.classList.add('hidden');saveBtn.classList.add('hidden');continueBtn.classList.remove('hidden');relationship='undecided';document.querySelectorAll('#relationshipOptions .wizard-option').forEach(x=>x.classList.remove('selected'));msg.textContent='Saved. Career Diya will keep this in your Vault.';await load();}catch(err){msg.textContent=err.message||'Could not save this item.';}finally{saveBtn.disabled=false;}};
 async function updateItem(id,patch){return window.CareerDiyaProfileAuth.updateVaultItem(id,patch);}
-function isCareerCandidate(x){return ['side_income','future_full_time_career','career_exploration','direct_career_pursuit','career_enabler'].includes(x.career_relationship);}
+function isCareerCandidate(x){return x.status!=='archived' && ['side_income','future_full_time_career','career_exploration','direct_career_pursuit'].includes(x.career_relationship);}
 async function load(){try{
 const rows=await window.CareerDiyaProfileAuth.getVaultItems();
 list.innerHTML=rows.length?rows.map(x=>{
