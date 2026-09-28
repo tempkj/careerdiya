@@ -446,14 +446,32 @@
     if (!isAuthenticated()) throw new Error('You need to be signed in to update your Vault.');
     if (!id) throw new Error('Vault item id is required.');
     const allowed = {};
-    ['item_type','career_relationship','status','priority','context_note','linked_career_id','linked_direction_id'].forEach(k => {
-      if (Object.prototype.hasOwnProperty.call(values, k)) allowed[k] = values[k];
+    ['raw_text','item_type','career_relationship','status','priority','context_note','linked_career_id','linked_direction_id'].forEach(k => {
+      if (Object.prototype.hasOwnProperty.call(values, k)) {
+        if (k === 'raw_text') {
+          const value = String(values[k] || '').trim();
+          if (!value) throw new Error('Vault thought cannot be empty.');
+          allowed[k] = value;
+        } else {
+          allowed[k] = values[k];
+        }
+      }
     });
     allowed.updated_at = new Date().toISOString();
     const { data, error } = await coreTable('career_diya_vault_item')
       .update(allowed).eq('id', id).select().single();
     if (error) throw error;
     return data;
+  }
+
+  async function deleteVaultItem(id) {
+    if (!isAuthenticated()) throw new Error('You need to be signed in to delete your Vault.');
+    if (!id) throw new Error('Vault item id is required.');
+    const { error } = await coreTable('career_diya_vault_item')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    return true;
   }
 
   async function getCareerDirections() {
@@ -494,5 +512,5 @@
     }
   }
 
-  window.CareerDiyaProfileAuth = { saveVaultItem, getVaultItems, updateVaultItem, getCareerDirections, upsertCareerDirection, openCareerAsana, setCurrentRole, resolveHandoffCurrentRole, signUp, signIn, signInWithProvider, handleOAuthReturn, refreshLocalSession, ensureProfile, getProfile, saveProfile, getEducationRecords, getExperienceRecords, saveBackground, saveExploration, getSavedExploration, setAudience, signOut, getSession, isAuthenticated };
+  window.CareerDiyaProfileAuth = { saveVaultItem, getVaultItems, updateVaultItem, deleteVaultItem, getCareerDirections, upsertCareerDirection, openCareerAsana, setCurrentRole, resolveHandoffCurrentRole, signUp, signIn, signInWithProvider, handleOAuthReturn, refreshLocalSession, ensureProfile, getProfile, saveProfile, getEducationRecords, getExperienceRecords, saveBackground, saveExploration, getSavedExploration, setAudience, signOut, getSession, isAuthenticated };
 })();
