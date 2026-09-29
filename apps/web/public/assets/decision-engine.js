@@ -45,14 +45,30 @@ function skillPlan(direction,answers){
   return {top,plan};
 }
 
-function renderWizard(root, currentRole = null, vaultContext = null, audienceOverride = null){
-  let step=0;const answers={};const audience=audienceOverride || currentAudience();const activeQuestions=questionsForAudience(audience);const total=activeQuestions.length;
+function renderWizard(root, currentRole = null, vaultContext = null, audienceOverride = null, explorerContext = null){
+  const context=explorerContext||{};
+  let step=0;
+  const answers={...(context.answers||{})};
+  const audience=audienceOverride || context.audience || currentAudience();
+  const baseQuestions=questionsForAudience(audience);
+  const activeQuestions=baseQuestions.filter(q=>!context.skipQuestionIds?.includes(q.id));
+  const total=activeQuestions.length;
+  if(!total){ gateBeforeResults(root,answers,audience,currentRole,null,vaultContext?.id||null); return;}
   function draw(){
     const q=activeQuestions[step];
     const eyebrow=audience==='parent'?'Free direction exploration · parent view':audience==='student'?'Free direction exploration · 16+':'Free career exploration';
-    root.innerHTML=`<div class="wizard-head"><div class="eyebrow">${eyebrow}</div><div class="wizard-progress"><span style="width:${((step+1)/total)*100}%"></span></div><div class="wizard-count">Question ${step+1} of ${total}</div><h2>${q.title}</h2><p>${q.subtitle}</p></div><div class="wizard-options">${q.options.map(([v,l])=>`<button class="wizard-option ${answers[q.id]===v?'selected':''}" data-value="${v}"><span class="radio-dot"></span><span>${l}</span></button>`).join('')}</div><div class="wizard-footer"><button class="btn btn-secondary" id="back" ${step===0?'disabled':''}>Back</button><button class="btn btn-primary" id="next" ${answers[q.id]?'':'disabled'}>${step===total-1?'See my directions':'Continue →'}</button></div>`;
+    root.innerHTML=`<div class="explorer-context-strip">
+      <div><span class="eyebrow">Using your Career Diya context</span>
+      <span class="explorer-context-values">${escHtml(context.summary||'')}</span></div>
+      ${context.canChangeRole?'<button class="btn btn-secondary btn-small" id="changeExplorerRole" type="button">Change</button>':''}
+    </div><div class="wizard-head"><div class="eyebrow">${eyebrow}</div><div class="wizard-progress"><span style="width:${((step+1)/total)*100}%"></span></div><div class="wizard-count">Question ${step+1} of ${total}</div><h2>${q.title}</h2><p>${q.subtitle}</p></div><div class="wizard-options">${q.options.map(([v,l])=>`<button class="wizard-option ${answers[q.id]===v?'selected':''}" data-value="${v}"><span class="radio-dot"></span><span>${l}</span></button>`).join('')}</div><div class="wizard-footer"><button class="btn btn-secondary" id="back" ${step===0?'disabled':''}>Back</button><button class="btn btn-primary" id="next" ${answers[q.id]?'':'disabled'}>${step===total-1?'See my directions':'Continue →'}</button></div>`;
     elsLocal('.wizard-option',root).forEach(b=>b.addEventListener('click',()=>{answers[q.id]=b.dataset.value;draw();}));
     root.querySelector('#back').addEventListener('click',()=>{if(step>0){step--;draw();}});
+    const changeRole=root.querySelector('#changeExplorerRole');
+    if(changeRole) changeRole.addEventListener('click',()=>renderCurrentRoleStep(root,audience,(role)=>{
+      const nextContext={...context,summary:role?buildExplorerContextSummary(audience,role):context.summary,currentRole:role,canChangeRole:false};
+      renderWizard(root,role,vaultContext,audience,nextContext);
+    }));
     root.querySelector('#next').addEventListener('click',()=>{
       if(!answers[q.id])return;
       if(step<total-1){step++;draw();return;}
@@ -704,6 +720,81 @@ function wireLeadForm(root,direction,audience,answers,signal){
   });
 }
 
+function inferProfessionalStageFromRole(role){
+  const value=String(role||'').toLowerCase();
+  if(/\\b(senior|sr\\.?|lead|principal|staff|head|director|vp|vice president|chief)\\b/.test(value)) return 'senior';
+  if(/\\b(junior|jr\\.?|entry|trainee|intern|graduate|fresher|associate)\\b/.test(value)) return 'early';
+  return null;
+}
+
+function buildExplorerContextSummary(audience,currentRole){
+  if(audience==='professional'){
+    const role=String(currentRole||'').trim();
+    return role ? `Graduate / Professional · ${role}` : 'Graduate / Professional';
+  }
+  if(audience==='student') return 'Student / learner';
+  if(audience==='parent') return 'Parent / guardian';
+  return '';
+}
+
+async function resolvePlatformExplorerContext(audience, currentRole=null){
+  let profile=null;
+  try{
+    if(window.CareerDiyaProfileAuth?.isAuthenticated?.() && window.CareerDiyaProfileAuth?.getProfile){
+      profile=await window.CareerDiyaProfileAuth.getProfile();
+    }
+  }catch(_){}
+  const resolvedAudience=['parent','student','professional'].includes(String(profile?.audience||'').toLowerCase())
+    ? String(profile.audience).toLowerCase() : audience;
+  const profileRole=String(profile?.current_role_title||profile?.current_role_other||'').trim();
+  const resolvedRole=String(currentRole||profileRole).trim()||null;
+  const answers={};
+  const skipQuestionIds=[];
+  // The profile already establishes the primary audience. For professionals, the
+  // profile role is also a persistent fact, so the old role-capture screen is skipped.
+  // The stage signal is only prefilled when the role title contains an unambiguous
+  // seniority marker; otherwise we still ask rather than inventing seniority.
+  if(resolvedAudience==='professional' && resolvedRole){
+    const inferredStage=inferProfessionalStageFromRole(resolvedRole);
+    if(inferredStage){ answers.stage=inferredStage; skipQuestionIds.push('stage'); }
+  }
+  return {
+    audience:resolvedAudience,
+    currentRole:resolvedRole,
+    answers,
+    skipQuestionIds,
+    summary:buildExplorerContextSummary(resolvedAudience,resolvedRole),
+    canChangeRole:resolvedAudience==='professional' && !!resolvedRole
+  };
+}
+
+function findVaultCareerCandidates(item, options){
+  const text=`${item?.raw_text||''} ${item?.context_note||''}`.toLowerCase();
+  const rules=[
+    {ids:['career_counselling'],words:['career coach','career coaching','career counsellor','career counselor','career guidance','career counselling','career counseling']},
+    {ids:['performing_arts'],words:['acting','actor','actress','theatre','theater','performing arts','drama']},
+    {ids:['culinary_arts'],words:['baking','baker','cake','culinary','cooking','chef','pastry']},
+    {ids:['content_creation'],words:['content creator','content creation','creator','podcast','podcasting','youtube']},
+    {ids:['photography'],words:['photography','photographer']},
+    {ids:['software_testing_and_quality_assurance'],words:['qa','quality assurance','software testing','tester']},
+    {ids:['software_engineering','full_stack_development'],words:['software developer','software engineer','programming','developer','coding']},
+    {ids:['data_science'],words:['data scientist','data science']},
+    {ids:['digital_marketing'],words:['digital marketing','seo','performance marketing']},
+    {ids:['human_resource_management'],words:['hr','human resources','people operations','recruitment','recruiter']},
+    {ids:['mentoring_and_coaching'],words:['mentor','mentoring','coach','coaching']}
+  ];
+  const scores=new Map();
+  rules.forEach(rule=>{
+    const score=rule.words.reduce((n,w)=>n+(text.includes(w)?1:0),0);
+    if(score) rule.ids.forEach(id=>scores.set(id,Math.max(scores.get(id)||0,score)));
+  });
+  return [...scores.entries()]
+    .map(([id,score])=>({career:options.find(c=>c.id===id),score}))
+    .filter(x=>x.career)
+    .sort((a,b)=>b.score-a.score)
+    .map(x=>x.career);
+}
+
 async function loadVaultExplorationContext(vaultItemId){
   if(!vaultItemId || !window.CareerDiyaProfileAuth?.getVaultItems) return null;
   const rows=await window.CareerDiyaProfileAuth.getVaultItems();
@@ -722,7 +813,8 @@ function renderVaultCareerContext(root,audience,item,onContinue){
   const linked=findCanonicalCareerForVaultItem(item);
   const allOptions=typeof CAREER_LIBRARY_CATALOGUE!=='undefined'?CAREER_LIBRARY_CATALOGUE.filter(c=>c.canonicalStatus==='verified'):[];
   const options=Array.from(new Map(allOptions.map(c=>[c.id,c])).values()).sort((a,b)=>a.canonicalName.localeCompare(b.canonicalName));
-  const initial=linked?.id||'';
+  const inferred=linked?[linked]:findVaultCareerCandidates(item,options).slice(0,3);
+  const suggested=inferred[0]||null;
   const optionMarkup=options.map(c=>'<option value="'+escHtml(c.id)+'">'+escHtml(c.canonicalName)+'</option>').join('');
   root.innerHTML=`<div class="profile-context-card vault-explore-context">
     <div class="eyebrow">From your Career Vault</div>
@@ -730,45 +822,68 @@ function renderVaultCareerContext(root,audience,item,onContinue){
     <p class="profile-context-lead">You saved:</p>
     <div class="vault-context-quote">“${escHtml(item.raw_text)}”</div>
     ${item.context_note?`<p class="profile-context-lead"><b>Your context:</b> ${escHtml(item.context_note)}</p>`:''}
-    <label class="profile-context-label" for="vaultCareerChoice">Canonical Career Library career</label>
-    <p class="profile-context-help">A captured thought is not automatically treated as a career. Select the exact career you want to explore. This keeps your Vault thought and your canonical career record separate.</p>
-    <select class="input" id="vaultCareerChoice">
-      <option value="">Select a career…</option>
-      ${optionMarkup}
-    </select>
-    <p class="profile-context-status" id="vaultCareerStatus" role="status" aria-live="polite"></p>
-    <div class="wizard-footer">
-      <a class="btn btn-secondary" href="vault.html">Back to Career Vault</a>
-      <button class="btn btn-primary" id="continueVaultCareer">${linked?'Continue with this career →':'Select a career →'}</button>
+    <div class="vault-career-suggestion">
+      <div class="profile-context-label">What do you mean by this?</div>
+      ${suggested?`<p class="profile-context-lead">Career Diya thinks you may mean <strong>${escHtml(suggested.canonicalName)}</strong>.</p>
+      <button class="btn btn-primary" id="confirmSuggested">Yes, explore this career →</button>`:'<p class="profile-context-lead">We could not confidently match this thought to a Career Library career.</p>'}
+      <button class="btn btn-secondary" id="chooseDifferent">${suggested?'Choose a different career':'Choose a career from the Library'}</button>
+      <button class="btn btn-secondary" id="noneAbove">None of these — I have another career in mind</button>
+    </div>
+    <div id="vaultCareerChooser" hidden>
+      <label class="profile-context-label" for="vaultCareerChoice">Career Library career</label>
+      <select class="input" id="vaultCareerChoice">
+        <option value="">Select a career…</option>
+        ${optionMarkup}
+      </select>
+      <div class="vault-custom-career" id="vaultCustomCareer" hidden>
+        <label class="profile-context-label" for="vaultCustomCareerInput">What career are you considering?</label>
+        <input class="input" id="vaultCustomCareerInput" type="text" maxlength="160" placeholder="Enter the career or career idea">
+      </div>
+      <p class="profile-context-status" id="vaultCareerStatus" role="status" aria-live="polite"></p>
+      <div class="wizard-footer">
+        <button class="btn btn-secondary" id="backVaultCareer">Back</button>
+        <button class="btn btn-primary" id="continueVaultCareer">Continue →</button>
+      </div>
     </div>
   </div>`;
 
-  const input=root.querySelector('#vaultCareerChoice');
-  if(initial) input.value=initial;
   const status=root.querySelector('#vaultCareerStatus');
-  root.querySelector('#continueVaultCareer').addEventListener('click',async()=>{
-    const selectedId=input.value;
-    const career=options.find(c=>c.id===selectedId);
-    if(!career){
-      status.textContent='Choose a career from the Career Library suggestions.';
-      status.className='profile-context-status err';
-      input.focus();
-      return;
-    }
-    const btn=root.querySelector('#continueVaultCareer');
-    btn.disabled=true; status.textContent='Saving this career context…'; status.className='profile-context-status';
+  const chooser=root.querySelector('#vaultCareerChooser');
+  const select=root.querySelector('#vaultCareerChoice');
+  const customWrap=root.querySelector('#vaultCustomCareer');
+  const customInput=root.querySelector('#vaultCustomCareerInput');
+  const saveAndContinue=async(career,customCareer=null)=>{
+    const btn=root.querySelector('#continueVaultCareer')||root.querySelector('#confirmSuggested');
+    if(btn) btn.disabled=true;
+    status.textContent='Saving this career context…'; status.className='profile-context-status';
     try{
-      if(window.CareerDiyaProfileAuth?.updateVaultItem){
-        await window.CareerDiyaProfileAuth.updateVaultItem(item.id,{linked_career_id:career.id});
-      }
-      onContinue({...item,linked_career_id:career.id,linkedCareer:career});
+      if(career && window.CareerDiyaProfileAuth?.updateVaultItem) await window.CareerDiyaProfileAuth.updateVaultItem(item.id,{linked_career_id:career.id});
+      onContinue({...item,linked_career_id:career?.id||null,linkedCareer:career||null,customCareer:customCareer||null});
     }catch(err){
-      btn.disabled=false;
-      status.textContent=err?.message||'Could not save the career context. Please try again.';
+      if(btn) btn.disabled=false;
+      status.textContent=err?.message||'Could not save this career context. Please try again.';
       status.className='profile-context-status err';
     }
+  };
+  root.querySelector('#confirmSuggested')?.addEventListener('click',()=>saveAndContinue(suggested));
+  root.querySelector('#chooseDifferent').addEventListener('click',()=>{chooser.hidden=false;status.textContent='';});
+  root.querySelector('#noneAbove').addEventListener('click',()=>{chooser.hidden=false;select.value='';customWrap.hidden=false;customInput.focus();});
+  select.addEventListener('change',()=>{customWrap.hidden=select.value!=='__custom__';});
+  // The custom option is injected at the end so the user can always leave the catalogue.
+  select.insertAdjacentHTML('beforeend','<option value="__custom__">None of these — enter my career</option>');
+  root.querySelector('#backVaultCareer').addEventListener('click',()=>{chooser.hidden=true;});
+  root.querySelector('#continueVaultCareer').addEventListener('click',()=>{
+    if(select.value==='__custom__'){
+      const custom=customInput.value.trim();
+      if(!custom){status.textContent='Enter the career or career idea you have in mind.';status.className='profile-context-status err';customInput.focus();return;}
+      saveAndContinue(null,custom); return;
+    }
+    const career=options.find(c=>c.id===select.value);
+    if(!career){status.textContent='Select a Career Library career, or choose None of these.';status.className='profile-context-status err';return;}
+    saveAndContinue(career);
   });
 }
+
 
 async function resolveVaultAudience(){
   try{
@@ -791,9 +906,18 @@ async function initDecisionEngine(){
       const item=await loadVaultExplorationContext(vaultItemId);
       if(item){
         const audience=await resolveVaultAudience();
-        renderVaultCareerContext(root,audience,item,(vaultContext)=>{
-          if(audience==='professional') renderCurrentRoleStep(root,audience,(role)=>renderWizard(root,role,vaultContext,audience));
-          else renderWizard(root,null,vaultContext,audience);
+        renderVaultCareerContext(root,audience,item,async(vaultContext)=>{
+          const explorerContext=await resolvePlatformExplorerContext(audience);
+          if(explorerContext.currentRole || audience!=='professional'){
+            renderWizard(root,explorerContext.currentRole,vaultContext,explorerContext.audience,explorerContext);
+          }else{
+            renderCurrentRoleStep(root,explorerContext.audience,(role)=>renderWizard(root,role,vaultContext,explorerContext.audience,{
+              ...explorerContext,
+              currentRole:role,
+              summary:buildExplorerContextSummary(explorerContext.audience,role),
+              canChangeRole:false
+            }));
+          }
         });
         return;
       }
@@ -842,14 +966,23 @@ async function initDecisionEngine(){
     root.innerHTML=`<div class="engine-start"><div class="eyebrow">${startCopy.eyebrow}</div><h2>${startCopy.title}</h2><p>${startCopy.copy}</p><div class="engine-benefits">${startCopy.benefits.map(x=>`<span>${x}</span>`).join('')}</div><button class="btn btn-primary" id="startEngine">Start my exploration →</button></div>`;
   }
   const start=document.getElementById('startEngine');
-  if(start) start.addEventListener('click',()=>{
+  if(start) start.addEventListener('click',async()=>{
     const aud=currentAudience();
-    if(aud==='professional') renderCurrentRoleStep(root,aud,(role)=>renderWizard(root,role));
-    else renderWizard(root,null);
+    const explorerContext=await resolvePlatformExplorerContext(aud);
+    if(explorerContext.currentRole || aud!=='professional'){
+      renderWizard(root,explorerContext.currentRole,null,explorerContext.audience,explorerContext);
+    }else{
+      renderCurrentRoleStep(root,explorerContext.audience,(role)=>renderWizard(root,role,null,explorerContext.audience,{
+        ...explorerContext,
+        currentRole:role,
+        summary:buildExplorerContextSummary(explorerContext.audience,role),
+        canChangeRole:false
+      }));
+    }
   });
   const startStream=document.getElementById('startStreamPath');
   if(startStream) startStream.addEventListener('click',()=>renderStudentStageStep(root));
   const startPreference=document.getElementById('startPreferencePath');
-  if(startPreference) startPreference.addEventListener('click',()=>renderWizard(root,null));
+  if(startPreference) startPreference.addEventListener('click',async()=>{const ctx=await resolvePlatformExplorerContext('student');renderWizard(root,ctx.currentRole,null,ctx.audience,ctx);});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initDecisionEngine);else initDecisionEngine();
