@@ -750,12 +750,33 @@ async function resolvePlatformExplorerContext(audience, currentRole=null){
   const resolvedRole=String(currentRole||profileRole).trim()||null;
   const answers={};
   const skipQuestionIds=[];
-  // The profile already establishes the primary audience. For professionals, the
-  // profile role is also a persistent fact, so the old role-capture screen is skipped.
-  // The stage signal is only prefilled when the role title contains an unambiguous
-  // seniority marker; otherwise we still ask rather than inventing seniority.
-  if(resolvedAudience==='professional' && resolvedRole){
-    const inferredStage=inferProfessionalStageFromRole(resolvedRole);
+  // Reuse persistent background facts where they map cleanly to an explorer signal.
+  // Do not guess when the profile is insufficient; unknown remains an explicit question.
+  let education=[];
+  let experience=[];
+  try{
+    if(window.CareerDiyaProfileAuth?.getEducationRecords) education=await window.CareerDiyaProfileAuth.getEducationRecords();
+    if(window.CareerDiyaProfileAuth?.getExperienceRecords) experience=await window.CareerDiyaProfileAuth.getExperienceRecords();
+  }catch(_){}
+  if(resolvedAudience==='professional'){
+    const latestExperience=experience.find(x=>x?.years_bucket)||experience[0];
+    const bucket=String(latestExperience?.years_bucket||'').toLowerCase();
+    let inferredStage=inferProfessionalStageFromRole(resolvedRole);
+    if(!inferredStage){
+      if(/^(no experience|less than 1 year|1–2 years|1-2 years)$/.test(bucket)) inferredStage='early';
+      else if(/^(3–5 years|3-5 years|6–10 years|6-10 years)$/.test(bucket)) inferredStage='mid';
+      else if(/^(11–15 years|11-15 years|16–20 years|16-20 years|20\+ years|20\+ years)$/.test(bucket)) inferredStage='senior';
+    }
+    if(inferredStage){ answers.stage=inferredStage; skipQuestionIds.push('stage'); }
+  }else if(resolvedAudience==='student'){
+    const currentEducation=education.find(x=>x?.is_current)||education[0];
+    const level=String(currentEducation?.education_level||'').toLowerCase();
+    const gradYear=Number(currentEducation?.graduation_year||0);
+    const thisYear=new Date().getFullYear();
+    let inferredStage=null;
+    if(level==='school') inferredStage='late_school';
+    else if(['undergraduate','diploma'].includes(level) && currentEducation?.is_current) inferredStage='college';
+    else if(['undergraduate','postgraduate','doctoral','professional certification'].includes(level) && gradYear && gradYear<=thisYear && !currentEducation?.is_current) inferredStage='recent_grad';
     if(inferredStage){ answers.stage=inferredStage; skipQuestionIds.push('stage'); }
   }
   return {
