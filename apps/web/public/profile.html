@@ -112,14 +112,32 @@
   }catch(e){status.textContent='Could not load your profile yet.';status.className='profile-gate-status err';}
   form.addEventListener('submit',async e=>{
     e.preventDefault();
+    const saveButton=form.querySelector('button[type="submit"]');
+    if(saveButton){saveButton.disabled=true;saveButton.textContent='Saving…';}
+    status.textContent='Saving your profile…';status.className='profile-gate-status';
     const d=new FormData(form);
     const interests=chipValues('careerInterests');
     const goals=chipValues('careerGoals');const strengths=chipValues('strengths');const weaknesses=chipValues('weaknesses');const learning=chipValues('learningPreferences');
     const otherValue=id=>{const el=document.querySelector(`#${id}`).parentElement.querySelector('.other-wrap input');return el?el.value.trim():''};
     const values={display_name:(d.get('display_name')||'').trim(),avatar_url:(d.get('avatar_url')||'').trim(),country:d.get('country')||null,country_other:(d.get('country_other')||'').trim(),current_role_title:d.get('current_role_title')||null,current_role_other:(d.get('current_role_other')||'').trim(),industry:d.get('industry')||null,industry_other:(d.get('industry_other')||'').trim(),experience_years:d.get('experience_years')||null,career_interests:interests,career_interests_other:otherValue('careerInterests'),career_goals:goals.join('|'),career_goals_other:otherValue('careerGoals'),strengths:strengths.join('|'),strengths_other:otherValue('strengths'),weaknesses:weaknesses.join('|'),weaknesses_other:otherValue('weaknesses'),learning_preferences:learning.join('|'),learning_preferences_other:otherValue('learningPreferences'),audience:profileAudience(profile||{})};
     try{
-      const saved=await auth.saveProfile(values);await auth.saveBackground({education:collectEducation(),experience:collectExperience()});fillProfile(saved);status.textContent='Profile saved.';status.className='profile-gate-status ok';
-    }catch(err){status.textContent=err.message||'Could not save your profile.';status.className='profile-gate-status err';}
+      const saved=await auth.saveProfile(values);
+      try{
+        await auth.saveBackground({education:collectEducation(),experience:collectExperience()});
+      }catch(backgroundError){
+        console.error('Career Diya profile background save failed:',backgroundError);
+        throw new Error(`Your main profile was saved, but Education / Experience could not be saved: ${backgroundError.hint||backgroundError.message||'Please try again.'}`);
+      }
+      const refreshed=await auth.getProfile();
+      fillProfile(refreshed||saved);
+      status.textContent='Profile saved successfully.';status.className='profile-gate-status ok';
+    }catch(err){
+      console.error('Career Diya profile save failed:',err);
+      status.textContent=err?.hint||err?.message||'Could not save your profile. Please check the browser console for the database error.';
+      status.className='profile-gate-status err';
+    }finally{
+      if(saveButton){saveButton.disabled=false;saveButton.textContent='Save My Profile';}
+    }
   });
   function profileAudience(p){return p&&p.audience?p.audience:null;}
 })();
