@@ -1,6 +1,7 @@
 // Public surface of the 'careerdiya' module. Other modules import ONLY from here (invariant A1).
 export type { DirectionId } from './domain/directions';
 export { DIRECTION_IDS, DIRECTION_LABELS, isDirectionId } from './domain/directions';
+export { isBoundedAnswers, BOUNDED_ANSWER_OPTIONS } from './domain/types';
 export type { BoundedAnswers, CareerDiyaEnrichment, CourseRecommendation, RecommendRequestBody } from './domain/types';
 export type { CareerDiyaGuideOutput, GuideIntent, GuideRequestBody } from './domain/types';
 export { GUIDE_INTENTS, isGuideIntent } from './domain/types';
