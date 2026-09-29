@@ -735,10 +735,14 @@ function inferProfessionalStageFromRole(role){
   return null;
 }
 
-function buildExplorerContextSummary(audience,currentRole){
+function buildExplorerContextSummary(audience,currentRole,experienceYears=null){
   if(audience==='professional'){
     const role=String(currentRole||'').trim();
-    return role ? `Graduate / Professional · ${role}` : 'Graduate / Professional';
+    const experience=String(experienceYears||'').trim();
+    const parts=['Graduate / Professional'];
+    if(role) parts.push(role);
+    if(experience) parts.push(experience);
+    return parts.join(' · ');
   }
   if(audience==='student') return 'Student / learner';
   if(audience==='parent') return 'Parent / guardian';
@@ -768,7 +772,9 @@ async function resolvePlatformExplorerContext(audience, currentRole=null){
   }catch(_){}
   if(resolvedAudience==='professional'){
     const latestExperience=experience.find(x=>x?.years_bucket)||experience[0];
-    const bucket=String(latestExperience?.years_bucket||'').toLowerCase();
+    // Prefer the explicit profile experience bucket because it is the primary
+    // persistent Career Context field. Background records are a useful fallback.
+    const bucket=String(profile?.experience_years||latestExperience?.years_bucket||'').trim().toLowerCase();
     let inferredStage=inferProfessionalStageFromRole(resolvedRole);
     if(!inferredStage){
       if(/^(no experience|less than 1 year|1–2 years|1-2 years)$/.test(bucket)) inferredStage='early';
@@ -792,7 +798,7 @@ async function resolvePlatformExplorerContext(audience, currentRole=null){
     currentRole:resolvedRole,
     answers,
     skipQuestionIds,
-    summary:buildExplorerContextSummary(resolvedAudience,resolvedRole),
+    summary:buildExplorerContextSummary(resolvedAudience,resolvedRole,profile?.experience_years||latestExperience?.years_bucket||null),
     canChangeRole:resolvedAudience==='professional' && !!resolvedRole
   };
 }
