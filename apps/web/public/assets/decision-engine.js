@@ -122,7 +122,7 @@ function renderToRoleStep(root,answers,audience,currentRole,vaultContext=null){
     // Defensive: a bounded role should always resolve to a family with at least one
     // other alias somewhere in its adjacent set. If it somehow doesn't, never a dead end
     // — proceed exactly as if this step didn't exist.
-    gateBeforeResults(root,answers,audience,currentRole,customCareer,vaultContext?.id || null);
+    gateBeforeResults(root,answers,audience,currentRole,null,vaultContext?.id || null);
     return;
   }
 
