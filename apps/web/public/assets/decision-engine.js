@@ -45,8 +45,8 @@ function skillPlan(direction,answers){
   return {top,plan};
 }
 
-function renderWizard(root, currentRole = null){
-  let step=0;const answers={};const audience=currentAudience();const activeQuestions=questionsForAudience(audience);const total=activeQuestions.length;
+function renderWizard(root, currentRole = null, vaultContext = null, audienceOverride = null){
+  let step=0;const answers={};const audience=audienceOverride || currentAudience();const activeQuestions=questionsForAudience(audience);const total=activeQuestions.length;
   function draw(){
     const q=activeQuestions[step];
     const eyebrow=audience==='parent'?'Free direction exploration · parent view':audience==='student'?'Free direction exploration · 16+':'Free career exploration';
@@ -61,8 +61,8 @@ function renderWizard(root, currentRole = null){
       // as a conditional mid-wizard question because `total` above is a const captured
       // once at wizard start, not re-evaluated per step.
       const growToRoleEligible = audience==='professional' && answers.intent==='growth' && currentRole && typeof isBoundedRoleValue==='function' && isBoundedRoleValue(currentRole);
-      if(growToRoleEligible) renderToRoleStep(root,answers,audience,currentRole);
-      else gateBeforeResults(root,answers,audience,currentRole);
+      if(growToRoleEligible) renderToRoleStep(root,answers,audience,currentRole, vaultContext);
+      else gateBeforeResults(root,answers,audience,currentRole,null,vaultContext?.id || null);
     });
   }
   draw();
@@ -99,13 +99,13 @@ function buildToRoleGroups(currentRole){
 // a modest escape hatch (btn-secondary, same visual weight as e.g. the wizard's Back
 // button) straight into the existing, unchanged gateBeforeResults/renderResults flow —
 // deliberately not a distinct destination. No LLM anywhere on this path.
-function renderToRoleStep(root,answers,audience,currentRole){
+function renderToRoleStep(root,answers,audience,currentRole,vaultContext=null){
   const pool = buildToRoleGroups(currentRole);
   if(!pool){
     // Defensive: a bounded role should always resolve to a family with at least one
     // other alias somewhere in its adjacent set. If it somehow doesn't, never a dead end
     // — proceed exactly as if this step didn't exist.
-    gateBeforeResults(root,answers,audience,currentRole);
+    gateBeforeResults(root,answers,audience,currentRole,null,vaultContext?.id || null);
     return;
   }
 
@@ -123,11 +123,11 @@ function renderToRoleStep(root,answers,audience,currentRole){
   </div>`;
 
   root.querySelector('#skipTargetRole').addEventListener('click',()=>{
-    gateBeforeResults(root,answers,audience,currentRole,null);
+    gateBeforeResults(root,answers,audience,currentRole,null,vaultContext?.id || null);
   });
   root.querySelector('#continueTargetRole').addEventListener('click',()=>{
     const value = root.querySelector('#targetRoleCapture').value.trim();
-    gateBeforeResults(root,answers,audience,currentRole,value||null);
+    gateBeforeResults(root,answers,audience,currentRole,value||null,vaultContext?.id || null);
   });
 }
 
@@ -453,7 +453,7 @@ async function renderStreamEdgeGuide(root,streamOrRoleLabel,tier){
 function gateBeforeResults(root,answers,audience,currentRole=null,targetRole=null,vaultItemId=null){
   const existing = window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.isAuthenticated();
   if (existing) {
-    renderResults(root,answers,audience,'',currentRole,targetRole);
+    renderResults(root,answers,audience,'',currentRole,targetRole,vaultItemId);
     return;
   }
 
@@ -704,11 +704,105 @@ function wireLeadForm(root,direction,audience,answers,signal){
   });
 }
 
+async async async function loadVaultExplorationContext(vaultItemId){
+  if(!vaultItemId || !window.CareerDiyaProfileAuth?.getVaultItems) return null;
+  const rows=await window.CareerDiyaProfileAuth.getVaultItems();
+  const item=rows.find(x=>x.id===vaultItemId);
+  if(!item) throw new Error('That Career Vault item could not be found.');
+  if(item.status==='archived') throw new Error('That Career Vault item is archived. Restore it from the Vault before exploring it.');
+  return item;
+}
+
+function findCanonicalCareerForVaultItem(item){
+  if(!item?.linked_career_id || typeof CAREER_LIBRARY_CATALOGUE==='undefined') return null;
+  return CAREER_LIBRARY_CATALOGUE.find(c=>c.id===item.linked_career_id) || null;
+}
+
+function renderVaultCareerContext(root,audience,item,onContinue){
+  const linked=findCanonicalCareerForVaultItem(item);
+  const allOptions=typeof CAREER_LIBRARY_CATALOGUE!=='undefined'?CAREER_LIBRARY_CATALOGUE.filter(c=>c.canonicalStatus==='verified'):[];
+  const options=Array.from(new Map(allOptions.map(c=>[c.id,c])).values()).sort((a,b)=>a.canonicalName.localeCompare(b.canonicalName));
+  const initial=linked?.id||'';
+  const optionMarkup=options.map(c=>'<option value="'+escHtml(c.id)+'">'+escHtml(c.canonicalName)+'</option>').join('');
+  root.innerHTML=`<div class="profile-context-card vault-explore-context">
+    <div class="eyebrow">From your Career Vault</div>
+    <h2>Let's explore this thought as a career.</h2>
+    <p class="profile-context-lead">You saved:</p>
+    <div class="vault-context-quote">“${escHtml(item.raw_text)}”</div>
+    ${item.context_note?`<p class="profile-context-lead"><b>Your context:</b> ${escHtml(item.context_note)}</p>`:''}
+    <label class="profile-context-label" for="vaultCareerChoice">Canonical Career Library career</label>
+    <p class="profile-context-help">A captured thought is not automatically treated as a career. Select the exact career you want to explore. This keeps your Vault thought and your canonical career record separate.</p>
+    <select class="input" id="vaultCareerChoice">
+      <option value="">Select a career…</option>
+      ${optionMarkup}
+    </select>
+    <p class="profile-context-status" id="vaultCareerStatus" role="status" aria-live="polite"></p>
+    <div class="wizard-footer">
+      <a class="btn btn-secondary" href="vault.html">Back to Career Vault</a>
+      <button class="btn btn-primary" id="continueVaultCareer">${linked?'Continue with this career →':'Select a career →'}</button>
+    </div>
+  </div>`;
+
+  const input=root.querySelector('#vaultCareerChoice');
+  if(initial) input.value=initial;
+  const status=root.querySelector('#vaultCareerStatus');
+  root.querySelector('#continueVaultCareer').addEventListener('click',async()=>{
+    const selectedId=input.value;
+    const career=options.find(c=>c.id===selectedId);
+    if(!career){
+      status.textContent='Choose a career from the Career Library suggestions.';
+      status.className='profile-context-status err';
+      input.focus();
+      return;
+    }
+    const btn=root.querySelector('#continueVaultCareer');
+    btn.disabled=true; status.textContent='Saving this career context…'; status.className='profile-context-status';
+    try{
+      if(window.CareerDiyaProfileAuth?.updateVaultItem){
+        await window.CareerDiyaProfileAuth.updateVaultItem(item.id,{linked_career_id:career.id});
+      }
+      onContinue({...item,linked_career_id:career.id,linkedCareer:career});
+    }catch(err){
+      btn.disabled=false;
+      status.textContent=err?.message||'Could not save the career context. Please try again.';
+      status.className='profile-context-status err';
+    }
+  });
+}
+
+async function resolveVaultAudience(){
+  try{
+    if(window.CareerDiyaProfileAuth?.isAuthenticated && window.CareerDiyaProfileAuth.isAuthenticated() && window.CareerDiyaProfileAuth.getProfile){
+      const profile=await window.CareerDiyaProfileAuth.getProfile();
+      const value=String(profile?.audience||'').toLowerCase();
+      if(['parent','student','professional'].includes(value)) return value;
+    }
+  }catch(_){}
+  return currentAudience();
+}
+
 async function initDecisionEngine(){
   const root=document.getElementById('decisionEngine');if(!root)return;
   try { await (window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.handleOAuthReturn ? window.CareerDiyaProfileAuth.handleOAuthReturn() : Promise.resolve()); } catch(err) { /* normal page load can continue */ }
-  const pendingRaw=localStorage.getItem('careerdiya_pending_exploration');
   const vaultItemId=qs().get('vaultItem')||null;
+  const vaultSource=qs().get('source')==='vault' || !!vaultItemId;
+  if(vaultSource && window.CareerDiyaProfileAuth?.isAuthenticated()){
+    try{
+      const item=await loadVaultExplorationContext(vaultItemId);
+      if(item){
+        const audience=await resolveVaultAudience();
+        renderVaultCareerContext(root,audience,item,(vaultContext)=>{
+          if(audience==='professional') renderCurrentRoleStep(root,audience,(role)=>renderWizard(root,role,vaultContext,audience));
+          else renderWizard(root,null,vaultContext,audience);
+        });
+        return;
+      }
+    }catch(err){
+      root.innerHTML='<div class="notice">'+escHtml(err?.message||'We could not open this Career Vault item. Please return to your Vault and try again.')+'</div>';
+      return;
+    }
+  }
+  const pendingRaw=localStorage.getItem('careerdiya_pending_exploration');
   const resumeRequested=qs().get('resume')==='1';
   if(window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.isAuthenticated()) {
     try {
