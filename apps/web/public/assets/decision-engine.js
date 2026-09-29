@@ -50,6 +50,7 @@ function renderWizard(root, currentRole = null, vaultContext = null, audienceOve
   let step=0;
   const answers={...(context.answers||{})};
   const audience=audienceOverride || context.audience || currentAudience();
+  const customCareer=context.customCareer||null;
   const baseQuestions=questionsForAudience(audience);
   const activeQuestions=baseQuestions.filter(q=>!context.skipQuestionIds?.includes(q.id));
   const total=activeQuestions.length;
@@ -78,7 +79,7 @@ function renderWizard(root, currentRole = null, vaultContext = null, audienceOve
       // once at wizard start, not re-evaluated per step.
       const growToRoleEligible = audience==='professional' && answers.intent==='growth' && currentRole && typeof isBoundedRoleValue==='function' && isBoundedRoleValue(currentRole);
       if(growToRoleEligible) renderToRoleStep(root,answers,audience,currentRole, vaultContext);
-      else gateBeforeResults(root,answers,audience,currentRole,null,vaultContext?.id || null);
+      else gateBeforeResults(root,answers,audience,currentRole,customCareer,vaultContext?.id || null);
     });
   }
   draw();
@@ -121,7 +122,7 @@ function renderToRoleStep(root,answers,audience,currentRole,vaultContext=null){
     // Defensive: a bounded role should always resolve to a family with at least one
     // other alias somewhere in its adjacent set. If it somehow doesn't, never a dead end
     // — proceed exactly as if this step didn't exist.
-    gateBeforeResults(root,answers,audience,currentRole,null,vaultContext?.id || null);
+    gateBeforeResults(root,answers,audience,currentRole,customCareer,vaultContext?.id || null);
     return;
   }
 
@@ -929,6 +930,7 @@ async function initDecisionEngine(){
         const audience=await resolveVaultAudience();
         renderVaultCareerContext(root,audience,item,async(vaultContext)=>{
           const explorerContext=await resolvePlatformExplorerContext(audience);
+          explorerContext.customCareer=vaultContext?.customCareer||null;
           if(explorerContext.currentRole || audience!=='professional'){
             renderWizard(root,explorerContext.currentRole,vaultContext,explorerContext.audience,explorerContext);
           }else{
