@@ -104,9 +104,11 @@
   document.getElementById('addEducation').addEventListener('click',()=>{if(educationBox.children.length<5)addEducationRecord();});
   document.getElementById('addExperience').addEventListener('click',()=>{if(experienceBox.children.length<5)addExperienceRecord();});
   selectInit();
+  let loadedProfile=null;
   try{
     const [profile, education, experience]=await Promise.all([auth.getProfile(),auth.getEducationRecords(),auth.getExperienceRecords()]);
-    fillProfile(profile||{});
+    loadedProfile=profile||{};
+    fillProfile(loadedProfile);
     education.forEach(addEducationRecord); if(!education.length)addEducationRecord();
     experience.forEach(addExperienceRecord); if(!experience.length)addExperienceRecord();
   }catch(e){status.textContent='Could not load your profile yet.';status.className='profile-gate-status err';}
@@ -119,7 +121,7 @@
     const interests=chipValues('careerInterests');
     const goals=chipValues('careerGoals');const strengths=chipValues('strengths');const weaknesses=chipValues('weaknesses');const learning=chipValues('learningPreferences');
     const otherValue=id=>{const el=document.querySelector(`#${id}`).parentElement.querySelector('.other-wrap input');return el?el.value.trim():''};
-    const values={display_name:(d.get('display_name')||'').trim(),avatar_url:(d.get('avatar_url')||'').trim(),country:d.get('country')||null,country_other:(d.get('country_other')||'').trim(),current_role_title:d.get('current_role_title')||null,current_role_other:(d.get('current_role_other')||'').trim(),industry:d.get('industry')||null,industry_other:(d.get('industry_other')||'').trim(),experience_years:d.get('experience_years')||null,career_interests:interests,career_interests_other:otherValue('careerInterests'),career_goals:goals.join('|'),career_goals_other:otherValue('careerGoals'),strengths:strengths.join('|'),strengths_other:otherValue('strengths'),weaknesses:weaknesses.join('|'),weaknesses_other:otherValue('weaknesses'),learning_preferences:learning.join('|'),learning_preferences_other:otherValue('learningPreferences'),audience:profileAudience(profile||{})};
+    const values={display_name:(d.get('display_name')||'').trim(),avatar_url:(d.get('avatar_url')||'').trim(),country:d.get('country')||null,country_other:(d.get('country_other')||'').trim(),current_role_title:d.get('current_role_title')||null,current_role_other:(d.get('current_role_other')||'').trim(),industry:d.get('industry')||null,industry_other:(d.get('industry_other')||'').trim(),experience_years:d.get('experience_years')||null,career_interests:interests,career_interests_other:otherValue('careerInterests'),career_goals:goals.join('|'),career_goals_other:otherValue('careerGoals'),strengths:strengths.join('|'),strengths_other:otherValue('strengths'),weaknesses:weaknesses.join('|'),weaknesses_other:otherValue('weaknesses'),learning_preferences:learning.join('|'),learning_preferences_other:otherValue('learningPreferences'),audience:profileAudience(loadedProfile||{})};
     try{
       const saved=await auth.saveProfile(values);
       try{
