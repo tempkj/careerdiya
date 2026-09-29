@@ -33,7 +33,14 @@ const PROFESSIONAL_QUESTIONS = [
 ];
 
 function qs(){return new URLSearchParams(location.search);}
-function currentAudience(){const a=qs().get('audience')||localStorage.getItem('careerdiyaAudience');return ['parent','student','professional'].includes(a)?a:'professional';}
+function currentAudience(){
+  const urlAudience=String(qs().get('audience')||'').toLowerCase();
+  if(['parent','student','professional'].includes(urlAudience)) return urlAudience;
+  // Do not let stale localStorage silently turn a fresh/default professional
+  // exploration into a student/parent exploration. Persistent profile is resolved
+  // asynchronously by resolvePlatformExplorerContext().
+  return 'professional';
+}
 function questionsForAudience(a){return a==='parent'?PARENT_QUESTIONS:a==='student'?STUDENT_QUESTIONS:PROFESSIONAL_QUESTIONS;}
 function elsLocal(q,p){return [...p.querySelectorAll(q)];}
 function escHtml(s){return String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
@@ -980,7 +987,20 @@ async function initDecisionEngine(){
   const startCopy=audience==='parent'?{eyebrow:'Free · a few minutes',title:'Explore your child’s direction before choosing a stream.',copy:'Answer a few questions about your child’s stage, interests and strengths. We will suggest broad directions worth exploring and a sensible next step.',benefits:['✓ Free profile to see your result','✓ No pressure to buy','✓ Use an age-designed assessment when you need deeper evidence']} : audience==='student'?{eyebrow:'Free · a few minutes',title:'Two ways to start exploring.',copy:'Jump straight to careers that come from your stream or major, or answer 7 quick questions for a read based on how you actually think and work. Neither is the "real" one — pick whichever you want first.',benefits:['✓ Free profile to see your result','✓ No pressure to buy','✓ Designed for students aged 16+']} : {eyebrow:'Free · 5–7 minutes',title:'Get a starting direction before you buy anything.',copy:'Answer a few questions about your situation, work preferences and goals. We will turn that into a short list of directions worth exploring and the most sensible next action.',benefits:['✓ Free profile to see your result','✓ No pressure to buy','✓ Skill Diya connection']};
   const autoStartWizard = qs().get('intent')||(!qs().get('wizard')&&qs().get('start')==='1');
   if(autoStartWizard){
-    renderWizard(root);
+    // Auto-start must go through the same context resolver as the normal Start button.
+    // Previously this bypassed profile context completely.
+    const bootstrapAudience=currentAudience();
+    const explorerContext=await resolvePlatformExplorerContext(bootstrapAudience);
+    if(explorerContext.currentRole || explorerContext.audience!=='professional'){
+      renderWizard(root,explorerContext.currentRole,null,explorerContext.audience,explorerContext);
+    }else{
+      renderCurrentRoleStep(root,explorerContext.audience,(role)=>renderWizard(root,role,null,explorerContext.audience,{
+        ...explorerContext,
+        currentRole:role,
+        summary:buildExplorerContextSummary(explorerContext.audience,role),
+        canChangeRole:false
+      }));
+    }
   } else if(audience==='student'){
     // ADR-CAREERDIY-0016: co-primary — both buttons use the SAME class (btn btn-primary),
     // same markup weight, side by side. Neither is styled as the fallback off the other.
@@ -1006,6 +1026,6 @@ async function initDecisionEngine(){
   const startStream=document.getElementById('startStreamPath');
   if(startStream) startStream.addEventListener('click',()=>renderStudentStageStep(root));
   const startPreference=document.getElementById('startPreferencePath');
-  if(startPreference) startPreference.addEventListener('click',async()=>{const ctx=await resolvePlatformExplorerContext('student');renderWizard(root,ctx.currentRole,null,ctx.audience,ctx);});
+  if(startPreference) startPreference.addEventListener('click',async()=>{const ctx=await resolvePlatformExplorerContext(currentAudience());renderWizard(root,ctx.currentRole,null,ctx.audience,ctx);});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initDecisionEngine);else initDecisionEngine();
