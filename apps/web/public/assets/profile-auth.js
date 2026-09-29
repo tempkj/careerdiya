@@ -123,11 +123,15 @@
     if (!session || !session.user) return null;
     const user = session.user;
     const meta = user.user_metadata || {};
+    const { data: existing, error: existingError } = await coreTable('profile')
+      .select('*').eq('user_id', user.id).maybeSingle();
+    if (existingError) throw existingError;
+    if (existing) return existing;
     const payload = {
       user_id: user.id,
       display_name: values.display_name ?? meta.display_name ?? meta.full_name ?? meta.name ?? '',
       avatar_url: values.avatar_url ?? meta.avatar_url ?? meta.picture ?? null,
-      audience: values.audience ?? meta.audience ?? null,
+      audience: values.audience ?? meta.audience ?? 'professional',
       updated_at: new Date().toISOString()
     };
     const { data, error } = await coreTable('profile').upsert(payload, { onConflict: 'user_id' }).select().single();
@@ -168,10 +172,10 @@
   async function getProfile() {
     if (!isAuthenticated()) return null;
     const client = getSupabaseClient();
-    await ensureProfile({});
     const { data, error } = await coreTable('profile').select('*').maybeSingle();
     if (error) throw error;
-    return data || null;
+    if (data) return data;
+    return await ensureProfile({});
   }
 
   // ADR-CAREERDIY-0015: isOther distinguishes a bounded dropdown pick from free-typed
@@ -213,16 +217,22 @@
 
   async function saveProfile(values) {
     const client = getSupabaseClient();
-    const { data: sessionData } = await client.auth.getSession();
+    const { data: sessionData, error: sessionError } = await client.auth.getSession();
+    if (sessionError) throw sessionError;
     const user = sessionData && sessionData.session && sessionData.session.user;
     if (!user) throw new Error('You need to be signed in to save your profile.');
+    const meta = user.user_metadata || {};
+    const { data: existing, error: existingError } = await coreTable('profile')
+      .select('audience').eq('user_id', user.id).maybeSingle();
+    if (existingError) throw existingError;
+    const audience = String(values.audience || existing?.audience || meta.audience || 'professional').toLowerCase();
     // Fix (state-contamination, second write path): profile.html's "Current Role" field
     // is shown and editable regardless of account audience — this was never touched by
     // the earlier setCurrentRole() gate (renderResults.js), because it's a completely
     // separate save path. Same principle applied here: current_role_title/current_role_other
     // persist only for a professional account. A student/parent submitting the form still
     // saves every OTHER field normally; only these two are dropped.
-    const isProfessional = values.audience === 'professional';
+    const isProfessional = audience === 'professional';
     const payload = {
       user_id: user.id,
       display_name: values.display_name || '',
@@ -248,7 +258,7 @@
       weaknesses_other: values.weaknesses_other || null,
       learning_preferences: values.learning_preferences || null,
       learning_preferences_other: values.learning_preferences_other || null,
-      audience: values.audience || null,
+      audience,
       updated_at: new Date().toISOString()
     };
     const { data, error } = await coreTable('profile').upsert(payload, { onConflict: 'user_id' }).select().single();
