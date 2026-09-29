@@ -720,30 +720,35 @@ function findCanonicalCareerForVaultItem(item){
 
 function renderVaultCareerContext(root,audience,item,onContinue){
   const linked=findCanonicalCareerForVaultItem(item);
-  const options=typeof CAREER_LIBRARY_CATALOGUE!=='undefined'?CAREER_LIBRARY_CATALOGUE.filter(c=>c.canonicalStatus==='verified'):[];
-  const datalist=options.map(c=>'<option value="'+escHtml(c.canonicalName)+'" data-career-id="'+escHtml(c.id)+'"></option>').join('');
-  const initial=linked?.canonicalName||'';
+  const allOptions=typeof CAREER_LIBRARY_CATALOGUE!=='undefined'?CAREER_LIBRARY_CATALOGUE.filter(c=>c.canonicalStatus==='verified'):[];
+  const options=Array.from(new Map(allOptions.map(c=>[c.id,c])).values()).sort((a,b)=>a.canonicalName.localeCompare(b.canonicalName));
+  const initial=linked?.id||'';
+  const optionMarkup=options.map(c=>'<option value="'+escHtml(c.id)+'">'+escHtml(c.canonicalName)+'</option>').join('');
   root.innerHTML=`<div class="profile-context-card vault-explore-context">
     <div class="eyebrow">From your Career Vault</div>
     <h2>Let's explore this thought as a career.</h2>
     <p class="profile-context-lead">You saved:</p>
     <div class="vault-context-quote">“${escHtml(item.raw_text)}”</div>
     ${item.context_note?`<p class="profile-context-lead"><b>Your context:</b> ${escHtml(item.context_note)}</p>`:''}
-    <label class="profile-context-label" for="vaultCareerChoice">${linked?'Career direction':'Which career are you considering?'}</label>
-    <input class="input" id="vaultCareerChoice" list="vaultCareerOptions" value="${escHtml(initial)}" placeholder="Search or type a career name…" autocomplete="off">
-    <datalist id="vaultCareerOptions">${datalist}</datalist>
+    <label class="profile-context-label" for="vaultCareerChoice">Canonical Career Library career</label>
+    <p class="profile-context-help">A captured thought is not automatically treated as a career. Select the exact career you want to explore. This keeps your Vault thought and your canonical career record separate.</p>
+    <select class="input" id="vaultCareerChoice">
+      <option value="">Select a career…</option>
+      ${optionMarkup}
+    </select>
     <p class="profile-context-status" id="vaultCareerStatus" role="status" aria-live="polite"></p>
     <div class="wizard-footer">
       <a class="btn btn-secondary" href="vault.html">Back to Career Vault</a>
-      <button class="btn btn-primary" id="continueVaultCareer">${linked?'Continue with this career →':'Continue →'}</button>
+      <button class="btn btn-primary" id="continueVaultCareer">${linked?'Continue with this career →':'Select a career →'}</button>
     </div>
   </div>`;
 
   const input=root.querySelector('#vaultCareerChoice');
+  if(initial) input.value=initial;
   const status=root.querySelector('#vaultCareerStatus');
   root.querySelector('#continueVaultCareer').addEventListener('click',async()=>{
-    const name=input.value.trim();
-    const career=options.find(c=>c.canonicalName.toLowerCase()===name.toLowerCase());
+    const selectedId=input.value;
+    const career=options.find(c=>c.id===selectedId);
     if(!career){
       status.textContent='Choose a career from the Career Library suggestions.';
       status.className='profile-context-status err';
