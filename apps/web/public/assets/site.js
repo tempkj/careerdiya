@@ -111,6 +111,16 @@ function syncProfileNav(){
   });
   els('[data-logged-out-hidden]').forEach(x=>x.classList.toggle('hidden',!authenticated));
   els('[data-logged-in-only]').forEach(x=>x.classList.toggle('hidden',!authenticated));
+  els('[data-auth-login]').forEach(node=>{
+    if(authenticated){
+      node.className='nav-signin hidden';
+      node.setAttribute('aria-hidden','true');
+    }else{
+      node.className='nav-signin';
+      node.href='auth.html?return=dashboard';
+      node.removeAttribute('aria-hidden');
+    }
+  });
 }
 function syncAssessmentCtas(){
   const d=assessmentDestination();
