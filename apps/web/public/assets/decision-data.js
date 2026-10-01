@@ -166,7 +166,7 @@ const STARTER_ROLE_FAMILIES = {
     label:'People, Education & HR',
     aliases:['hr manager','human resources manager','hr executive','human resources executive',
       'recruiter','talent acquisition','learning and development','l&d manager','trainer',
-      'teacher','career counsellor','career counselor'],
+      'teacher','career counsellor','career counselor','career counselling','career coaching','career coach'],
     adjacent:['product_business','marketing_communication'],
     transferable:['law_policy']
   },
@@ -500,15 +500,14 @@ function generateRecommendations(answers,audience,currentRole=null,targetRole=nu
 
   // Fix A — target-role anchoring. The eligibility gate above is completely untouched:
   // this only ever reorders WITHIN the already-gated `ranked` list, never widens or
-  // narrows it, and only applies under GROW with a target role actually selected (the
-  // to-role interstitial is professional+GROW-only, so this is a no-op for every other
-  // case by construction). The user told us which specific role they're growing toward —
+  // narrows it, and only applies to GROW or SWITCH with an explicit target role.
+  // The user told us which specific role they're growing toward or switching into —
   // that direction wins the primary slot regardless of raw cosine score, so the result
   // never contradicts a target they explicitly picked. A genuinely stronger adjacent
   // signal is preserved, not suppressed: it simply moves to the next slot (still surfaced
   // as "also worth exploring"), rather than displacing the stated target as primary.
   let anchoredDirectionId=null;
-  if(kind==='adult' && context.intent==='GROW' && targetRole){
+  if(kind==='adult' && (context.intent==='GROW' || context.intent==='SWITCH') && targetRole){
     const targetFamily=roleFamilyForRole(targetRole);
     const targetDirectionId=targetFamily?directionIdForRoleFamily(targetFamily):null;
     if(targetDirectionId){
