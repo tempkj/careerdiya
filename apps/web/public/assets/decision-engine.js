@@ -977,13 +977,23 @@ function renderVaultCareerContext(root,audience,item,onContinue){
   const saveAndContinue=async(career,customCareer=null)=>{
     const btn=root.querySelector('#continueVaultCareer')||root.querySelector('#confirmSuggested');
     if(btn) btn.disabled=true;
-    status.textContent='Saving this career context…'; status.className='profile-context-status';
+    status.textContent='Opening your free exploration…'; status.className='profile-context-status';
     try{
-      if(career && window.CareerDiyaProfileAuth?.updateVaultItem) await window.CareerDiyaProfileAuth.updateVaultItem(item.id,{linked_career_id:career.id});
-      onContinue({...item,linked_career_id:career?.id||null,linkedCareer:career||null,customCareer:customCareer||null});
+      if(career && window.CareerDiyaProfileAuth?.updateVaultItem){
+        await window.CareerDiyaProfileAuth.updateVaultItem(item.id,{linked_career_id:career.id});
+      }
+      // onContinue is async: await it so resolver/database failures are caught here
+      // instead of becoming an unhandled promise that leaves the page unchanged.
+      await onContinue({
+        ...item,
+        linked_career_id:career?.id||null,
+        linkedCareer:career||null,
+        customCareer:customCareer||null
+      });
     }catch(err){
+      console.error('[Career Diya] vault exploration launch failed',err);
       if(btn) btn.disabled=false;
-      status.textContent=err?.message||'Could not save this career context. Please try again.';
+      status.textContent=err?.message||'Could not open the free exploration. Please try again.';
       status.className='profile-context-status err';
     }
   };
