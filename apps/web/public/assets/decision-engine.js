@@ -26,7 +26,7 @@ const PROFESSIONAL_QUESTIONS = [
   {id:'stage', title:'Where are you right now?', subtitle:'This helps us frame the recommendation.', options:[['early','Early career (0–3 years)'],['mid','Mid career (3–9 years)'],['senior','Senior / established career (10+ years)']]},
   {id:'intent', title:'What are you trying to figure out?', subtitle:'Pick the question closest to what is on your mind.', options:[['choice','I am not sure which career to choose'],['switch','I am thinking about a career switch'],['growth','I want to grow where I am'],['learning','I am not sure which course or skill to invest in'],['stuck','I feel stuck and need a new direction']]},
   {id:'work', title:'What kind of work gives you energy?', subtitle:'Choose the type of problems you would rather spend time on.', options:[['analytical','Analysing, solving and finding patterns'],['builder','Building products, systems or solutions'],['creative','Creating, designing or communicating'],['people','Helping, coaching or influencing people'],['quality','Making things better, safer or more reliable']]},
-  {id:'environment', title:'Which environment sounds more like you?', subtitle:'There is no right answer.', options:[['structured','Clear structure, standards and measurable outcomes'],['dynamic','Fast-changing, ambiguous and entrepreneurial'],['collaborative','Cross-functional, discussion-heavy and people-oriented'],['independent','Deep work with ownership and autonomy']]},
+  {id:'environment', title:'Which environment sounds more like you?', subtitle:'There is no right answer. If you need a job urgently or are open to any working conditions, choose the final option.', options:[['structured','Clear structure, standards and measurable outcomes'],['dynamic','Fast-changing, ambiguous and entrepreneurial'],['collaborative','Cross-functional, discussion-heavy and people-oriented'],['independent','Deep work with ownership and autonomy'],['any','Any environment — I need flexibility right now']]},
   {id:'priority', title:'What matters most in the next few years?', subtitle:'Choose the outcome you would value most.', options:[['stability','Stability and dependable career progression'],['growth','Growth, responsibility and earning potential'],['impact','Meaningful impact and visible contribution'],['flexibility','Flexibility and freedom in how I work']]},
   {id:'learning', title:'How do you prefer to learn?', subtitle:'This helps us suggest an action route.', options:[['project','Projects and hands-on practice'],['structured','Structured courses and guided instruction'],['mentor','Mentor-led discussion and feedback'],['self','Self-paced exploration and experimentation']]},
   {id:'commitment', title:'How ready are you to take action?', subtitle:'This changes the kind of next step we recommend.', options:[['explore','Just exploring — I do not want to commit yet'],['validate','I want to validate my direction first'],['plan','I am ready to make a 90-day plan'],['act','I am ready to start learning / acting']]}
@@ -84,9 +84,11 @@ function renderWizard(root, currentRole = null, vaultContext = null, audienceOve
       // to-role interstitial after the wizard, before results — mounted here rather than
       // as a conditional mid-wizard question because `total` above is a const captured
       // once at wizard start, not re-evaluated per step.
+      const explicitVaultTarget = vaultContext?.linkedCareer?.canonicalName || vaultContext?.customCareer || null;
+      const switchToRoleEligible = audience==='professional' && answers.intent==='switch' && explicitVaultTarget;
       const growToRoleEligible = audience==='professional' && answers.intent==='growth' && currentRole && typeof isBoundedRoleValue==='function' && isBoundedRoleValue(currentRole);
       if(growToRoleEligible) renderToRoleStep(root,answers,audience,currentRole, vaultContext);
-      else gateBeforeResults(root,answers,audience,currentRole,customCareer,vaultContext?.id || null);
+      else gateBeforeResults(root,answers,audience,currentRole,explicitVaultTarget||customCareer,vaultContext?.id || null);
     });
   }
   draw();
@@ -749,7 +751,7 @@ function buildExplorerContextSummary(audience,currentRole,experienceYears=null){
   return '';
 }
 
-async function resolvePlatformExplorerContext(audience, currentRole=null){
+async function resolvePlatformExplorerContext(audience, currentRole=null, vaultContext=null){
   let profile=null;
   try{
     if(window.CareerDiyaProfileAuth?.isAuthenticated?.() && window.CareerDiyaProfileAuth?.getProfile){
@@ -762,26 +764,44 @@ async function resolvePlatformExplorerContext(audience, currentRole=null){
   const resolvedRole=String(currentRole||profileRole).trim()||null;
   const answers={};
   const skipQuestionIds=[];
-  // Reuse persistent background facts where they map cleanly to an explorer signal.
-  // Do not guess when the profile is insufficient; unknown remains an explicit question.
   let education=[];
   let experience=[];
   try{
     if(window.CareerDiyaProfileAuth?.getEducationRecords) education=await window.CareerDiyaProfileAuth.getEducationRecords();
     if(window.CareerDiyaProfileAuth?.getExperienceRecords) experience=await window.CareerDiyaProfileAuth.getExperienceRecords();
   }catch(_){}
+
   if(resolvedAudience==='professional'){
     const latestExperience=experience.find(x=>x?.years_bucket)||experience[0];
-    // Prefer the explicit profile experience bucket because it is the primary
-    // persistent Career Context field. Background records are a useful fallback.
     const bucket=String(profile?.experience_years||latestExperience?.years_bucket||'').trim().toLowerCase();
     let inferredStage=inferProfessionalStageFromRole(resolvedRole);
     if(!inferredStage){
       if(/^(no experience|less than 1 year|1–2 years|1-2 years)$/.test(bucket)) inferredStage='early';
       else if(/^(3–5 years|3-5 years|6–10 years|6-10 years)$/.test(bucket)) inferredStage='mid';
-      else if(/^(11–15 years|11-15 years|16–20 years|16-20 years|20\+ years|20\+ years)$/.test(bucket)) inferredStage='senior';
+      else if(/^(11–15 years|11-15 years|16–20 years|16-20 years|20\+ years)$/.test(bucket)) inferredStage='senior';
     }
     if(inferredStage){ answers.stage=inferredStage; skipQuestionIds.push('stage'); }
+
+    // Vault career pursuit + a known from-role is a career-switch intent, not a generic
+    // preference exploration. The target career is carried separately so it can anchor
+    // the final direction.
+    if(vaultContext?.linkedCareer?.canonicalName || vaultContext?.customCareer){
+      answers.intent='switch';
+      skipQuestionIds.push('intent');
+    }
+
+    const savedWork=String(profile?.exploration_work_preference||'').trim();
+    if(['analytical','builder','creative','people','quality'].includes(savedWork)){
+      answers.work=savedWork; skipQuestionIds.push('work');
+    }
+    const savedEnvironment=String(profile?.exploration_environment||'').trim();
+    if(['structured','dynamic','collaborative','independent','any'].includes(savedEnvironment)){
+      answers.environment=savedEnvironment; skipQuestionIds.push('environment');
+    }
+    const savedPriority=String(profile?.exploration_priority||'').trim();
+    if(['stability','growth','impact','flexibility'].includes(savedPriority)){
+      answers.priority=savedPriority; skipQuestionIds.push('priority');
+    }
   }else if(resolvedAudience==='student'){
     const currentEducation=education.find(x=>x?.is_current)||education[0];
     const level=String(currentEducation?.education_level||'').toLowerCase();
@@ -793,16 +813,19 @@ async function resolvePlatformExplorerContext(audience, currentRole=null){
     else if(['undergraduate','postgraduate','doctoral','professional certification'].includes(level) && gradYear && gradYear<=thisYear && !currentEducation?.is_current) inferredStage='recent_grad';
     if(inferredStage){ answers.stage=inferredStage; skipQuestionIds.push('stage'); }
   }
+
+  const experienceForSummary=profile?.experience_years||experience.find(x=>x?.years_bucket)?.years_bucket||null;
   return {
     audience:resolvedAudience,
     currentRole:resolvedRole,
     answers,
     skipQuestionIds,
-    summary:buildExplorerContextSummary(resolvedAudience,resolvedRole,profile?.experience_years||latestExperience?.years_bucket||null),
-    canChangeRole:resolvedAudience==='professional' && !!resolvedRole
+    summary:buildExplorerContextSummary(resolvedAudience,resolvedRole,experienceForSummary),
+    canChangeRole:resolvedAudience==='professional' && !!resolvedRole,
+    targetCareerId:vaultContext?.linkedCareer?.id||null,
+    targetCareerName:vaultContext?.linkedCareer?.canonicalName||vaultContext?.customCareer||null
   };
 }
-
 function findVaultCareerCandidates(item, options){
   const text=`${item?.raw_text||''} ${item?.context_note||''}`.toLowerCase();
   const rules=[
@@ -942,8 +965,10 @@ async function initDecisionEngine(){
       if(item){
         const audience=await resolveVaultAudience();
         renderVaultCareerContext(root,audience,item,async(vaultContext)=>{
-          const explorerContext=await resolvePlatformExplorerContext(audience);
+          const explorerContext=await resolvePlatformExplorerContext(audience,vaultContext?.currentRole||null,vaultContext);
           explorerContext.customCareer=vaultContext?.customCareer||null;
+          explorerContext.targetCareerId=vaultContext?.linkedCareer?.id||null;
+          explorerContext.targetCareerName=vaultContext?.linkedCareer?.canonicalName||vaultContext?.customCareer||null;
           if(explorerContext.currentRole || audience!=='professional'){
             renderWizard(root,explorerContext.currentRole,vaultContext,explorerContext.audience,explorerContext);
           }else{
