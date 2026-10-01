@@ -169,7 +169,7 @@
     return data;
   }
 
-  async function saveExplorationDefaults({ audience, answers = {} } = {}) {
+  async function saveExplorationDefaults({ audience, answers = {}, currentRole = null } = {}) {
     const client = getSupabaseClient();
     const { data: sessionData, error: sessionError } = await client.auth.getSession();
     if (sessionError) throw sessionError;
@@ -178,25 +178,81 @@
     const allowed = new Set(['parent','student','professional']);
     const safeAudience = allowed.has(String(audience || '').toLowerCase()) ? String(audience).toLowerCase() : null;
     if (!safeAudience) throw new Error('Invalid exploration audience.');
+
+    const existing = await coreTable('profile').select('*').eq('user_id', user.id).maybeSingle();
+    if (existing.error) throw existing.error;
+    const existingProfile = existing.data || {};
+
+    // The first completed free exploration establishes the reusable baseline.
+    // Later feature-specific changes are local overrides and never replace this baseline.
+    if (existingProfile.exploration_default_context && Object.keys(existingProfile.exploration_default_context).length) {
+      return existingProfile;
+    }
+
+    const goalMap = {
+      choice: 'Choose my first career direction',
+      learning: 'Build specialist expertise',
+      growth: 'Grow in my current career',
+      switch: 'Switch careers',
+      stuck: 'Choose my first career direction'
+    };
+    const learningMap = {
+      project: 'Hands-on projects',
+      structured: 'Instructor-led',
+      mentor: 'Mentor support',
+      self: 'Self-paced'
+    };
     const payload = {
       audience: safeAudience,
       answers: { ...answers },
+      current_role: currentRole || null,
       saved_at: new Date().toISOString(),
       source: 'first_free_exploration'
     };
+
+    const profilePatch = {
+      user_id: user.id,
+      audience: safeAudience,
+      exploration_default_context: payload,
+      updated_at: new Date().toISOString()
+    };
+
+    if (safeAudience === 'professional' && currentRole) {
+      profilePatch.current_role_title = currentRole;
+      profilePatch.current_role_other = null;
+    }
+    if (answers.intent && goalMap[answers.intent] && !existingProfile.career_goals) {
+      profilePatch.career_goals = goalMap[answers.intent];
+    }
+    if (answers.work && !existingProfile.exploration_work_preference) {
+      profilePatch.exploration_work_preference = answers.work;
+    }
+    if (answers.environment && !existingProfile.exploration_environment) {
+      profilePatch.exploration_environment = answers.environment;
+    }
+    if (answers.priority && !existingProfile.exploration_priority) {
+      profilePatch.exploration_priority = answers.priority;
+    }
+    if (answers.learning && !existingProfile.learning_preferences) {
+      profilePatch.learning_preferences = learningMap[answers.learning] || answers.learning;
+    }
+    if (safeAudience === 'professional' && answers.stage && !existingProfile.experience_years) {
+      profilePatch.experience_years = ({early:'Less than 1 year',mid:'3–5 years',senior:'11–15 years'})[answers.stage] || null;
+    }
+    if (safeAudience === 'student' && answers.stage === 'late_school' && !existingProfile.education_level) {
+      profilePatch.education_level = 'School';
+    }
+    if (safeAudience === 'student' && answers.stage === 'college' && !existingProfile.education_level) {
+      profilePatch.education_level = 'Undergraduate';
+    }
+
     const { data, error } = await coreTable('profile')
-      .upsert({
-        user_id: user.id,
-        audience: safeAudience,
-        exploration_default_context: payload,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id' })
+      .upsert(profilePatch, { onConflict: 'user_id' })
       .select().single();
     if (error) throw error;
     try { localStorage.setItem('careerdiya_exploration_defaults', JSON.stringify(payload)); } catch (_) {}
     return data;
   }
-
   async function getExplorationDefaults() {
     if (!isAuthenticated()) return null;
     const profile = await getProfile();
