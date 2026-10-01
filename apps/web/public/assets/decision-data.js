@@ -273,6 +273,30 @@ function roleFamilyForRole(role){
     if(info.aliases.includes(normalized)) return family;
   }
 
+  // Profile "Current Role" is intentionally a bounded role-family taxonomy. Map those
+  // labels into the same routing families used by the exploration engine so persistent
+  // profile context actually constrains switch/growth exploration.
+  const profileFamilyAliases={
+    'software / technology':'software_engineering',
+    'data / ai / analytics':'data_science',
+    'product':'product_business',
+    'design / ux':'design_ux',
+    'marketing / communications':'marketing_communication',
+    'sales / business development':'marketing_communication',
+    'finance / accounting':'finance_risk',
+    'operations':'product_business',
+    'human resources':'people_hr',
+    'consulting':'product_business',
+    'legal / compliance':'law_policy',
+    'research':'data_science',
+    'education / training':'people_hr',
+    'healthcare':'health_lifesciences',
+    'entrepreneur / founder':'entrepreneurship',
+    'government / public sector':'law_policy',
+    'creative / media':'design_ux'
+  };
+  if(profileFamilyAliases[normalized]) return profileFamilyAliases[normalized];
+
   const patterns=[
     ['software_engineering',/\b(software|application|frontend|front end|backend|back end|web)\s+(engineer|developer)\b/],
     ['data_science',/\b(data scientist|data analyst|research analyst|researcher|machine learning engineer|machine learning scientist|ml engineer)\b/],
