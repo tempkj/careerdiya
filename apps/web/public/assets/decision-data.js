@@ -60,7 +60,8 @@ const ANSWER_MAPPINGS = {
       structured:{workStyle:{structure:1,deep_focus:0.7,stability:0.45}},
       dynamic:{workStyle:{variety:1,autonomy:0.55,freedom:0.4}},
       collaborative:{workStyle:{people:0.8,communication:0.8,variety:0.4}},
-      independent:{workStyle:{autonomy:1,deep_focus:0.8,structure:0.25}}
+      independent:{workStyle:{autonomy:1,deep_focus:0.8,structure:0.25}},
+      any:{}
     },
     priority: {
       stability:{values:{stability:1,structure:0.55}},
