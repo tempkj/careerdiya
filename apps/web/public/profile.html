@@ -23,6 +23,20 @@
         </div>
 
         <div class="profile-section">
+          <div class="eyebrow">Career Context</div><h2>How Career Diya Should Understand You</h2>
+          <p class="profile-section-note">This is your persistent context. You can change it whenever your situation changes.</p>
+          <div class="profile-form-grid">
+            <label>I'm exploring as
+              <select class="input select" name="audience" id="profileAudience">
+                <option value="professional">Professional</option>
+                <option value="student">Student</option>
+                <option value="parent">Parent</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="profile-section" id="currentWorkSection">
           <div class="eyebrow">Professional</div><h2>Your Current Work Context</h2>
           <p class="profile-section-note">Keep this focused on what you are doing now. Your broader work and knowledge history is captured below.</p>
           <div class="profile-form-grid">
@@ -89,9 +103,15 @@
     experienceBox.appendChild(card);
   }
   const renumber=(box,selector,label)=>box.querySelectorAll(selector).forEach((card,i)=>card.querySelector('.profile-repeat-head strong').textContent=`${label} ${i+1}`);
+  function syncAudienceUI(value){
+    const audience=String(value||'professional').toLowerCase();
+    if(audienceSelect) audienceSelect.value=['parent','student','professional'].includes(audience)?audience:'professional';
+    if(currentWorkSection) currentWorkSection.classList.toggle('hidden', audience!=='professional');
+  }
   function fillProfile(p){
     if(!p)return;
     ['display_name','avatar_url','country','country_other','current_role_title','current_role_other','industry','industry_other','experience_years'].forEach(k=>{const el=form.elements[k];if(el)el.value=p[k]??'';});
+    syncAudienceUI(p.audience);
     wireOther(form.elements.country,form.elements.country_other);wireOther(form.elements.current_role_title,form.elements.current_role_other);wireOther(form.elements.industry,form.elements.industry_other);
     const name=p.display_name||'Your Profile';namePreview.textContent=name;avatar.innerHTML=p.avatar_url?`<img src="${escapeHtml(p.avatar_url)}" alt="">`:(name.trim().split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase()||'?');
     wireChipSet(document.getElementById('careerInterests'),options.careerInterests,p.career_interests||[],p.career_interests_other||'');wireChipSet(document.getElementById('careerGoals'),options.careerGoals,(p.career_goals||'').split('|').filter(Boolean),p.career_goals_other||'');wireChipSet(document.getElementById('strengths'),options.strengths,(p.strengths||'').split('|').filter(Boolean),p.strengths_other||'');wireChipSet(document.getElementById('weaknesses'),options.developmentAreas,(p.weaknesses||'').split('|').filter(Boolean),p.weaknesses_other||'');wireChipSet(document.getElementById('learningPreferences'),options.learningPreferences,(p.learning_preferences||'').split('|').filter(Boolean),p.learning_preferences_other||'');
@@ -100,6 +120,8 @@
   function collectExperience(){return Array.from(experienceBox.querySelectorAll('.experience-record')).map(card=>({domain:card.querySelector('.domain').value,domain_other:card.querySelector('.domain-other').value.trim(),exposure_type:card.querySelector('.exposure-type').value,exposure_level:card.querySelector('.exposure-level').value,role_family:card.querySelector('.role-family').value,role_family_other:card.querySelector('.role-family-other').value.trim(),years_bucket:card.querySelector('.years-bucket').value}));}
   function selectInit(){
     form.elements.country.innerHTML=optionList(options.countries,'','Select country');form.elements.current_role_title.innerHTML=optionList(options.roleFamilies,'','Select current role');form.elements.industry.innerHTML=optionList(options.industries,'','Select industry');form.elements.experience_years.innerHTML=optionList(options.experienceBuckets,'','Select experience');
+    syncAudienceUI(audienceSelect?.value||'professional');
+    audienceSelect?.addEventListener('change',()=>syncAudienceUI(audienceSelect.value));
   }
   document.getElementById('addEducation').addEventListener('click',()=>{if(educationBox.children.length<5)addEducationRecord();});
   document.getElementById('addExperience').addEventListener('click',()=>{if(experienceBox.children.length<5)addExperienceRecord();});
@@ -121,7 +143,8 @@
     const interests=chipValues('careerInterests');
     const goals=chipValues('careerGoals');const strengths=chipValues('strengths');const weaknesses=chipValues('weaknesses');const learning=chipValues('learningPreferences');
     const otherValue=id=>{const el=document.querySelector(`#${id}`).parentElement.querySelector('.other-wrap input');return el?el.value.trim():''};
-    const values={display_name:(d.get('display_name')||'').trim(),avatar_url:(d.get('avatar_url')||'').trim(),country:d.get('country')||null,country_other:(d.get('country_other')||'').trim(),current_role_title:d.get('current_role_title')||null,current_role_other:(d.get('current_role_other')||'').trim(),industry:d.get('industry')||null,industry_other:(d.get('industry_other')||'').trim(),experience_years:d.get('experience_years')||null,career_interests:interests,career_interests_other:otherValue('careerInterests'),career_goals:goals.join('|'),career_goals_other:otherValue('careerGoals'),strengths:strengths.join('|'),strengths_other:otherValue('strengths'),weaknesses:weaknesses.join('|'),weaknesses_other:otherValue('weaknesses'),learning_preferences:learning.join('|'),learning_preferences_other:otherValue('learningPreferences'),audience:profileAudience(loadedProfile||{})};
+    const selectedAudience=String(d.get('audience')||profileAudience(loadedProfile||{})||'professional').toLowerCase();
+    const values={display_name:(d.get('display_name')||'').trim(),avatar_url:(d.get('avatar_url')||'').trim(),country:d.get('country')||null,country_other:(d.get('country_other')||'').trim(),current_role_title:d.get('current_role_title')||null,current_role_other:(d.get('current_role_other')||'').trim(),industry:d.get('industry')||null,industry_other:(d.get('industry_other')||'').trim(),experience_years:d.get('experience_years')||null,career_interests:interests,career_interests_other:otherValue('careerInterests'),career_goals:goals.join('|'),career_goals_other:otherValue('careerGoals'),strengths:strengths.join('|'),strengths_other:otherValue('strengths'),weaknesses:weaknesses.join('|'),weaknesses_other:otherValue('weaknesses'),learning_preferences:learning.join('|'),learning_preferences_other:otherValue('learningPreferences'),audience:selectedAudience};
     try{
       const saved=await auth.saveProfile(values);
       try{
@@ -131,7 +154,8 @@
         throw new Error(`Your main profile was saved, but Education / Experience could not be saved: ${backgroundError.hint||backgroundError.message||'Please try again.'}`);
       }
       const refreshed=await auth.getProfile();
-      fillProfile(refreshed||saved);
+      loadedProfile=refreshed||saved||loadedProfile;
+      fillProfile(loadedProfile);
       status.textContent='Profile saved successfully.';status.className='profile-gate-status ok';
     }catch(err){
       console.error('Career Diya profile save failed:',err);
