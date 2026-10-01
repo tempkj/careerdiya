@@ -45,6 +45,11 @@
 
 /* Profile / authentication experience */
 .btn{font-weight:650}
+.nav-signin{display:inline-flex;align-items:center;justify-content:center;padding:9px 14px;border:1px solid var(--line);border-radius:999px;text-decoration:none;color:var(--ink);font-weight:650;font-size:14px;white-space:nowrap}
+.nav-signin:hover{background:#f7f7f4}
+.nav-signin.hidden{display:none}
+.returning-user-prompt{margin-top:12px;font-size:14px;color:var(--muted)}
+.returning-user-prompt a{color:var(--brand);font-weight:700;text-decoration:none}
 .profile-menu{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:50%;text-decoration:none;flex:0 0 auto}
 .profile-menu.guest{cursor:not-allowed;opacity:.96}
 .profile-avatar{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:var(--ink);color:#fff;font-weight:700;font-size:15px;overflow:hidden;border:2px solid #fff;box-shadow:0 3px 12px rgba(20,22,40,.12)}
