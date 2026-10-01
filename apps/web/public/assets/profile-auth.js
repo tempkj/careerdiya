@@ -169,6 +169,41 @@
     return data;
   }
 
+  async function saveExplorationDefaults({ audience, answers = {} } = {}) {
+    const client = getSupabaseClient();
+    const { data: sessionData, error: sessionError } = await client.auth.getSession();
+    if (sessionError) throw sessionError;
+    const user = sessionData && sessionData.session && sessionData.session.user;
+    if (!user) throw new Error('You need to be signed in to save exploration defaults.');
+    const allowed = new Set(['parent','student','professional']);
+    const safeAudience = allowed.has(String(audience || '').toLowerCase()) ? String(audience).toLowerCase() : null;
+    if (!safeAudience) throw new Error('Invalid exploration audience.');
+    const payload = {
+      audience: safeAudience,
+      answers: { ...answers },
+      saved_at: new Date().toISOString(),
+      source: 'first_free_exploration'
+    };
+    const { data, error } = await coreTable('profile')
+      .upsert({
+        user_id: user.id,
+        audience: safeAudience,
+        exploration_default_context: payload,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' })
+      .select().single();
+    if (error) throw error;
+    try { localStorage.setItem('careerdiya_exploration_defaults', JSON.stringify(payload)); } catch (_) {}
+    return data;
+  }
+
+  async function getExplorationDefaults() {
+    if (!isAuthenticated()) return null;
+    const profile = await getProfile();
+    const value = profile && profile.exploration_default_context;
+    return value && typeof value === 'object' ? value : null;
+  }
+
   async function getProfile() {
     if (!isAuthenticated()) return null;
     const client = getSupabaseClient();
@@ -525,5 +560,5 @@
     }
   }
 
-  window.CareerDiyaProfileAuth = { saveVaultItem, getVaultItems, updateVaultItem, deleteVaultItem, getCareerDirections, upsertCareerDirection, openCareerAsana, setCurrentRole, resolveHandoffCurrentRole, signUp, signIn, signInWithProvider, handleOAuthReturn, refreshLocalSession, ensureProfile, getProfile, saveProfile, getEducationRecords, getExperienceRecords, saveBackground, saveExploration, getSavedExploration, setAudience, signOut, getSession, isAuthenticated };
+  window.CareerDiyaProfileAuth = { saveVaultItem, getVaultItems, updateVaultItem, deleteVaultItem, getCareerDirections, upsertCareerDirection, openCareerAsana, setCurrentRole, resolveHandoffCurrentRole, signUp, signIn, signInWithProvider, handleOAuthReturn, refreshLocalSession, ensureProfile, getProfile, saveExplorationDefaults, getExplorationDefaults, saveProfile, getEducationRecords, getExperienceRecords, saveBackground, saveExploration, getSavedExploration, setAudience, signOut, getSession, isAuthenticated };
 })();
