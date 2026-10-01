@@ -76,6 +76,8 @@
   const auth=window.CareerDiyaProfileAuth, options=window.CAREER_DIYA_PROFILE_OPTIONS||{};
   if(!auth||!auth.isAuthenticated()){location.replace('auth.html?return=profile');return;}
   const form=document.getElementById('profileForm'), status=document.getElementById('profileStatus');
+  const currentWorkSection=document.getElementById('currentWorkSection');
+  const audienceSelect=document.getElementById('profileAudience');
   const avatar=document.getElementById('profileAvatar'), namePreview=document.getElementById('profileNamePreview');
   const educationBox=document.getElementById('educationRecords'), experienceBox=document.getElementById('experienceRecords');
   const escapeHtml=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
