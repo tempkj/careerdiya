@@ -258,6 +258,9 @@
       weaknesses_other: values.weaknesses_other || null,
       learning_preferences: values.learning_preferences || null,
       learning_preferences_other: values.learning_preferences_other || null,
+      exploration_work_preference: values.exploration_work_preference || null,
+      exploration_environment: values.exploration_environment || null,
+      exploration_priority: values.exploration_priority || null,
       audience,
       updated_at: new Date().toISOString()
     };
