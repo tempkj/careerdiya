@@ -76,7 +76,7 @@ function renderWizard(root, currentRole = null, vaultContext = null, audienceOve
         ${context.skipQuestionIds?.length && !showAllContextQuestions ? '<button class="btn btn-secondary btn-small" id="changeExplorerContext" type="button">Change answers</button>' : ''}
         ${context.canChangeRole?'<button class="btn btn-secondary btn-small" id="changeExplorerRole" type="button">Change role</button>':''}
       </div>
-    </div><div class="wizard-head"><div class="eyebrow">${eyebrow}</div><div class="wizard-progress"><span style="width:${((step+1)/activeQuestions.length)*100}%"></span></div><div class="wizard-count">Question ${step+1} of ${activeQuestions.length}</div><h2>${q.title}</h2><p>${q.subtitle}</p></div><div class="wizard-options">${q.options.map(([v,l])=>`<button class="wizard-option ${answers[q.id]===v?'selected':''}" data-value="${v}"><span class="radio-dot"></span><span>${l}</span></button>`).join('')}</div><div class="wizard-footer"><button class="btn btn-secondary" id="back" ${step===0?'disabled':''}>Back</button><button class="btn btn-primary" id="next" ${answers[q.id]?'':'disabled'}>${step===total-1?'See my directions':'Continue →'}</button></div>`;
+    </div><div class="wizard-head"><div class="eyebrow">${eyebrow}</div><div class="wizard-progress"><span style="width:${((step+1)/activeQuestions.length)*100}%"></span></div><div class="wizard-count">Question ${step+1} of ${activeQuestions.length}</div><h2>${q.title}</h2><p>${q.subtitle}</p></div><div class="wizard-options">${q.options.map(([v,l])=>`<button class="wizard-option ${answers[q.id]===v?'selected':''}" data-value="${v}"><span class="radio-dot"></span><span>${l}</span></button>`).join('')}</div><div class="wizard-footer"><button class="btn btn-secondary" id="back" ${step===0?'disabled':''}>Back</button><button class="btn btn-primary" id="next" ${answers[q.id]?'':'disabled'}>${step===activeQuestions.length-1?'See my directions':'Continue →'}</button></div>`;
     elsLocal('.wizard-option',root).forEach(b=>b.addEventListener('click',()=>{answers[q.id]=b.dataset.value;draw();}));
     root.querySelector('#back').addEventListener('click',()=>{if(step>0){step--;draw();}});
     const changeContext=root.querySelector('#changeExplorerContext');
@@ -917,6 +917,70 @@ function findVaultCareerCandidates(item, options){
     .map(x=>x.career);
 }
 
+function normalizeVaultCareerText(value){
+  return String(value||'')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g,' ')
+    .trim()
+    .replace(/\s+/g,' ');
+}
+
+function vaultCareerToken(value){
+  const token=normalizeVaultCareerText(value);
+  if(!token)return '';
+  // Small deterministic normalization for common career-language variants.
+  return token
+    .replace(/ies$/,'y')
+    .replace(/ing$/,'')
+    .replace(/ings$/,'')
+    .replace(/ed$/,'')
+    .replace(/s$/,'');
+}
+
+function findVaultCareerCandidates(item,options){
+  const text=normalizeVaultCareerText(`${item?.raw_text||''} ${item?.context_note||''}`);
+  const textTokens=new Set(text.split(' ').map(vaultCareerToken).filter(Boolean));
+
+  // Explicit aliases cover common career-language phrases whose meaning cannot be
+  // safely recovered from the catalogue name alone.
+  const rules=[
+    {ids:['career_counselling'],words:['career coach','career coaching','career counsellor','career counselor','career guidance','career counselling','career counseling']},
+    {ids:['performing_arts'],words:['acting','actor','actress','theatre','theater','performing arts','drama']},
+    {ids:['culinary_arts'],words:['baking','baker','cake','culinary','cooking','chef','pastry']},
+    {ids:['content_creation'],words:['content creator','content creation','creator','podcast','podcasting','youtube']},
+    {ids:['photography'],words:['photography','photographer']},
+    {ids:['software_testing_and_quality_assurance'],words:['qa','quality assurance','software testing','tester']},
+    {ids:['software_engineering','full_stack_development'],words:['software developer','software engineer','programming','developer','coding']},
+    {ids:['data_science'],words:['data scientist','data science']},
+    {ids:['digital_marketing'],words:['digital marketing','seo','performance marketing']},
+    {ids:['human_resource_management'],words:['hr','human resources','people operations','recruitment','recruiter']},
+    {ids:['mentoring_and_coaching'],words:['mentor','mentoring','coach','coaching']}
+  ];
+  const scores=new Map();
+  rules.forEach(rule=>{
+    const score=rule.words.reduce((n,w)=>n+(text.includes(w)?1:0),0);
+    if(score) rule.ids.forEach(id=>scores.set(id,Math.max(scores.get(id)||0,score+10)));
+  });
+
+  // Catalogue-aware exact/near-exact matching handles phrases such as
+  // "become mechanical engineer" -> "Mechanical Engineering" without a growing
+  // one-off rule for every Career Library entry.
+  options.forEach(career=>{
+    const nameTokens=normalizeVaultCareerText(career.canonicalName).split(' ').map(vaultCareerToken).filter(Boolean);
+    if(nameTokens.length<2)return;
+    const matched=nameTokens.filter(t=>textTokens.has(t)).length;
+    if(matched===nameTokens.length){
+      scores.set(career.id,Math.max(scores.get(career.id)||0,20+matched));
+    }
+  });
+
+  return [...scores.entries()]
+    .map(([id,score])=>({career:options.find(c=>c.id===id),score}))
+    .filter(x=>x.career)
+    .sort((a,b)=>b.score-a.score)
+    .map(x=>x.career);
+}
+
 async function loadVaultExplorationContext(vaultItemId){
   if(!vaultItemId || !window.CareerDiyaProfileAuth?.getVaultItems) return null;
   const rows=await window.CareerDiyaProfileAuth.getVaultItems();
@@ -950,6 +1014,7 @@ function renderVaultCareerContext(root,audience,item,onContinue){
       <button class="btn btn-primary" id="confirmSuggested">Yes, explore this career →</button>`:'<p class="profile-context-lead">We could not confidently match this thought to a Career Library career.</p>'}
       <button class="btn btn-secondary" id="chooseDifferent">${suggested?'Choose a different career':'Choose a career from the Library'}</button>
       <button class="btn btn-secondary" id="noneAbove">None of these — I have another career in mind</button>
+      <p class="profile-context-status" id="vaultCareerStatus" role="status" aria-live="polite"></p>
     </div>
     <div id="vaultCareerChooser" hidden>
       <label class="profile-context-label" for="vaultCareerChoice">Career Library career</label>
@@ -961,7 +1026,6 @@ function renderVaultCareerContext(root,audience,item,onContinue){
         <label class="profile-context-label" for="vaultCustomCareerInput">What career are you considering?</label>
         <input class="input" id="vaultCustomCareerInput" type="text" maxlength="160" placeholder="Enter the career or career idea">
       </div>
-      <p class="profile-context-status" id="vaultCareerStatus" role="status" aria-live="polite"></p>
       <div class="wizard-footer">
         <button class="btn btn-secondary" id="backVaultCareer">Back</button>
         <button class="btn btn-primary" id="continueVaultCareer">Continue →</button>
@@ -977,13 +1041,14 @@ function renderVaultCareerContext(root,audience,item,onContinue){
   const saveAndContinue=async(career,customCareer=null)=>{
     const btn=root.querySelector('#continueVaultCareer')||root.querySelector('#confirmSuggested');
     if(btn) btn.disabled=true;
-    status.textContent='Opening your free exploration…'; status.className='profile-context-status';
+    status.textContent='Opening your free exploration…';
+    status.className='profile-context-status';
     try{
       if(career && window.CareerDiyaProfileAuth?.updateVaultItem){
         await window.CareerDiyaProfileAuth.updateVaultItem(item.id,{linked_career_id:career.id});
       }
-      // onContinue is async: await it so resolver/database failures are caught here
-      // instead of becoming an unhandled promise that leaves the page unchanged.
+      // Await the complete launch chain so resolver/database errors are visible here
+      // instead of leaving the user on a non-responsive screen.
       await onContinue({
         ...item,
         linked_career_id:career?.id||null,
@@ -997,25 +1062,34 @@ function renderVaultCareerContext(root,audience,item,onContinue){
       status.className='profile-context-status err';
     }
   };
+
   root.querySelector('#confirmSuggested')?.addEventListener('click',()=>saveAndContinue(suggested));
   root.querySelector('#chooseDifferent').addEventListener('click',()=>{chooser.hidden=false;status.textContent='';});
   root.querySelector('#noneAbove').addEventListener('click',()=>{chooser.hidden=false;select.value='';customWrap.hidden=false;customInput.focus();});
   select.addEventListener('change',()=>{customWrap.hidden=select.value!=='__custom__';});
-  // The custom option is injected at the end so the user can always leave the catalogue.
   select.insertAdjacentHTML('beforeend','<option value="__custom__">None of these — enter my career</option>');
   root.querySelector('#backVaultCareer').addEventListener('click',()=>{chooser.hidden=true;});
   root.querySelector('#continueVaultCareer').addEventListener('click',()=>{
     if(select.value==='__custom__'){
       const custom=customInput.value.trim();
-      if(!custom){status.textContent='Enter the career or career idea you have in mind.';status.className='profile-context-status err';customInput.focus();return;}
-      saveAndContinue(null,custom); return;
+      if(!custom){
+        status.textContent='Enter the career or career idea you have in mind.';
+        status.className='profile-context-status err';
+        customInput.focus();
+        return;
+      }
+      saveAndContinue(null,custom);
+      return;
     }
     const career=options.find(c=>c.id===select.value);
-    if(!career){status.textContent='Select a Career Library career, or choose None of these.';status.className='profile-context-status err';return;}
+    if(!career){
+      status.textContent='Select a Career Library career, or choose None of these.';
+      status.className='profile-context-status err';
+      return;
+    }
     saveAndContinue(career);
   });
 }
-
 
 async function resolveVaultAudience(){
   try{
