@@ -841,12 +841,23 @@ async function resolvePlatformExplorerContext(audience, currentRole=null, vaultC
     if(['stability','growth','impact','flexibility'].includes(savedPriority)){
       answers.priority=savedPriority; if(!skipQuestionIds.includes('priority')) skipQuestionIds.push('priority');
     }
-    if(['project','structured','mentor','self'].includes(String(savedDefaults?.answers?.learning||''))){
-      answers.learning=savedDefaults.answers.learning;
+    const savedLearning=String(profile?.learning_preferences||'').toLowerCase();
+    const learningFromProfile =
+      savedLearning.includes('hands-on') || savedLearning.includes('project') ? 'project' :
+      savedLearning.includes('instructor') || savedLearning.includes('course') ? 'structured' :
+      savedLearning.includes('mentor') ? 'mentor' :
+      savedLearning.includes('self-paced') || savedLearning.includes('self paced') ? 'self' : null;
+    const defaultLearning=['project','structured','mentor','self'].includes(String(savedDefaults?.answers?.learning||''))
+      ? savedDefaults.answers.learning : null;
+    const effectiveLearning=learningFromProfile || defaultLearning;
+    if(effectiveLearning){
+      answers.learning=effectiveLearning;
       if(!skipQuestionIds.includes('learning')) skipQuestionIds.push('learning');
     }
-    if(['explore','validate','plan','act'].includes(String(savedDefaults?.answers?.commitment||''))){
-      answers.commitment=savedDefaults.answers.commitment;
+    const defaultCommitment=['explore','validate','plan','act'].includes(String(savedDefaults?.answers?.commitment||''))
+      ? savedDefaults.answers.commitment : null;
+    if(defaultCommitment){
+      answers.commitment=defaultCommitment;
       if(!skipQuestionIds.includes('commitment')) skipQuestionIds.push('commitment');
     }
   }else if(resolvedAudience==='student'){
