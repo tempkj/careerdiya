@@ -14,7 +14,7 @@ const FREE_ENGINE_CONFIG = {
   // targetRole argument). The eligibility gate itself is unchanged. Historical
   // core.career_diya_exploration rows are immutable snapshots and are never recomputed
   // against a newer version.
-  version: '1.3-target-role-anchor',
+  version: '1.4-profile-vault-context',
   categoryWeights: {
     interest: 0.20,
     strengths: 0.20,
