@@ -609,7 +609,9 @@ function renderResults(root,answers,audience,profileMessage='',currentRole=null,
   // Fix A: describe the actual decision path — when the target role anchored the
   // primary slot, say so explicitly, rather than letting the routing-note text imply
   // the winner was purely preference-driven when it wasn't.
-  const anchorNote=result.anchoredDirectionId ? ` You told us you're growing toward ${effectiveTargetRole}, so ${top.name} is your primary direction.` : '';
+  const anchorNote=result.anchoredDirectionId
+    ? ` You told us you're ${answers.intent==='switch'?'switching into':'growing toward'} ${effectiveTargetRole}, so ${top.name} is the primary direction surfaced for this exploration.`
+    : '';
   const explanation=(result.routingNote ? `${result.routingNote} Within that set, your answers highlighted ${rationale}.` : `Your answers highlighted ${rationale}.`)+anchorNote;
   const storedResult={profileCreated:true,audience,currentRole:effectiveCurrentRole,targetRole:effectiveTargetRole,answers,recommendationMatrixVersion:FREE_ENGINE_CONFIG.version,score:result.chosen[0].score,signal,margin:result.margin,userProfile:result.userProfile,contextRouting:result.context?{intent:result.context.intent,roleFamily:result.context.roleFamily,currentRole:result.context.currentRole}:null,recommendations:result.chosen.map(x=>({id:x.direction.id,name:x.direction.name,score:x.score,similarities:x.similarities,penalty:x.penalty})),recs:result.chosen.map(x=>({id:x.direction.id,name:x.direction.name,skills:x.direction.skills||[],score:x.score,similarities:x.similarities,penalty:x.penalty})),updatedAt:new Date().toISOString()};
   localStorage.setItem('careerdiya_profile',JSON.stringify(storedResult));
