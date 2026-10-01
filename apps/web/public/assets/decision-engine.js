@@ -596,6 +596,16 @@ function renderResults(root,answers,audience,profileMessage='',currentRole=null,
   // Fix A: computed before generateRecommendations so the to-role can be passed into
   // scoring, not just stored for display.
   const effectiveTargetRole=(targetRole||'').trim()||null;
+  // The first completed free exploration establishes the user's reusable profile
+  // context. This write happens only after authentication and is intentionally separate
+  // from the immutable exploration snapshot below.
+  if(window.CareerDiyaProfileAuth?.saveExplorationDefaults){
+    window.CareerDiyaProfileAuth.saveExplorationDefaults({
+      audience,
+      answers,
+      currentRole: effectiveCurrentRole
+    }).catch(err=>console.warn('Career Diya exploration defaults persistence failed:',err));
+  }
   const result=generateRecommendations(answers,audience,effectiveCurrentRole,effectiveTargetRole);
   const isBoundedRole=!!(effectiveCurrentRole && audience==='professional' && typeof isBoundedRoleValue==='function' && isBoundedRoleValue(effectiveCurrentRole));
   if(window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.setCurrentRole){
