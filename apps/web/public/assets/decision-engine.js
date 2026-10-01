@@ -785,8 +785,16 @@ async function resolvePlatformExplorerContext(audience, currentRole=null, vaultC
     // Vault career pursuit + a known from-role is a career-switch intent, not a generic
     // preference exploration. The target career is carried separately so it can anchor
     // the final direction.
-    if(vaultContext?.linkedCareer?.canonicalName || vaultContext?.customCareer){
+    const vaultTarget=String(vaultContext?.linkedCareer?.canonicalName||vaultContext?.customCareer||'').trim();
+    const savedGoals=String(profile?.career_goals||'').split('|').map(x=>x.trim()).filter(Boolean);
+    if(vaultTarget){
       answers.intent='switch';
+      skipQuestionIds.push('intent');
+    }else if(savedGoals.includes('Switch careers')){
+      answers.intent='switch';
+      skipQuestionIds.push('intent');
+    }else if(savedGoals.includes('Grow in my current career')){
+      answers.intent='growth';
       skipQuestionIds.push('intent');
     }
 
