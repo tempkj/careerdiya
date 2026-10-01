@@ -765,17 +765,19 @@ function buildExplorerContextSummary(audience,currentRole,experienceYears=null){
 
 async function resolvePlatformExplorerContext(audience, currentRole=null, vaultContext=null){
   let profile=null;
+  let savedDefaults=null;
   try{
     if(window.CareerDiyaProfileAuth?.isAuthenticated?.() && window.CareerDiyaProfileAuth?.getProfile){
       profile=await window.CareerDiyaProfileAuth.getProfile();
+      if(window.CareerDiyaProfileAuth?.getExplorationDefaults) savedDefaults=await window.CareerDiyaProfileAuth.getExplorationDefaults();
     }
   }catch(_){}
   const resolvedAudience=['parent','student','professional'].includes(String(profile?.audience||'').toLowerCase())
-    ? String(profile.audience).toLowerCase() : audience;
-  const profileRole=String(profile?.current_role_title||profile?.current_role_other||'').trim();
+    ? String(profile.audience).toLowerCase() : (savedDefaults?.audience || audience);
+  const profileRole=String(profile?.current_role_title||profile?.current_role_other||savedDefaults?.current_role||'').trim();
   const resolvedRole=String(currentRole||profileRole).trim()||null;
-  const answers={};
-  const skipQuestionIds=[];
+  const answers={...(savedDefaults?.answers||{})};
+  const skipQuestionIds=Object.keys(answers).filter(k=>answers[k]!==null && answers[k]!==undefined && answers[k]!=='');
   let education=[];
   let experience=[];
   try{
@@ -792,7 +794,7 @@ async function resolvePlatformExplorerContext(audience, currentRole=null, vaultC
       else if(/^(3–5 years|3-5 years|6–10 years|6-10 years)$/.test(bucket)) inferredStage='mid';
       else if(/^(11–15 years|11-15 years|16–20 years|16-20 years|20\+ years)$/.test(bucket)) inferredStage='senior';
     }
-    if(inferredStage){ answers.stage=inferredStage; skipQuestionIds.push('stage'); }
+    if(inferredStage){ answers.stage=inferredStage; if(!skipQuestionIds.includes('stage')) skipQuestionIds.push('stage'); }
 
     // Vault career pursuit + a known from-role is a career-switch intent, not a generic
     // preference exploration. The target career is carried separately so it can anchor
@@ -801,26 +803,37 @@ async function resolvePlatformExplorerContext(audience, currentRole=null, vaultC
     const savedGoals=String(profile?.career_goals||'').split('|').map(x=>x.trim()).filter(Boolean);
     if(vaultTarget){
       answers.intent='switch';
-      skipQuestionIds.push('intent');
+      if(!skipQuestionIds.includes('intent')) skipQuestionIds.push('intent');
+    }else if(savedDefaults?.answers?.intent){
+      answers.intent=savedDefaults.answers.intent;
+      if(!skipQuestionIds.includes('intent')) skipQuestionIds.push('intent');
     }else if(savedGoals.includes('Switch careers')){
       answers.intent='switch';
-      skipQuestionIds.push('intent');
+      if(!skipQuestionIds.includes('intent')) skipQuestionIds.push('intent');
     }else if(savedGoals.includes('Grow in my current career')){
       answers.intent='growth';
-      skipQuestionIds.push('intent');
+      if(!skipQuestionIds.includes('intent')) skipQuestionIds.push('intent');
     }
 
     const savedWork=String(profile?.exploration_work_preference||'').trim();
     if(['analytical','builder','creative','people','quality'].includes(savedWork)){
-      answers.work=savedWork; skipQuestionIds.push('work');
+      answers.work=savedWork; if(!skipQuestionIds.includes('work')) skipQuestionIds.push('work');
     }
     const savedEnvironment=String(profile?.exploration_environment||'').trim();
     if(['structured','dynamic','collaborative','independent','any'].includes(savedEnvironment)){
-      answers.environment=savedEnvironment; skipQuestionIds.push('environment');
+      answers.environment=savedEnvironment; if(!skipQuestionIds.includes('environment')) skipQuestionIds.push('environment');
     }
     const savedPriority=String(profile?.exploration_priority||'').trim();
     if(['stability','growth','impact','flexibility'].includes(savedPriority)){
-      answers.priority=savedPriority; skipQuestionIds.push('priority');
+      answers.priority=savedPriority; if(!skipQuestionIds.includes('priority')) skipQuestionIds.push('priority');
+    }
+    if(['project','structured','mentor','self'].includes(String(savedDefaults?.answers?.learning||''))){
+      answers.learning=savedDefaults.answers.learning;
+      if(!skipQuestionIds.includes('learning')) skipQuestionIds.push('learning');
+    }
+    if(['explore','validate','plan','act'].includes(String(savedDefaults?.answers?.commitment||''))){
+      answers.commitment=savedDefaults.answers.commitment;
+      if(!skipQuestionIds.includes('commitment')) skipQuestionIds.push('commitment');
     }
   }else if(resolvedAudience==='student'){
     const currentEducation=education.find(x=>x?.is_current)||education[0];
