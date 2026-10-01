@@ -818,10 +818,22 @@ async function resolvePlatformExplorerContext(audience, currentRole=null, vaultC
     if(vaultTarget){
       answers.intent='switch';
       if(!skipQuestionIds.includes('intent')) skipQuestionIds.push('intent');
+    }else if(savedGoals.includes('Switch careers')){
+      answers.intent='switch';
+      if(!skipQuestionIds.includes('intent')) skipQuestionIds.push('intent');
+    }else if(savedGoals.includes('Grow in my current career')){
+      answers.intent='growth';
+      if(!skipQuestionIds.includes('intent')) skipQuestionIds.push('intent');
+    }else if(savedGoals.includes('Choose my first career direction')){
+      answers.intent='choice';
+      if(!skipQuestionIds.includes('intent')) skipQuestionIds.push('intent');
+    }else if(savedGoals.includes('Build specialist expertise')){
+      answers.intent='learning';
+      if(!skipQuestionIds.includes('intent')) skipQuestionIds.push('intent');
     }else if(savedDefaults?.answers?.intent){
       answers.intent=savedDefaults.answers.intent;
       if(!skipQuestionIds.includes('intent')) skipQuestionIds.push('intent');
-    }else if(savedGoals.includes('Switch careers')){
+    }else if(false){
       answers.intent='switch';
       if(!skipQuestionIds.includes('intent')) skipQuestionIds.push('intent');
     }else if(savedGoals.includes('Grow in my current career')){
