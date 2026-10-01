@@ -55,23 +55,37 @@ function skillPlan(direction,answers){
 function renderWizard(root, currentRole = null, vaultContext = null, audienceOverride = null, explorerContext = null){
   const context=explorerContext||{};
   let step=0;
+  let showAllContextQuestions=false;
   const answers={...(context.answers||{})};
   const audience=audienceOverride || context.audience || currentAudience();
   const customCareer=context.customCareer||null;
   const baseQuestions=questionsForAudience(audience);
-  const activeQuestions=baseQuestions.filter(q=>!context.skipQuestionIds?.includes(q.id));
-  const total=activeQuestions.length;
-  if(!total){ gateBeforeResults(root,answers,audience,currentRole,null,vaultContext?.id||null); return;}
+  const getActiveQuestions=()=>showAllContextQuestions
+    ? baseQuestions
+    : baseQuestions.filter(q=>!context.skipQuestionIds?.includes(q.id));
+  let activeQuestions=getActiveQuestions();
+  if(!activeQuestions.length){ gateBeforeResults(root,answers,audience,currentRole,null,vaultContext?.id||null); return;}
   function draw(){
+    activeQuestions=getActiveQuestions();
     const q=activeQuestions[step];
     const eyebrow=audience==='parent'?'Free direction exploration · parent view':audience==='student'?'Free direction exploration · 16+':'Free career exploration';
     root.innerHTML=`<div class="explorer-context-strip">
       <div><span class="eyebrow">Using your Career Diya context</span>
       <span class="explorer-context-values">${escHtml(context.summary||'')}</span></div>
-      ${context.canChangeRole?'<button class="btn btn-secondary btn-small" id="changeExplorerRole" type="button">Change</button>':''}
-    </div><div class="wizard-head"><div class="eyebrow">${eyebrow}</div><div class="wizard-progress"><span style="width:${((step+1)/total)*100}%"></span></div><div class="wizard-count">Question ${step+1} of ${total}</div><h2>${q.title}</h2><p>${q.subtitle}</p></div><div class="wizard-options">${q.options.map(([v,l])=>`<button class="wizard-option ${answers[q.id]===v?'selected':''}" data-value="${v}"><span class="radio-dot"></span><span>${l}</span></button>`).join('')}</div><div class="wizard-footer"><button class="btn btn-secondary" id="back" ${step===0?'disabled':''}>Back</button><button class="btn btn-primary" id="next" ${answers[q.id]?'':'disabled'}>${step===total-1?'See my directions':'Continue →'}</button></div>`;
+      <div class="explorer-context-actions">
+        ${context.skipQuestionIds?.length && !showAllContextQuestions ? '<button class="btn btn-secondary btn-small" id="changeExplorerContext" type="button">Change answers</button>' : ''}
+        ${context.canChangeRole?'<button class="btn btn-secondary btn-small" id="changeExplorerRole" type="button">Change role</button>':''}
+      </div>
+    </div><div class="wizard-head"><div class="eyebrow">${eyebrow}</div><div class="wizard-progress"><span style="width:${((step+1)/activeQuestions.length)*100}%"></span></div><div class="wizard-count">Question ${step+1} of ${activeQuestions.length}</div><h2>${q.title}</h2><p>${q.subtitle}</p></div><div class="wizard-options">${q.options.map(([v,l])=>`<button class="wizard-option ${answers[q.id]===v?'selected':''}" data-value="${v}"><span class="radio-dot"></span><span>${l}</span></button>`).join('')}</div><div class="wizard-footer"><button class="btn btn-secondary" id="back" ${step===0?'disabled':''}>Back</button><button class="btn btn-primary" id="next" ${answers[q.id]?'':'disabled'}>${step===total-1?'See my directions':'Continue →'}</button></div>`;
     elsLocal('.wizard-option',root).forEach(b=>b.addEventListener('click',()=>{answers[q.id]=b.dataset.value;draw();}));
     root.querySelector('#back').addEventListener('click',()=>{if(step>0){step--;draw();}});
+    const changeContext=root.querySelector('#changeExplorerContext');
+    if(changeContext) changeContext.addEventListener('click',()=>{
+      showAllContextQuestions=true;
+      step=0;
+      activeQuestions=getActiveQuestions();
+      draw();
+    });
     const changeRole=root.querySelector('#changeExplorerRole');
     if(changeRole) changeRole.addEventListener('click',()=>renderCurrentRoleStep(root,audience,(role)=>{
       const nextContext={...context,summary:role?buildExplorerContextSummary(audience,role):context.summary,currentRole:role,canChangeRole:false};
@@ -79,7 +93,7 @@ function renderWizard(root, currentRole = null, vaultContext = null, audienceOve
     }));
     root.querySelector('#next').addEventListener('click',()=>{
       if(!answers[q.id])return;
-      if(step<total-1){step++;draw();return;}
+      if(step<activeQuestions.length-1){step++;draw();return;}
       // ADR-CAREERDIY-0016: professional + GROW + a bounded from-role gets a contextual
       // to-role interstitial after the wizard, before results — mounted here rather than
       // as a conditional mid-wizard question because `total` above is a const captured
