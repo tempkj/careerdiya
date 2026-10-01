@@ -36,6 +36,42 @@
           </div>
         </div>
 
+        <div class="profile-section">
+          <div class="eyebrow">Exploration Preferences</div><h2>How You Prefer to Work</h2>
+          <p class="profile-section-note">These preferences help Career Diya avoid asking you the same questions during exploration. You can change an answer during any exploration.</p>
+          <div class="profile-form-grid">
+            <label>Work that gives you energy
+              <select class="input select" name="exploration_work_preference">
+                <option value="">Ask me during exploration</option>
+                <option value="analytical">Analysing, solving and finding patterns</option>
+                <option value="builder">Building products, systems or solutions</option>
+                <option value="creative">Creating, designing or communicating</option>
+                <option value="people">Helping, coaching or influencing people</option>
+                <option value="quality">Making things better, safer or more reliable</option>
+              </select>
+            </label>
+            <label>Preferred environment
+              <select class="input select" name="exploration_environment">
+                <option value="">Ask me during exploration</option>
+                <option value="structured">Clear structure, standards and measurable outcomes</option>
+                <option value="dynamic">Fast-changing, ambiguous and entrepreneurial</option>
+                <option value="collaborative">Cross-functional, discussion-heavy and people-oriented</option>
+                <option value="independent">Deep work with ownership and autonomy</option>
+                <option value="any">Any environment — I need flexibility right now</option>
+              </select>
+            </label>
+            <label>What matters most next
+              <select class="input select" name="exploration_priority">
+                <option value="">Ask me during exploration</option>
+                <option value="stability">Stability and dependable career progression</option>
+                <option value="growth">Growth, responsibility and earning potential</option>
+                <option value="impact">Meaningful impact and visible contribution</option>
+                <option value="flexibility">Flexibility and freedom in how I work</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
         <div class="profile-section" id="currentWorkSection">
           <div class="eyebrow">Professional</div><h2>Your Current Work Context</h2>
           <p class="profile-section-note">Keep this focused on what you are doing now. Your broader work and knowledge history is captured below.</p>
@@ -112,7 +148,7 @@
   }
   function fillProfile(p){
     if(!p)return;
-    ['display_name','avatar_url','country','country_other','current_role_title','current_role_other','industry','industry_other','experience_years'].forEach(k=>{const el=form.elements[k];if(el)el.value=p[k]??'';});
+    ['display_name','avatar_url','country','country_other','current_role_title','current_role_other','industry','industry_other','experience_years','exploration_work_preference','exploration_environment','exploration_priority'].forEach(k=>{const el=form.elements[k];if(el)el.value=p[k]??'';});
     syncAudienceUI(p.audience);
     wireOther(form.elements.country,form.elements.country_other);wireOther(form.elements.current_role_title,form.elements.current_role_other);wireOther(form.elements.industry,form.elements.industry_other);
     const name=p.display_name||'Your Profile';namePreview.textContent=name;avatar.innerHTML=p.avatar_url?`<img src="${escapeHtml(p.avatar_url)}" alt="">`:(name.trim().split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase()||'?');
@@ -146,7 +182,7 @@
     const goals=chipValues('careerGoals');const strengths=chipValues('strengths');const weaknesses=chipValues('weaknesses');const learning=chipValues('learningPreferences');
     const otherValue=id=>{const el=document.querySelector(`#${id}`).parentElement.querySelector('.other-wrap input');return el?el.value.trim():''};
     const selectedAudience=String(d.get('audience')||profileAudience(loadedProfile||{})||'professional').toLowerCase();
-    const values={display_name:(d.get('display_name')||'').trim(),avatar_url:(d.get('avatar_url')||'').trim(),country:d.get('country')||null,country_other:(d.get('country_other')||'').trim(),current_role_title:d.get('current_role_title')||null,current_role_other:(d.get('current_role_other')||'').trim(),industry:d.get('industry')||null,industry_other:(d.get('industry_other')||'').trim(),experience_years:d.get('experience_years')||null,career_interests:interests,career_interests_other:otherValue('careerInterests'),career_goals:goals.join('|'),career_goals_other:otherValue('careerGoals'),strengths:strengths.join('|'),strengths_other:otherValue('strengths'),weaknesses:weaknesses.join('|'),weaknesses_other:otherValue('weaknesses'),learning_preferences:learning.join('|'),learning_preferences_other:otherValue('learningPreferences'),audience:selectedAudience};
+    const values={display_name:(d.get('display_name')||'').trim(),avatar_url:(d.get('avatar_url')||'').trim(),country:d.get('country')||null,country_other:(d.get('country_other')||'').trim(),current_role_title:d.get('current_role_title')||null,current_role_other:(d.get('current_role_other')||'').trim(),industry:d.get('industry')||null,industry_other:(d.get('industry_other')||'').trim(),experience_years:d.get('experience_years')||null,career_interests:interests,career_interests_other:otherValue('careerInterests'),career_goals:goals.join('|'),career_goals_other:otherValue('careerGoals'),strengths:strengths.join('|'),strengths_other:otherValue('strengths'),weaknesses:weaknesses.join('|'),weaknesses_other:otherValue('weaknesses'),learning_preferences:learning.join('|'),learning_preferences_other:otherValue('learningPreferences'),exploration_work_preference:d.get('exploration_work_preference')||null,exploration_environment:d.get('exploration_environment')||null,exploration_priority:d.get('exploration_priority')||null,audience:selectedAudience};
     try{
       const saved=await auth.saveProfile(values);
       try{
