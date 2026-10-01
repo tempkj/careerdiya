@@ -833,12 +833,6 @@ async function resolvePlatformExplorerContext(audience, currentRole=null, vaultC
     }else if(savedDefaults?.answers?.intent){
       answers.intent=savedDefaults.answers.intent;
       if(!skipQuestionIds.includes('intent')) skipQuestionIds.push('intent');
-    }else if(false){
-      answers.intent='switch';
-      if(!skipQuestionIds.includes('intent')) skipQuestionIds.push('intent');
-    }else if(savedGoals.includes('Grow in my current career')){
-      answers.intent='growth';
-      if(!skipQuestionIds.includes('intent')) skipQuestionIds.push('intent');
     }
 
     const savedWork=String(profile?.exploration_work_preference||'').trim();
