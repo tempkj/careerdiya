@@ -14,7 +14,7 @@ const FREE_ENGINE_CONFIG = {
   // targetRole argument). The eligibility gate itself is unchanged. Historical
   // core.career_diya_exploration rows are immutable snapshots and are never recomputed
   // against a newer version.
-  version: '1.5-explicit-target-routing',
+  version: '1.6-career-library-target-routing',
   categoryWeights: {
     interest: 0.20,
     strengths: 0.20,
@@ -277,6 +277,25 @@ function roleFamilyForRole(role){
   // Profile "Current Role" is intentionally a bounded role-family taxonomy. Map those
   // labels into the same routing families used by the exploration engine so persistent
   // profile context actually constrains switch/growth exploration.
+  // Career Library canonical careers are a second, broader vocabulary than the
+  // starter role-family aliases above. When an explicit Vault target is a verified
+  // Career Library career (for example Performing Arts, Blockchain Technology or
+  // Career Counselling), resolve its curated direction mapping before falling back
+  // to free-text role patterns. This keeps explicit target routing aligned with the
+  // same Career Library -> Direction mapping used elsewhere in Career Diya.
+  if(typeof CAREER_LIBRARY_CATALOGUE!=='undefined' && typeof CAREER_LIBRARY_MAPPINGS!=='undefined'){
+    const canonical=CAREER_LIBRARY_CATALOGUE.find(c=>normalizeRoleText(c.canonicalName)===normalized);
+    if(canonical){
+      for(const [mappingId,mapping] of Object.entries(CAREER_LIBRARY_MAPPINGS)){
+        if((mapping?.careers||[]).some(c=>c.id===canonical.id)){
+          const directionAlias=Object.entries(DIRECTION_ID_ALIASES||{}).find(([,id])=>id===mappingId)?.[0]||null;
+          const mappedFamily=directionAlias ? ROLE_FAMILY_BY_DIRECTION[directionAlias] : null;
+          if(mappedFamily) return mappedFamily;
+        }
+      }
+    }
+  }
+
   const profileFamilyAliases={
     'software / technology':'software_engineering',
     'data / ai / analytics':'data_science',
