@@ -14,7 +14,7 @@ const FREE_ENGINE_CONFIG = {
   // targetRole argument). The eligibility gate itself is unchanged. Historical
   // core.career_diya_exploration rows are immutable snapshots and are never recomputed
   // against a newer version.
-  version: '1.4-profile-vault-context',
+  version: '1.5-explicit-target-routing',
   categoryWeights: {
     interest: 0.20,
     strengths: 0.20,
@@ -326,7 +326,7 @@ function intentCodeForAnswer(answer){
   })[answer] || 'EXPLORE';
 }
 
-function eligibleFamiliesForIntent(intentAnswer,currentRole,audience){
+function eligibleFamiliesForIntent(intentAnswer,currentRole,audience,targetRole=null){
   if(audience==='parent') return null;
   const intent=intentCodeForAnswer(intentAnswer);
   if(intent==='EXPLORE'||intent==='STUCK') return null;
@@ -341,19 +341,29 @@ function eligibleFamiliesForIntent(intentAnswer,currentRole,audience){
     return new Set([family,...(info.adjacent||[])]);
   }
   if(intent==='SWITCH'){
-    return new Set([family,...(info.adjacent||[]),...(info.transferable||[])]);
+    const eligible=new Set([family,...(info.adjacent||[]),...(info.transferable||[])]);
+    // An explicit target career is a stronger piece of context than the generic
+    // SWITCH relationship set. Career Vault (and any future explicit target-role
+    // capture) must therefore be allowed into the candidate pool even when the
+    // target sits outside the current role family's pre-approved relationships.
+    // This does NOT widen generic SWITCH explorations; it only applies when the
+    // user has explicitly named a target and it resolves to a known role family.
+    const targetFamily=roleFamilyForRole(targetRole);
+    if(targetFamily) eligible.add(targetFamily);
+    return eligible;
   }
   return null;
 }
 
-function contextRouting(answers,currentRole,audience){
+function contextRouting(answers,currentRole,audience,targetRole=null){
   const intent=intentCodeForAnswer(answers&&answers.intent);
   const roleFamily=audience==='parent'?null:roleFamilyForRole(currentRole);
   return {
     intent,
     currentRole:String(currentRole||'').trim()||null,
     roleFamily,
-    eligibleFamilies:eligibleFamiliesForIntent(answers&&answers.intent,currentRole,audience)
+    targetRole:String(targetRole||'').trim()||null,
+    eligibleFamilies:eligibleFamiliesForIntent(answers&&answers.intent,currentRole,audience,targetRole)
   };
 }
 
@@ -508,7 +518,7 @@ function generateRecommendations(answers,audience,currentRole=null,targetRole=nu
   const kind=audience==='parent'?'parent':'adult';
   const directions=DIRECTION_PROFILES[kind];
   const userProfile=buildFreeProfile(answers,audience);
-  const context=contextRouting(answers,currentRole,audience);
+  const context=contextRouting(answers,currentRole,audience,targetRole);
 
   const scored=directions.map(direction=>{
     const ds=directionScore(answers,userProfile,direction,audience,context);
