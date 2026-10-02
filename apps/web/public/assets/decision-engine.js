@@ -999,7 +999,15 @@ function renderVaultCareerContext(root,audience,item,onContinue){
   const linked=findCanonicalCareerForVaultItem(item);
   const allOptions=typeof CAREER_LIBRARY_CATALOGUE!=='undefined'?CAREER_LIBRARY_CATALOGUE.filter(c=>c.canonicalStatus==='verified'):[];
   const options=Array.from(new Map(allOptions.map(c=>[c.id,c])).values()).sort((a,b)=>a.canonicalName.localeCompare(b.canonicalName));
-  const inferred=linked?[linked]:findVaultCareerCandidates(item,options).slice(0,3);
+  // Prefer a strong match from the user's actual Vault text over a stale or
+  // previously incorrect linked_career_id. linked_career_id has no provenance field,
+  // so we can only safely treat it as authoritative when the raw thought does not
+  // produce a stronger deterministic match. Explicit phrases such as "career coach",
+  // "blockchain technology" and "performing arts" therefore correct stale links.
+  const textCandidates=findVaultCareerCandidates(item,options);
+  const inferred=textCandidates.length
+    ? textCandidates.slice(0,3)
+    : (linked?[linked]:[]);
   const suggested=inferred[0]||null;
   const optionMarkup=options.map(c=>'<option value="'+escHtml(c.id)+'">'+escHtml(c.canonicalName)+'</option>').join('');
   root.innerHTML=`<div class="profile-context-card vault-explore-context">
