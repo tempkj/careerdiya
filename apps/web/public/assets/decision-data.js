@@ -215,7 +215,7 @@ const STARTER_ROLE_FAMILIES = {
   }
 };
 
-const ROLE_FAMILY_BY_DIRECTION = {
+// A few Career Library careers intentionally belong to more than one direction.\n// Keep a deterministic primary direction for explicit Vault targets so the result\n// does not depend on CAREER_LIBRARY_MAPPINGS iteration order.\nconst CAREER_PRIMARY_ROLE_FAMILY = {\n  content_creation: 'marketing_communication'\n};\n\nconst ROLE_FAMILY_BY_DIRECTION = {
   software:'software_engineering',
   data:'data_science',
   product:'product_business',
@@ -286,6 +286,8 @@ function roleFamilyForRole(role){
   if(typeof CAREER_LIBRARY_CATALOGUE!=='undefined' && typeof CAREER_LIBRARY_MAPPINGS!=='undefined'){
     const canonical=CAREER_LIBRARY_CATALOGUE.find(c=>normalizeRoleText(c.canonicalName)===normalized);
     if(canonical){
+      const preferredFamily=CAREER_PRIMARY_ROLE_FAMILY[canonical.id];
+      if(preferredFamily) return preferredFamily;
       for(const [mappingId,mapping] of Object.entries(CAREER_LIBRARY_MAPPINGS)){
         if((mapping?.careers||[]).some(c=>c.id===canonical.id)){
           const directionAlias=Object.entries(DIRECTION_ID_ALIASES||{}).find(([,id])=>id===mappingId)?.[0]||null;
