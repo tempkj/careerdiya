@@ -215,7 +215,14 @@ const STARTER_ROLE_FAMILIES = {
   }
 };
 
-// A few Career Library careers intentionally belong to more than one direction.\n// Keep a deterministic primary direction for explicit Vault targets so the result\n// does not depend on CAREER_LIBRARY_MAPPINGS iteration order.\nconst CAREER_PRIMARY_ROLE_FAMILY = {\n  content_creation: 'marketing_communication'\n};\n\nconst ROLE_FAMILY_BY_DIRECTION = {
+// A few Career Library careers intentionally belong to more than one direction.
+// Keep a deterministic primary direction for explicit Vault targets so the result
+// does not depend on CAREER_LIBRARY_MAPPINGS iteration order.
+const CAREER_PRIMARY_ROLE_FAMILY = {
+  content_creation: 'marketing_communication'
+};
+
+const ROLE_FAMILY_BY_DIRECTION = {
   software:'software_engineering',
   data:'data_science',
   product:'product_business',
