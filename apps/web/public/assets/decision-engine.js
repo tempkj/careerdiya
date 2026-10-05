@@ -101,8 +101,14 @@ function renderWizard(root, currentRole = null, vaultContext = null, audienceOve
       const explicitVaultTarget = vaultContext?.linkedCareer?.canonicalName || vaultContext?.customCareer || null;
       const switchToRoleEligible = audience==='professional' && answers.intent==='switch' && explicitVaultTarget;
       const growToRoleEligible = audience==='professional' && answers.intent==='growth' && currentRole && typeof isBoundedRoleValue==='function' && isBoundedRoleValue(currentRole);
-      if(growToRoleEligible) renderToRoleStep(root,answers,audience,currentRole, vaultContext);
-      else gateBeforeResults(root,answers,audience,currentRole,explicitVaultTarget||customCareer,vaultContext?.id || null);
+      try{
+        if(growToRoleEligible) renderToRoleStep(root,answers,audience,currentRole,vaultContext);
+        else gateBeforeResults(root,answers,audience,currentRole,explicitVaultTarget||customCareer,vaultContext?.id || null);
+      }catch(err){
+        console.error('[Career Diya] exploration completion failed',err);
+        root.innerHTML=`<div class="profile-gate"><div class="eyebrow">We could not complete this exploration</div><h2>Your answers are still here.</h2><p class="profile-gate-lead">${escHtml(err?.message||'Something went wrong while preparing your directions.')}</p><div class="actions"><button type="button" class="btn btn-primary" id="retryDirections">Try again</button></div></div>`;
+        root.querySelector('#retryDirections')?.addEventListener('click',()=>draw());
+      }
     });
   }
   draw();
