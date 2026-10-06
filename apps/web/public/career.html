@@ -82,6 +82,11 @@ function renderVaultCareerJourney(career,matches){
   const courses=matches?.courses||[];
   const render=function(state){
     const ready=state.readiness, learn=state.learning, next=state.next;
+    let tailoredCourses=courses.slice();
+    if(ready==='explore') tailoredCourses=tailoredCourses.filter(function(course){return String(course.level||'').toLowerCase()==='beginner';});
+    else if(ready==='prepare') tailoredCourses=tailoredCourses.filter(function(course){return ['beginner','intermediate'].includes(String(course.level||'').toLowerCase());});
+    if(learn==='guided') tailoredCourses.sort(function(a,b){return (String(b.format||'').toLowerCase().includes('live')?1:0)-(String(a.format||'').toLowerCase().includes('live')?1:0);});
+    if(learn==='hands_on') tailoredCourses.sort(function(a,b){const score=function(x){return /build|produce|program|complete|create|defend|project/i.test(String(x.description||''))?1:0;};return score(b)-score(a);});
     let html='<div class="vault-career-journey">';
     html+='<div class="eyebrow">Your next step for '+escapeHtml(career.canonicalName)+'</div>';
     html+='<h2>Now let’s make this career specific to you.</h2>';
@@ -107,8 +112,8 @@ function renderVaultCareerJourney(career,matches){
       html+='<div class="vault-journey-result"><div class="tag">Personalized starting point</div><h3>'+title+'</h3><p>'+copy+'</p>';
       if(next==='skills')html+='<h4>What to investigate first</h4><p>Use the career profile above to identify the core work and requirements. Then compare those requirements with your current experience before choosing training.</p>';
       if(next==='transition')html+='<h4>Transition lens</h4><p>Your current role, prior experience and readiness matter as much as the destination. The next deeper step should compare your current capabilities with '+escapeHtml(career.canonicalName)+' rather than recommending a generic course.</p>';
-      if(next==='course'){html+='<h4>Current Skill Diya matches</h4>';if(courses.length){html+='<div class="vault-journey-course-list">';courses.forEach(function(course){html+='<article class="vault-journey-course"><small>'+escapeHtml(course.domain)+' · '+escapeHtml(course.level)+' · '+escapeHtml(course.format)+'</small><h4>'+escapeHtml(course.title)+'</h4><p>'+escapeHtml(course.description)+'</p></article>';});html+='</div>';}else html+='<p>No sufficiently specific Skill Diya course mapping is available for this career yet. We should not substitute a generic course just to fill the slot.</p>';}
-      html+='<div class="vault-journey-actions"><a class="btn btn-secondary" href="#career-nature">Review the career profile</a>'+(next==='course'&&courses.length?'<a class="btn btn-primary" href="#skillDiyaCareerCourses">See course details →</a>':'')+'</div></div>';
+      if(next==='course'){html+='<h4>Current Skill Diya matches</h4>';if(tailoredCourses.length){html+='<p>Based on your readiness and learning preference, these are the strongest current matches.</p><div class="vault-journey-course-list">';tailoredCourses.forEach(function(course){html+='<article class="vault-journey-course"><small>'+escapeHtml(course.domain)+' · '+escapeHtml(course.level)+' · '+escapeHtml(course.format)+'</small><h4>'+escapeHtml(course.title)+'</h4><p>'+escapeHtml(course.description)+'</p></article>';});html+='</div>';}else if(courses.length&&learn==='self') html+='<p>The current catalogue has relevant matches, but they are not designed specifically for self-paced learning. Treat them as options to investigate rather than an automatic recommendation.</p>';else html+='<p>No sufficiently specific Skill Diya course mapping is available for this career yet. We should not substitute a generic course just to fill the slot.</p>';}
+      html+='<div class="vault-journey-actions"><a class="btn btn-secondary" href="#career-nature">Review the career profile</a>'+(next==='course'&&tailoredCourses.length?'<a class="btn btn-primary" href="#skillDiyaCareerCourses">See course details →</a>':'')+'</div></div>';
     }
     html+='</div>';target.innerHTML=html;
     target.querySelectorAll('[data-vj-readiness]').forEach(function(b){b.onclick=function(){render({readiness:b.dataset.vjReadiness,learning:learn,next:next});};});
