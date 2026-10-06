@@ -1833,6 +1833,7 @@ const CAREER_LIBRARY_MAPPINGS = {
 };
 
 const DIRECTION_ID_ALIASES = {
+  "engineering": "technology_engineering",
   "software": "technology_engineering",
   "data": "data_science_research",
   "product": "product_business_operations",
