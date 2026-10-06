@@ -1,4 +1,4 @@
-/* Fix A (target-role anchoring) regression tests.
+/* Target-role anchoring regression tests.
  * Load decision-data.js (career-mapping.js / decision-engine.js / student-stream-careers-
  * data.js are not required — this only exercises generateRecommendations), then run this
  * file in a browser console (same pattern as the other decision-engine.*.test.js files).
@@ -65,11 +65,14 @@
   assert('a target role outside the eligible pool still leaves People/HR excluded from primary',
     !outOfPoolTarget.chosen.some((c) => c.direction.id === 'people'));
 
-  // ── SWITCH/EXPLORE intents are unaffected — anchoring is GROW-only by construction ───
+  // ── SWITCH target anchoring is supported; explicit target context should win primary ─
 
   const switchWithTarget = generateRecommendations({ ...growBase, intent: 'switch' }, 'professional', 'Software Engineer', 'Product Manager');
-  assert('a target role passed under SWITCH intent does not anchor (this feature is GROW-only; the to-role step never renders for other intents)',
-    switchWithTarget.anchoredDirectionId === null);
+  assert('SWITCH with an explicit target anchors the target direction',
+    switchWithTarget.anchoredDirectionId === 'product' && switchWithTarget.chosen[0].direction.id === 'product',
+    switchWithTarget.chosen.map((c) => c.direction.id));
+  assert('SWITCH target anchoring still preserves the gate — unrelated People/HR is not primary',
+    !switchWithTarget.chosen.some((c) => c.direction.id === 'people'));
 
   const passed = failures.length === 0;
   console.log(passed ? 'FIX-A-TARGET-ROLE-ANCHOR: ALL PASS' : 'FIX-A-TARGET-ROLE-ANCHOR: FAILURES', failures);
