@@ -1100,6 +1100,22 @@ async function initDecisionEngine(){
       if(item){
         const audience=await resolveVaultAudience();
         renderVaultCareerContext(root,audience,item,async(vaultContext)=>{
+          // A confirmed exact Career Library target is a different UX journey from
+          // normal free exploration. The user has already named the career they want
+          // to investigate, so do not make them re-derive a broad direction and then
+          // select the same career again. Send them directly to the career profile,
+          // where we can ask targeted readiness/learning questions.
+          if(vaultContext?.linkedCareer?.id){
+            const params=new URLSearchParams({
+              careerId:vaultContext.linkedCareer.id,
+              source:'vault',
+              vaultItem:item.id,
+              audience:audience||''
+            });
+            window.location.href='career.html?'+params.toString();
+            return;
+          }
+
           const explorerContext=await resolvePlatformExplorerContext(audience,vaultContext?.currentRole||null,vaultContext);
           explorerContext.customCareer=vaultContext?.customCareer||null;
           explorerContext.targetCareerId=vaultContext?.linkedCareer?.id||null;
