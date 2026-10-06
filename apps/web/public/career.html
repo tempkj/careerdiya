@@ -307,13 +307,14 @@ async function renderCareer(career,country=selectedCountry,language=selectedLang
         const courseData=await SkillDiyaCourses.load();
         const courseMatches=SkillDiyaCourses.recommendationMatches(courseData,career?.id||'',career?.canonicalName||'this career');
         renderVaultCareerJourney(career,courseMatches,profile);
-        const panel=document.getElementById('careerPersonalizeContent'), host=document.getElementById('vaultCareerJourneyContent');
-        if(panel&&host) panel.appendChild(host);
+        const panel=document.getElementById('careerPersonalizeContent'), host=document.getElementById('vaultCareerJourneyContent'), vaultSection=document.getElementById('vaultCareerJourney');
+        if(panel&&host){panel.appendChild(host); if(vaultSection) vaultSection.remove();}
       }catch(_){renderVaultCareerJourney(career,{courses:[],strong:[],adjacent:[]},profile);}
       const genericCourses=document.getElementById('skillDiyaCareerCourses');
       if(genericCourses) genericCourses.style.display='none';
       const genericBridge=document.getElementById('careerAsanaBridge');
       if(genericBridge) genericBridge.style.display='none';
+      wireCareerWorkspace();
     }else{
       renderSkillDiyaForCareer(career);
       wireCareerWorkspace();
