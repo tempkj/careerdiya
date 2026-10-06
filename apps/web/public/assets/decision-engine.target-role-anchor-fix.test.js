@@ -67,6 +67,13 @@
 
   // ── SWITCH target anchoring is supported; explicit target context should win primary ─
 
+  const mechanicalTarget = generateRecommendations({ ...growBase, intent: 'switch' }, 'professional', 'Software Engineer', 'Mechanical Engineering');
+  assert('SWITCH with Mechanical Engineering target anchors Technology & Engineering',
+    mechanicalTarget.anchoredDirectionId === 'engineering' && mechanicalTarget.chosen[0].direction.id === 'engineering',
+    mechanicalTarget.chosen.map((c) => c.direction.id));
+  assert('Mechanical Engineering target remains within the eligible target-aware pool',
+    mechanicalTarget.scored.find((x) => x.direction.id === 'engineering')?.primaryEligible === true);
+
   const switchWithTarget = generateRecommendations({ ...growBase, intent: 'switch' }, 'professional', 'Software Engineer', 'Product Manager');
   assert('SWITCH with an explicit target anchors the target direction',
     switchWithTarget.anchoredDirectionId === 'product' && switchWithTarget.chosen[0].direction.id === 'product',
