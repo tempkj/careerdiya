@@ -74,6 +74,59 @@ async function wireRelatedCareerOptions(){
   });
 }
 
+async function renderSkillDiyaForCareer(career){
+  const target=document.getElementById('skillDiyaCareerCourses');
+  if(!target||!window.SkillDiyaCourses) return;
+  try{
+    const data=await SkillDiyaCourses.load();
+    const matches=SkillDiyaCourses.recommendationMatches(data,career?.id||'',career?.canonicalName||'this career');
+    SkillDiyaCourses.renderRecommendationSection(
+      target,
+      matches,
+      career?.canonicalName||'this career',
+      career?.id||''
+    );
+  }catch(err){
+    console.error('Skill Diya career training section failed',err);
+    target.innerHTML='<div class="career-card"><span class="tag">Courses &amp; Training</span><h3>Training options will appear here when the catalogue is available.</h3><p>The Career Diya career profile remains available while the Skill Diya catalogue is unavailable.</p></div>';
+  }
+}
+
+function wireCareerAsanaBridge(career){
+  const bridge=document.getElementById('careerAsanaBridge');
+  const button=document.getElementById('careerAsanaCta');
+  const note=document.getElementById('careerAsanaBridgeNote');
+  if(!bridge||!button||!window.CareerDiyaProfileAuth) return;
+  bridge.style.display='block';
+  if(!window.CareerDiyaProfileAuth.isAuthenticated()){
+    note.textContent='Create a free Career Diya profile to carry this career choice into the deeper planning layer.';
+    button.textContent='Sign in to build my path →';
+    button.onclick=()=>{ window.location.href=`auth.html?return=${encodeURIComponent('career.html?careerId='+encodeURIComponent(career.id)+'&direction='+encodeURIComponent(directionId||'')+(audience?'&audience='+encodeURIComponent(audience):''))}`; };
+    return;
+  }
+  button.onclick=async()=>{
+    button.disabled=true;
+    const old=button.textContent;
+    button.textContent='Opening CareerAsana…';
+    try{
+      let currentRole=null;
+      if(audience==='professional'){
+        const profile=await window.CareerDiyaProfileAuth.getProfile();
+        currentRole=profile?.current_role_title || profile?.current_role_other || profile?.current_role || null;
+      }
+      await window.CareerDiyaProfileAuth.openCareerAsana({
+        desiredRole:career.canonicalName,
+        currentRole,
+        careerId:career.id
+      });
+    }catch(err){
+      note.textContent=err?.message || 'Could not open the deeper planning layer. Please try again.';
+      button.disabled=false;
+      button.textContent=old;
+    }
+  };
+}
+
 function renderVaultCareerJourney(career,matches,profile){
   const section=document.getElementById('vaultCareerJourney');
   const target=document.getElementById('vaultCareerJourneyContent');
@@ -195,10 +248,30 @@ function renderVaultCareerJourney(career,matches,profile){
     }));
     const asana=target.querySelector('[data-vj-asana]');
     if(asana){
-      asana.addEventListener('click',()=>{
-        const bridgeButton=document.getElementById('careerAsanaCta');
-        if(bridgeButton) bridgeButton.click();
-        else window.location.href='counselling.html';
+      asana.addEventListener('click',async()=>{
+        asana.disabled=true;
+        const oldText=asana.textContent;
+        asana.textContent='Opening CareerAsana…';
+        try{
+          const auth=window.CareerDiyaProfileAuth;
+          if(!auth) throw new Error('The deeper planning layer is not available right now.');
+          const authenticated=auth.isAuthenticated();
+          if(!authenticated){
+            const next=`/activate?source=careerdiya&desiredRole=${encodeURIComponent(career.canonicalName||'')}&currentRole=${encodeURIComponent(profileRole||'')}&careerId=${encodeURIComponent(career.id||'')}`;
+            window.location.href=`/login?next=${encodeURIComponent(next)}`;
+            return;
+          }
+          await auth.openCareerAsana({
+            desiredRole:career.canonicalName,
+            currentRole:audience==='professional' ? (profileRole||null) : null,
+            careerId:career.id
+          });
+        }catch(err){
+          asana.disabled=false;
+          asana.textContent=oldText;
+          const note=document.getElementById('careerAsanaBridgeNote');
+          if(note) note.textContent=err?.message || 'Could not open CareerAsana right now. Please try again.';
+        }
       });
     }
   };
