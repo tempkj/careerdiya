@@ -75,6 +75,12 @@
   // yet expose a formal skill graph, so only explicitly mapped course IDs can match
   // a specific Career Library career. An unmapped career intentionally resolves to NONE.
   const careerCourseRules={
+    mechanical_engineering:{strong:{'cad-for-mechanical-design':['mechanical design','cad']},adjacent:{'plc-programming-fundamentals':['industrial automation']}},
+    electrical_engineering:{strong:{'pcb-design-fundamentals':['pcb design','electrical design']},adjacent:{'plc-programming-fundamentals':['industrial automation']}},
+    aerospace_engineering:{strong:{'cad-for-mechanical-design':['mechanical design','cad']},adjacent:{'plc-programming-fundamentals':['systems / automation']}},
+    robotics_engineering:{strong:{'plc-programming-fundamentals':['industrial automation']},adjacent:{'cad-for-mechanical-design':['mechanical design']}},
+    renewable_energy_engineering:{strong:{'plc-programming-fundamentals':['industrial automation']},adjacent:{'cad-for-mechanical-design':['engineering design']}},
+
     investment_banking:{strong:{'financial-modeling-for-business-decisions':['financial modeling','financial decisions']},adjacent:{'sql-for-business-data-analytics':['business analytics'],'power-bi-business-intelligence':['business intelligence']}},
     financial_analysis:{strong:{'financial-modeling-for-business-decisions':['financial modeling']},adjacent:{'sql-for-business-data-analytics':['analytics'],'power-bi-business-intelligence':['business intelligence'],'data-protection-privacy-operations':['risk and compliance context']}},
     financial_planning:{strong:{'financial-modeling-for-business-decisions':['financial modeling','financial decisions']},adjacent:{'power-bi-business-intelligence':['business intelligence'],'sql-for-business-data-analytics':['analytics']}},
