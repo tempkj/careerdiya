@@ -14,7 +14,7 @@ const FREE_ENGINE_CONFIG = {
   // targetRole argument). The eligibility gate itself is unchanged. Historical
   // core.career_diya_exploration rows are immutable snapshots and are never recomputed
   // against a newer version.
-  version: '1.6-career-library-target-routing',
+  version: '1.7-target-aware-alternatives',
   categoryWeights: {
     interest: 0.20,
     strengths: 0.20,
@@ -533,6 +533,56 @@ function selectDiverse(recs,n=3){
   return selected;
 }
 
+/*
+ * Target-aware alternatives for explicit Career Vault targets.
+ *
+ * When a user explicitly names a target career, the primary result is anchored
+ * to that target's direction. "Other directions worth exploring" should then
+ * be alternatives around THAT target, not simply the highest-scoring members
+ * of the user's current-role pool. This prevents the current role (and the
+ * same two generic directions) from appearing on every Vault result.
+ *
+ * Generic explorations without an explicit target retain the original
+ * selectDiverse() behaviour.
+ */
+function selectTargetAwareRecommendations(ranked, targetRole, currentRole){
+  const targetFamily=roleFamilyForRole(targetRole);
+  if(!targetFamily || !STARTER_ROLE_FAMILIES[targetFamily]) return selectDiverse(ranked,3);
+
+  const targetInfo=STARTER_ROLE_FAMILIES[targetFamily];
+  const relatedFamilies=new Set([
+    targetFamily,
+    ...(targetInfo.adjacent||[]),
+    ...(targetInfo.transferable||[])
+  ]);
+  const currentFamily=roleFamilyForRole(currentRole);
+
+  const primary=ranked[0]||null;
+  if(!primary) return [];
+
+  // Prefer directions related to the explicit target. Do not echo the user's
+  // current role family as an "alternative" unless it is itself the target.
+  const relatedAlternatives=ranked.filter(item=>{
+    if(item===primary) return false;
+    if(!item.roleFamily || !relatedFamilies.has(item.roleFamily)) return false;
+    if(currentFamily && currentFamily!==targetFamily && item.roleFamily===currentFamily) return false;
+    return true;
+  });
+
+  const selected=[primary,...selectDiverse(relatedAlternatives,2)];
+
+  // Defensive fallback: if the target family has fewer than two related
+  // directions in the catalogue, fill the remaining slots from the original
+  // ranked pool while still excluding the primary result.
+  if(selected.length<3){
+    for(const item of ranked){
+      if(selected.length===3) break;
+      if(!selected.includes(item)) selected.push(item);
+    }
+  }
+  return selected.slice(0,3);
+}
+
 // Fix A — reverse lookup of ROLE_FAMILY_BY_DIRECTION (existing, already-shipped data;
 // no new taxonomy). Returns the direction id belonging to a given role family, or null.
 function directionIdForRoleFamily(family){
@@ -588,7 +638,9 @@ function generateRecommendations(answers,audience,currentRole=null,targetRole=nu
     }
   }
 
-  const chosen=selectDiverse(ranked,3);
+  const chosen=(kind==='adult' && (context.intent==='GROW' || context.intent==='SWITCH') && targetRole)
+    ? selectTargetAwareRecommendations(ranked,targetRole,currentRole)
+    : selectDiverse(ranked,3);
   const margin=chosen.length>1?chosen[0].score-chosen[1].score:chosen[0].score;
   const signal=signalFor(chosen[0].score,margin);
   const routingNote=context.eligibleFamilies
