@@ -300,26 +300,29 @@ async function renderCareer(career,country=selectedCountry,language=selectedLang
     const data=await CareerDiyaCareerLibrary.loadCareerProfile({careerName:career.canonicalName,careerId:career.id,directionName:directionId,country,language});
     detailsEl.innerHTML=CareerDiyaCareerLibrary.renderCareerData(data,career,directionId,country,language,audience);
     const isVaultJourney=vaultItemId&&new URLSearchParams(location.search).get('source')==='vault';
+    let profile=null;
+    try{profile=window.CareerDiyaProfileAuth?.isAuthenticated()?await window.CareerDiyaProfileAuth.getProfile():null;}catch(_){}
+    try{
+      const courseData=await SkillDiyaCourses.load();
+      const courseMatches=SkillDiyaCourses.recommendationMatches(courseData,career?.id||'',career?.canonicalName||'this career');
+      renderVaultCareerJourney(career,courseMatches,profile);
+      const panel=document.getElementById('careerPersonalizeContent'), host=document.getElementById('vaultCareerJourneyContent'), vaultSection=document.getElementById('vaultCareerJourney');
+      if(panel&&host){panel.appendChild(host);if(vaultSection)vaultSection.remove();}
+    }catch(_){
+      renderVaultCareerJourney(career,{courses:[],strong:[],adjacent:[]},profile);
+      const panel=document.getElementById('careerPersonalizeContent'), host=document.getElementById('vaultCareerJourneyContent'), vaultSection=document.getElementById('vaultCareerJourney');
+      if(panel&&host){panel.appendChild(host);if(vaultSection)vaultSection.remove();}
+    }
     if(isVaultJourney){
-      let profile=null;
-      try{profile=window.CareerDiyaProfileAuth?.isAuthenticated()?await window.CareerDiyaProfileAuth.getProfile():null;}catch(_){}
-      try{
-        const courseData=await SkillDiyaCourses.load();
-        const courseMatches=SkillDiyaCourses.recommendationMatches(courseData,career?.id||'',career?.canonicalName||'this career');
-        renderVaultCareerJourney(career,courseMatches,profile);
-        const panel=document.getElementById('careerPersonalizeContent'), host=document.getElementById('vaultCareerJourneyContent'), vaultSection=document.getElementById('vaultCareerJourney');
-        if(panel&&host){panel.appendChild(host); if(vaultSection) vaultSection.remove();}
-      }catch(_){renderVaultCareerJourney(career,{courses:[],strong:[],adjacent:[]},profile);}
       const genericCourses=document.getElementById('skillDiyaCareerCourses');
       if(genericCourses) genericCourses.style.display='none';
       const genericBridge=document.getElementById('careerAsanaBridge');
       if(genericBridge) genericBridge.style.display='none';
-      wireCareerWorkspace();
     }else{
       renderSkillDiyaForCareer(career);
-      wireCareerWorkspace();
       wireCareerAsanaBridge(career);
     }
+    wireCareerWorkspace();
     wireRelatedCareerOptions();
     localStorage.setItem('careerDiyaCountry',country); localStorage.setItem('careerDiyaLanguage',language);
     const countrySelect=document.getElementById('careerCountrySelect');
