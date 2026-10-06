@@ -211,7 +211,7 @@ async function renderCareer(career,country=selectedCountry,language=selectedLang
   detailsEl.innerHTML='<div class="career-library-loading"><div class="career-loader"></div><div><strong>Loading career profile</strong><p>Fetching the latest career information…</p></div></div>';
   try{
     const data=await CareerDiyaCareerLibrary.loadCareerProfile({careerName:career.canonicalName,careerId:career.id,directionName:directionId,country,language});
-    detailsEl.innerHTML=CareerDiyaCareerLibrary.renderCareerData(data,career,directionId,country,language);
+    detailsEl.innerHTML=CareerDiyaCareerLibrary.renderCareerData(data,career,directionId,country,language,audience);
     const isVaultJourney=vaultItemId&&new URLSearchParams(location.search).get('source')==='vault';
     if(isVaultJourney){
       let profile=null;
