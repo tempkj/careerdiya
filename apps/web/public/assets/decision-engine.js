@@ -896,33 +896,6 @@ async function resolvePlatformExplorerContext(audience, currentRole=null, vaultC
     targetCareerName:vaultContext?.linkedCareer?.canonicalName||vaultContext?.customCareer||null
   };
 }
-function findVaultCareerCandidates(item, options){
-  const text=`${item?.raw_text||''} ${item?.context_note||''}`.toLowerCase();
-  const rules=[
-    {ids:['career_counselling'],words:['career coach','career coaching','career counsellor','career counselor','career guidance','career counselling','career counseling']},
-    {ids:['performing_arts'],words:['acting','actor','actress','theatre','theater','performing arts','drama']},
-    {ids:['culinary_arts'],words:['baking','baker','cake','culinary','cooking','chef','pastry']},
-    {ids:['content_creation'],words:['content creator','content creation','creator','podcast','podcasting','youtube']},
-    {ids:['photography'],words:['photography','photographer']},
-    {ids:['software_testing_and_quality_assurance'],words:['qa','quality assurance','software testing','tester']},
-    {ids:['software_engineering','full_stack_development'],words:['software developer','software engineer','programming','developer','coding']},
-    {ids:['data_science'],words:['data scientist','data science']},
-    {ids:['digital_marketing'],words:['digital marketing','seo','performance marketing']},
-    {ids:['human_resource_management'],words:['hr','human resources','people operations','recruitment','recruiter']},
-    {ids:['mentoring_and_coaching'],words:['mentor','mentoring','coach','coaching']}
-  ];
-  const scores=new Map();
-  rules.forEach(rule=>{
-    const score=rule.words.reduce((n,w)=>n+(text.includes(w)?1:0),0);
-    if(score) rule.ids.forEach(id=>scores.set(id,Math.max(scores.get(id)||0,score)));
-  });
-  return [...scores.entries()]
-    .map(([id,score])=>({career:options.find(c=>c.id===id),score}))
-    .filter(x=>x.career)
-    .sort((a,b)=>b.score-a.score)
-    .map(x=>x.career);
-}
-
 function normalizeVaultCareerText(value){
   return String(value||'')
     .toLowerCase()
