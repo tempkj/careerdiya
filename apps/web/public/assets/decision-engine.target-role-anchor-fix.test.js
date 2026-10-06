@@ -67,6 +67,11 @@
 
   // ── SWITCH target anchoring is supported; explicit target context should win primary ─
 
+  const blockchainTarget = generateRecommendations({ ...growBase, intent: 'switch' }, 'professional', 'Software Engineer', 'Blockchain Technology');
+  assert('SWITCH with Blockchain Technology target anchors Software Engineering',
+    blockchainTarget.anchoredDirectionId === 'software' && blockchainTarget.chosen[0].direction.id === 'software',
+    blockchainTarget.chosen.map((c) => c.direction.id));
+
   const mechanicalTarget = generateRecommendations({ ...growBase, intent: 'switch' }, 'professional', 'Software Engineer', 'Mechanical Engineering');
   assert('SWITCH with Mechanical Engineering target anchors Technology & Engineering',
     mechanicalTarget.anchoredDirectionId === 'engineering' && mechanicalTarget.chosen[0].direction.id === 'engineering',
