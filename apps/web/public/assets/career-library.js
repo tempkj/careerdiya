@@ -117,7 +117,7 @@
     modal.setAttribute('aria-hidden','false');
   }
 
-  function renderCareerData(data, career, directionName, country='India', language='English'){
+  function renderCareerData(data, career, directionName, country='India', language='English', audience=''){
     const stats = data.stats || {};
     const salary = stats.salary || {};
     const demand = text(stats.demandLevel,'Not specified');
@@ -156,8 +156,10 @@
         <div class="career-detail-main" id="career-detail-content">
           ${sectionCard('Why explore it?', 'Who may enjoy this career', list(data.whoShouldPursue))}
           ${sectionCard('Work reality', 'What the work is actually like', `<p>${esc(data.workNature?.description || '')}</p>${arr(data.workNature?.examples).length?`<h3 class="career-subtitle">Typical activities</h3>${list(data.workNature.examples)}`:''}`,'career-detail-card')}
-          ${arr(data.eligibility).length ? sectionCard('What you may need', 'Eligibility & requirements', list(data.eligibility)) : ''}
-          ${arr(data.pathways).length ? sectionCard('Career navigators', 'Ways into this career', arr(data.pathways).map(pathwayMarkup).join('')) : ''}
+          ${audience==='professional'
+            ? sectionCard('For professionals', 'Your route into this career', '<p>Your route should be based on your existing education, experience and transferable skills. Career Diya will use your current profile for the deeper transition assessment rather than assuming a school or college entry route.</p>')
+            : `${arr(data.eligibility).length ? sectionCard('What you may need', 'Eligibility & requirements', list(data.eligibility)) : ''}
+          ${arr(data.pathways).length ? sectionCard('Career navigators', 'Ways into this career', arr(data.pathways).map(pathwayMarkup).join('')) : ''}`}
           ${(arr(data.conventionalOptions).length || arr(data.newAgeOptions).length || arr(data.aiRelatedOptions).length) ? `<section class="career-detail-card" id="career-opportunities"><div class="tag">Explore opportunities</div><h2>Related career options</h2>${arr(data.conventionalOptions).length?`<h3 class="career-group-title">Conventional career options</h3>${optionAccordion(data.conventionalOptions)}`:''}${arr(data.newAgeOptions).length?`<h3 class="career-group-title">New-age career options</h3>${optionAccordion(data.newAgeOptions)}`:''}${arr(data.aiRelatedOptions).length?`<h3 class="career-group-title">AI-related career options</h3>${optionAccordion(data.aiRelatedOptions)}`:''}</section>` : ''}
           ${faq.length ? `<section class="career-detail-card"><div class="tag">Common questions</div><h2>Frequently asked questions</h2>${faq.map(item=>`<details class="career-option"><summary><span>${esc(item?.question || item?.title || '')}</span><span class="career-option-chevron">⌄</span></summary><div><p>${esc(item?.answer || item?.description || '')}</p></div></details>`).join('')}</section>` : ''}
         </div>
