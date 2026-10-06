@@ -126,6 +126,15 @@ const ANSWER_MAPPINGS = {
  * `transferable` is an explicit relationship used only for SWITCH.
  */
 const STARTER_ROLE_FAMILIES = {
+  engineering: {
+    label:'Engineering',
+    aliases:['mechanical engineer','mechanical engineering','electrical engineer','electrical engineering',
+      'aerospace engineer','aerospace engineering','chemical engineer','chemical engineering',
+      'biomedical engineer','biomedical engineering','industrial engineer','industrial engineering',
+      'agricultural engineer','agricultural engineering','renewable energy engineer','renewable energy engineering'],
+    adjacent:['software_engineering','data_science','design_ux','product_business'],
+    transferable:['entrepreneurship']
+  },
   software_engineering: {
     label:'Software Engineering',
     aliases:['software engineer','software developer','application developer','application engineer',
@@ -224,6 +233,7 @@ const CAREER_PRIMARY_ROLE_FAMILY = {
 
 const ROLE_FAMILY_BY_DIRECTION = {
   software:'software_engineering',
+  engineering:'engineering',
   data:'data_science',
   product:'product_business',
   finance:'finance_risk',
@@ -397,6 +407,7 @@ function contextRouting(answers,currentRole,audience,targetRole=null){
 
 const DIRECTION_PROFILES = {
   adult: [
+    {id:'engineering',name:'Technology & Engineering',icon:'⚙',tags:['engineering','technology','problem solving'],skills:['Engineering fundamentals','Systems thinking','Design','Problem solving'],routes:['student','switch','growth'],profile:{interest:{technology:0.9,analytical:0.9,builder:0.85},strengths:{analytical:0.85,builder:0.9},workPreference:{builder:0.9,analytical:0.8},workStyle:{structure:0.75,deep_focus:0.7,independent:0.6},values:{learning:0.9,stability:0.7,impact:0.65},practicalFit:{hands_on:0.9,learning:0.85}},tagsForScoring:['engineering','technology','problem solving','builder']},
     {id:'software',name:'Software Engineering',icon:'</>',tags:['technology','problem solving'],skills:['Programming','APIs','Testing','Git/CI'],routes:['student','switch','growth'],profile:{interest:{technology:0.95,analytical:0.75},strengths:{analytical:0.9,builder:0.8},workPreference:{builder:0.85,analytical:0.75},workStyle:{deep_focus:0.9,independent:0.7,structure:0.65},values:{learning:0.9,income:0.75,stability:0.65,freedom:0.65},practicalFit:{learning:0.8,autonomy:0.7}} ,tagsForScoring:['analytical','builder','technology','problem solving'],mismatches:['strong_people_service']},
     {id:'data',name:'Data, Science & Research',icon:'◫',tags:['analytics','research'],skills:['SQL','Python','Statistics','Storytelling'],routes:['student','switch','growth'],profile:{interest:{analytical:0.9,research:0.95},strengths:{analytical:0.95,research:0.9},workPreference:{analytical:0.9,research:0.85},workStyle:{deep_focus:0.9,independent:0.65,structure:0.65},values:{learning:0.95,stability:0.7,income:0.7},practicalFit:{learning:0.85,structure:0.6}},tagsForScoring:['analytical','research','analytics'],mismatches:['strong_people_service']},
     {id:'product',name:'Product, Business & Operations',icon:'◎',tags:['business','technology'],skills:['Discovery','Prioritisation','Communication','Analytics'],routes:['switch','growth'],profile:{interest:{commercial:0.8,people:0.75,builder:0.65},strengths:{communication:0.85,organizing:0.8,analytical:0.65},workPreference:{builder:0.7,people:0.75,communication:0.8},workStyle:{collaborative:0.9,variety:0.8,autonomy:0.65},values:{learning:0.85,income:0.75,impact:0.65,freedom:0.65},practicalFit:{organizing:0.75,learning:0.75}},tagsForScoring:['business','technology','communication','people']},
