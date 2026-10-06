@@ -228,7 +228,34 @@ const STARTER_ROLE_FAMILIES = {
 // Keep a deterministic primary direction for explicit Vault targets so the result
 // does not depend on CAREER_LIBRARY_MAPPINGS iteration order.
 const CAREER_PRIMARY_ROLE_FAMILY = {
-  content_creation: 'marketing_communication'
+  content_creation: 'marketing_communication',
+
+  // Technology & Engineering is a broad Career Library mapping shared by
+  // software, engineering and adjacent technology careers. Keep explicit
+  // primary families so reverse mapping never depends on object iteration order.
+  software_engineering: 'software_engineering',
+  full_stack_development: 'software_engineering',
+  artificial_intelligence: 'software_engineering',
+  cyber_security: 'software_engineering',
+  ethical_hacking: 'software_engineering',
+  ethical_hacking_specialist: 'software_engineering',
+  blockchain_technology: 'software_engineering',
+  game_development: 'software_engineering',
+  mobile_application_development: 'software_engineering',
+  software_testing_and_quality_assurance: 'software_engineering',
+  hardware_and_networking: 'engineering',
+  robotics_engineering: 'engineering',
+  renewable_energy_engineering: 'engineering',
+  mechanical_engineering: 'engineering',
+  electrical_engineering: 'engineering',
+  aerospace_engineering: 'engineering',
+  chemical_engineering: 'engineering',
+  industrial_quality_engineering: 'engineering',
+
+  // Some engineering careers are mapped to other curated Career Library
+  // directions as well; their explicit primary family keeps target routing deterministic.
+  biomedical_engineering: 'engineering',
+  agricultural_engineering: 'engineering'
 };
 
 const ROLE_FAMILY_BY_DIRECTION = {
