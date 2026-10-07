@@ -174,7 +174,7 @@
   async function loadCareerProfile({careerName, careerId, directionName, country='India', language='English'}){
     const cfg = window.CAREER_DIYA_SUPABASE || {};
     if(!cfg.url || !cfg.anonKey) throw new Error('Supabase configuration is missing.');
-    const endpoint = cfg.url.replace(/\/$/,'') + '/functions/v1/career-library';
+    const endpoint = cfg.url.replace(/\/$/,'') + '/functions/v1/career-library-cache';
     const normalizedCountry=normalizeCountry(country);
     const res = await fetch(endpoint, {method:'POST',headers:{'apikey':cfg.anonKey,'Authorization':'Bearer '+cfg.anonKey,'Content-Type':'application/json'},body:JSON.stringify({careerName,country:normalizedCountry,language})});
     const payload = await res.json().catch(()=>({}));
