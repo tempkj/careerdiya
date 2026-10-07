@@ -13,3 +13,10 @@ extra_search_path = ["public", "core"]
 [auth]
 enabled = true
 # JWT-based; RLS is the sole tenant-isolation boundary (handbook §3, A5).
+
+# Career Intelligence cache and refresh functions
+[functions.career-library-cache]
+verify_jwt = false
+
+[functions.career-library-refresh]
+verify_jwt = false
