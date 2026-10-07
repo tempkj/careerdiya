@@ -19,4 +19,4 @@ enabled = true
 verify_jwt = false
 
 [functions.career-library-refresh]
-verify_jwt = false
+verify_jwt = true
