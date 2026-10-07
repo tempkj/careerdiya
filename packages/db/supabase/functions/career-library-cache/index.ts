@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
     }
 
     const admin = adminClient();
-    const source = await admin.from("career_library_source")
+    const source = await admin.schema("knowledge").from("career_library_source")
       .select("id,provider_key,integration_version")
       .eq("provider_key", "edumilestones-career-library")
       .maybeSingle();
@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
       return json({ error: "Career Library source is not configured." }, 500);
     }
 
-    let variant = await admin.from("career_library_variant")
+    let variant = await admin.schema("knowledge").from("career_library_variant")
       .select("*")
       .eq("source_id", source.data.id)
       .eq("canonical_name", canonicalName)
@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     const cached = variant.data
-      ? await admin.from("career_library_profile").select("*").eq("variant_id", variant.data.id).maybeSingle()
+      ? await admin.schema("knowledge").from("career_library_profile").select("*").eq("variant_id", variant.data.id).maybeSingle()
       : { data: null, error: null };
 
     const fresh = cached.data && variant.data?.last_success_at &&
@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
       const now = new Date().toISOString();
 
       if (!variant.data) {
-        const inserted = await admin.from("career_library_variant").insert({
+        const inserted = await admin.schema("knowledge").from("career_library_variant").insert({
           source_id: source.data.id, career_id: careerId, canonical_name: canonicalName, country, language,
           next_refresh_at: new Date(Date.now() + CACHE_MAX_AGE_MS).toISOString(),
           last_checked_at: now, last_success_at: now, last_changed_at: now, content_hash: hash, refresh_status: "changed"
@@ -121,8 +121,8 @@ Deno.serve(async (req) => {
       let snapshotId = cached.data?.snapshot_id || null;
 
       if (changed || !cached.data) {
-        await admin.from("career_library_snapshot").update({ is_current: false }).eq("variant_id", variant.data.id);
-        const snapshot = await admin.from("career_library_snapshot").insert({
+        await admin.schema("knowledge").from("career_library_snapshot").update({ is_current: false }).eq("variant_id", variant.data.id);
+        const snapshot = await admin.schema("knowledge").from("career_library_snapshot").insert({
           variant_id: variant.data.id, source_id: source.data.id, content_hash: hash,
           response_valid: upstream.isValid !== false, adapter_version: upstream.adapterVersion || source.data.integration_version,
           raw_payload: payload, is_current: true
@@ -130,14 +130,14 @@ Deno.serve(async (req) => {
         if (snapshot.error) throw snapshot.error;
         snapshotId = snapshot.data.id;
 
-        const profile = await admin.from("career_library_profile").upsert({
+        const profile = await admin.schema("knowledge").from("career_library_profile").upsert({
           variant_id: variant.data.id, career_id: careerId || variant.data.career_id || null,
           canonical_name: canonicalName, country, language, data: payload, snapshot_id: snapshotId, updated_at: now
         }, { onConflict: "variant_id" });
         if (profile.error) throw profile.error;
       }
 
-      await admin.from("career_library_variant").update({
+      await admin.schema("knowledge").from("career_library_variant").update({
         career_id: careerId || variant.data.career_id || null, last_checked_at: now, last_success_at: now,
         last_changed_at: changed ? now : variant.data.last_changed_at,
         next_refresh_at: new Date(Date.now() + CACHE_MAX_AGE_MS).toISOString(),
@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
       return json({ isValid: true, careerData: payload, cache: { source: "careerdiya", cached: false, refreshed: changed, nextRefreshAt: new Date(Date.now() + CACHE_MAX_AGE_MS).toISOString() } });
     } catch (upstreamError) {
       if (cached.data) {
-        await admin.from("career_library_variant").update({
+        await admin.schema("knowledge").from("career_library_variant").update({
           refresh_status: "failed", last_checked_at: new Date().toISOString(), last_error: String(upstreamError?.message || upstreamError).slice(0, 1000),
           refresh_lock_until: null, failure_count: (variant.data.failure_count || 0) + 1, updated_at: new Date().toISOString()
         }).eq("id", variant.data.id);
