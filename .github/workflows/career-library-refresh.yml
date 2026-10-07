@@ -1,0 +1,32 @@
+name: Career Library Refresh
+
+on:
+  schedule:
+    # Check due cached career profiles every 6 hours.
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Maximum due career variants to process"
+        required: false
+        default: "100"
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refresh due Career Library profiles
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          LIMIT: ${{ inputs.limit || '100' }}
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_ANON_KEY"
+          curl --fail-with-body --silent --show-error \
+            -X POST "$SUPABASE_URL/functions/v1/career-library-refresh" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" \
+            --data "{\"limit\":$LIMIT}"
