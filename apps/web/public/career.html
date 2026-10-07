@@ -76,6 +76,48 @@
     padding:24px;
   }
 }
+</style><style id="career-matching-layout-v4">
+/* Keep the supporting rail useful while the primary career content continues below it. */
+.career-detail-side{
+  position:sticky;
+  top:108px;
+  align-self:start;
+}
+.career-detail-main{
+  min-width:0;
+}
+/* Overview is a scan surface, not a set of mini scroll panes. */
+.career-snapshot-item{
+  height:260px;
+  min-height:260px;
+  overflow:hidden;
+}
+.career-snapshot-body{
+  height:auto;
+  max-height:none;
+  overflow:visible;
+  padding-right:0;
+}
+.career-snapshot-body ul{
+  margin:0;
+  padding-left:20px;
+}
+.career-snapshot-body li{
+  margin-bottom:9px;
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:4;
+  overflow:hidden;
+}
+@media(max-width:900px){
+  .career-detail-side{
+    position:static;
+  }
+  .career-snapshot-item{
+    height:auto;
+    min-height:0;
+  }
+}
 </style></head><body><header class="site-header"><div class="container nav"><a href="index.html"><img class="logo" src="assets/careerdiya-horizontal-lockup.svg"></a><nav class="navlinks"><a href="explore.html">Explore Careers</a><a href="paths.html">Career Paths</a><a href="assessment.html">Assessment</a><a href="counselling.html">Counselling</a><a href="resources.html">Resources</a><a href="courses.html">Courses &amp; Training</a></nav><a class="profile-menu guest" data-profile-menu href="javascript:void(0)" title="Create a free profile to unlock your Career Diya workspace" aria-label="Profile locked for guests"><span class="profile-avatar">?</span></a></div></header><main><section class="page-hero mural-band"><div class="container"><div class="eyebrow">Career path</div><h1 id="careerName">Career path</h1><p id="careerIntro">Understand the work, identify the evidence you need, then decide whether the learning investment makes sense.</p><div class="career-hero-actions"><button type="button" class="btn btn-primary" id="personalizeCareerBtn">Personalize this career →</button><a class="btn btn-secondary" href="#career-work">Explore the work ↓</a></div></div></section><nav class="career-quicknav" id="careerQuickNav" aria-label="Career information"><div class="container"><a href="#career-overview" data-section="career-overview">Overview</a><a href="#career-work" data-section="career-work">Work</a><a href="#career-skills" data-section="career-skills">Skills</a><a href="#career-routes" data-section="career-routes">Routes</a><a href="#career-outlook" data-section="career-outlook">Outlook</a><a href="#career-learning" data-section="career-learning">Skill Diya</a><a href="#career-faq" data-section="career-faq">FAQs</a></div></nav><section class="section career-snapshot" id="career-overview"><div class="container"><div class="career-snapshot-grid" id="careerSnapshotGrid"></div></div></section><section class="section career-personalize-panel" id="careerPersonalizePanel"><div class="container"><div id="careerPersonalizeContent"></div></div></section><section class="section"><div class="container"><div id="careerDetails"></div></div></section><section class="section skilldiya-career-section"><div class="container"><div id="skillDiyaCareerCourses"></div></div></section><section class="section" id="careerAsanaBridge" style="padding-top:0;display:none">
   <div class="container">
     <div class="career-card" style="border:1px solid #dfe3eb;background:#f8f9fb">
@@ -384,10 +426,10 @@ function wireCareerWorkspace(){
     const whoItems=whoShouldPursueForSnapshot();
     const marketText=cleanText(outlook?.querySelector('p,li'));
     const cards=[
-      ['What it involves',toPoints(intro)],
-      ['Who it suits',whoItems.slice(0,3)],
-      ['Work reality',toPoints(workText)],
-      ['Market outlook',toPoints(marketText)]
+      ['What it involves',toPoints(intro,2)],
+      ['Who it suits',whoItems.slice(0,2)],
+      ['Work reality',toPoints(workText,2)],
+      ['Market outlook',toPoints(marketText,2)]
     ];
     snap.innerHTML=cards.map(([label,items])=>{
       const body=items.length?'<ul>'+items.map(s=>'<li>'+escapeHtml(s)+'</li>').join('')+'</ul>':'<p>See the detailed career profile below.</p>';
