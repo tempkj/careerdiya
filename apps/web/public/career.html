@@ -118,7 +118,36 @@
     min-height:0;
   }
 }
-</style></head><body><header class="site-header"><div class="container nav"><a href="index.html"><img class="logo" src="assets/careerdiya-horizontal-lockup.svg"></a><nav class="navlinks"><a href="explore.html">Explore Careers</a><a href="paths.html">Career Paths</a><a href="assessment.html">Assessment</a><a href="counselling.html">Counselling</a><a href="resources.html">Resources</a><a href="courses.html">Courses &amp; Training</a></nav><a class="profile-menu guest" data-profile-menu href="javascript:void(0)" title="Create a free profile to unlock your Career Diya workspace" aria-label="Profile locked for guests"><span class="profile-avatar">?</span></a></div></header><main><section class="page-hero mural-band"><div class="container"><div class="eyebrow">Career path</div><h1 id="careerName">Career path</h1><p id="careerIntro">Understand the work, identify the evidence you need, then decide whether the learning investment makes sense.</p><div class="career-hero-actions"><button type="button" class="btn btn-primary" id="personalizeCareerBtn">Personalize this career →</button><a class="btn btn-secondary" href="#career-work">Explore the work ↓</a></div></div></section><nav class="career-quicknav" id="careerQuickNav" aria-label="Career information"><div class="container"><a href="#career-overview" data-section="career-overview">Overview</a><a href="#career-work" data-section="career-work">Work</a><a href="#career-skills" data-section="career-skills">Skills</a><a href="#career-routes" data-section="career-routes">Routes</a><a href="#career-outlook" data-section="career-outlook">Outlook</a><a href="#career-learning" data-section="career-learning">Skill Diya</a><a href="#career-faq" data-section="career-faq">FAQs</a></div></nav><section class="section career-snapshot" id="career-overview"><div class="container"><div class="career-snapshot-grid" id="careerSnapshotGrid"></div></div></section><section class="section career-personalize-panel" id="careerPersonalizePanel"><div class="container"><div id="careerPersonalizeContent"></div></div></section><section class="section"><div class="container"><div id="careerDetails"></div></div></section><section class="section skilldiya-career-section"><div class="container"><div id="skillDiyaCareerCourses"></div></div></section><section class="section" id="careerAsanaBridge" style="padding-top:0;display:none">
+</style><style id="career-match-context-css">
+.career-match-context{
+  background:#fff;
+  border:1px solid #e5e1d8;
+  border-radius:22px;
+  padding:28px;
+  box-shadow:0 10px 32px rgba(21,24,39,.035);
+}
+.career-match-context .eyebrow{margin-bottom:6px}
+.career-match-context h2{font-size:30px;line-height:1.18;margin:6px 0 8px}
+.career-match-context .match-intro{color:#626979;max-width:900px;margin:0 0 20px}
+.career-match-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.career-match-card{background:#f8f7f2;border:1px solid #e5e1d8;border-radius:16px;padding:16px}
+.career-match-card small{display:block;color:#687083;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;margin-bottom:7px}
+.career-match-card strong{display:block;color:#202438;font-size:16px;line-height:1.35}
+.career-match-card span{display:block;color:#626979;font-size:12px;line-height:1.45;margin-top:5px}
+.career-match-path{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  margin:18px 0 0;padding:14px 16px;border-radius:15px;
+  background:#f5f6fb;border:1px solid #e0e4f0;
+}
+.career-match-path .path-node{font-weight:700;color:#202438}
+.career-match-path .path-arrow{color:#213a8f;font-weight:800}
+.career-match-anon{
+  margin-top:18px;padding:14px 16px;border-radius:14px;
+  background:#fff8e9;border:1px solid #f3dfb1;color:#596071;font-size:13px;
+}
+.career-match-disclosure{margin:16px 0 0;color:#7a8090;font-size:11px;line-height:1.5}
+@media(max-width:900px){.career-match-grid{grid-template-columns:1fr}}
+</style></head><body><header class="site-header"><div class="container nav"><a href="index.html"><img class="logo" src="assets/careerdiya-horizontal-lockup.svg"></a><nav class="navlinks"><a href="explore.html">Explore Careers</a><a href="paths.html">Career Paths</a><a href="assessment.html">Assessment</a><a href="counselling.html">Counselling</a><a href="resources.html">Resources</a><a href="courses.html">Courses &amp; Training</a></nav><a class="profile-menu guest" data-profile-menu href="javascript:void(0)" title="Create a free profile to unlock your Career Diya workspace" aria-label="Profile locked for guests"><span class="profile-avatar">?</span></a></div></header><main><section class="page-hero mural-band"><div class="container"><div class="eyebrow">Career path</div><h1 id="careerName">Career path</h1><p id="careerIntro">Understand the work, identify the evidence you need, then decide whether the learning investment makes sense.</p><div class="career-hero-actions"><button type="button" class="btn btn-primary" id="personalizeCareerBtn">See how this fits me →</button><a class="btn btn-secondary" href="#career-work">Explore the work ↓</a></div></div></section><nav class="career-quicknav" id="careerQuickNav" aria-label="Career information"><div class="container"><a href="#career-overview" data-section="career-overview">Overview</a><a href="#career-work" data-section="career-work">Work</a><a href="#career-skills" data-section="career-skills">Skills</a><a href="#career-routes" data-section="career-routes">Routes</a><a href="#career-outlook" data-section="career-outlook">Outlook</a><a href="#career-learning" data-section="career-learning">Skill Diya</a><a href="#career-faq" data-section="career-faq">FAQs</a></div></nav><section class="section career-snapshot" id="career-overview"><div class="container"><div class="career-snapshot-grid" id="careerSnapshotGrid"></div></div></section><section class="section career-personalize-panel" id="careerPersonalizePanel"><div class="container"><div id="careerPersonalizeContent"></div></div></section><section class="section"><div class="container"><div id="careerDetails"></div></div></section><section class="section skilldiya-career-section"><div class="container"><div id="skillDiyaCareerCourses"></div></div></section><section class="section" id="careerAsanaBridge" style="padding-top:0;display:none">
   <div class="container">
     <div class="career-card" style="border:1px solid #dfe3eb;background:#f8f9fb">
       <span class="tag">Deeper · CareerAsana</span>
@@ -399,6 +428,93 @@ function renderVaultCareerJourney(career,matches,profile){
 }
 
 
+
+function careerMatchIntent(profile,saved,audience){
+  const answers=saved?.answers||saved?.result?.answers||{};
+  const savedGoals=String(profile?.career_goals||'').split('|').map(x=>x.trim()).filter(Boolean);
+  const intent=String(answers.intent||'').toLowerCase();
+  const goalText=savedGoals.join(' ').toLowerCase();
+  if(audience==='parent') return {label:'Helping a student decide',next:'Understand the career before making a study or career decision.'};
+  if(audience==='student'){
+    if(intent==='learning'||goalText.includes('further study')) return {label:'Study / learning decision',next:'Check what this career requires before choosing a course or degree.'};
+    if(intent==='switch'||intent==='stuck') return {label:'Direction reset',next:'Compare this direction with the alternatives you are considering.'};
+    return {label:'First-career exploration',next:'Understand the work, fit and routes into this career before committing.'};
+  }
+  if(intent==='switch'||goalText.includes('switch careers')) return {label:'Career switch',next:'Understand the move from your current role and what needs to change.'};
+  if(intent==='growth'||goalText.includes('grow in my current career')) return {label:'Career growth',next:'See whether this career strengthens or changes your next move.'};
+  if(intent==='learning'||goalText.includes('specialist expertise')) return {label:'Skill / learning decision',next:'Identify which capabilities are worth investing in for this career.'};
+  if(intent==='choice'||goalText.includes('first career direction')) return {label:'Career choice',next:'Compare this option with the other directions you are considering.'};
+  if(intent==='stuck'||goalText.includes('meaningful work')) return {label:'Direction reset',next:'Test whether this career addresses what you are looking for next.'};
+  if(goalText.includes('return to work')) return {label:'Return to work',next:'Understand the most realistic re-entry route from your previous experience.'};
+  if(goalText.includes('leadership')) return {label:'Leadership progression',next:'Check how this career fits your existing experience and next level.'};
+  if(goalText.includes('new industry')) return {label:'Industry move',next:'Understand what carries over and what changes when you move into this field.'};
+  return {label:'Career exploration',next:'Understand the work and decide whether this is worth exploring further.'};
+}
+
+function renderCareerMatchContext(career,profile,saved){
+  const host=document.getElementById('careerPersonalizeContent');
+  if(!host) return;
+  const audienceKey=String(profile?.audience||audience||'').toLowerCase();
+  const isKnown=['parent','student','professional'].includes(audienceKey);
+  const role=String(profile?.current_role_title||profile?.current_role_other||profile?.current_role||saved?.result?.currentRole||'').trim();
+  const experience=String(profile?.experience_years||'').trim();
+  const intent=careerMatchIntent(profile,saved,audienceKey);
+  const target=career?.canonicalName||heroTitle.textContent||'this career';
+  const work=String(profile?.exploration_work_preference||saved?.answers?.work||'').trim();
+  const environment=String(profile?.exploration_environment||saved?.answers?.environment||'').trim();
+  const priority=String(profile?.exploration_priority||saved?.answers?.priority||'').trim();
+  const learning=String(profile?.learning_preferences||saved?.answers?.learning||'').trim();
+
+  const labelMap={
+    analytical:'Analytical / problem-solving',
+    builder:'Building / systems',
+    creative:'Creative / communication',
+    people:'People / influence',
+    quality:'Quality / reliability',
+    structured:'Structured',
+    dynamic:'Dynamic',
+    collaborative:'Collaborative',
+    independent:'Independent',
+    stability:'Stability',
+    growth:'Growth',
+    impact:'Impact',
+    flexibility:'Flexibility',
+    project:'Hands-on',
+    structured:'Structured',
+    mentor:'Mentor-led',
+    self:'Self-directed'
+  };
+
+  const cards=[];
+  if(isKnown) cards.push(['Your context',audienceKey==='professional'?'Professional':audienceKey==='student'?'Student / learner':'Parent / guardian',role||'Profile context available']);
+  else cards.push(['Your context','Guest','Sign in to connect this career to your profile']);
+
+  cards.push(['What you are trying to do',intent.label,intent.next]);
+  if(role) cards.push(['Starting point',role,experience?experience+' experience':'Current role from your profile']);
+  else if(audienceKey==='student') cards.push(['Starting point','Your current stage','Use your education and exploration context to shape the next step.']);
+  else if(audienceKey==='parent') cards.push(['Starting point','Your child’s situation','Use the parent exploration context rather than assuming an adult career profile.']);
+  if(work||environment||priority) cards.push(['How you tend to work',
+    [labelMap[work]||work,labelMap[environment]||environment,labelMap[priority]||priority].filter(Boolean).join(' · '),
+    'These are preference signals, not a psychometric verdict.']);
+  if(learning) cards.push(['How you prefer to learn',labelMap[learning]||learning,'Used to shape the suggested action route.']);
+
+  const visibleCards=cards.slice(0,4);
+  let html='<div class="career-match-context">';
+  html+='<div class="eyebrow">Career match context</div>';
+  html+='<h2>What '+escapeHtml(target)+' means for you</h2>';
+  html+='<p class="match-intro">Career Diya uses the context you have already shared — rather than treating every visitor as a blank-slate career seeker.</p>';
+  html+='<div class="career-match-grid">'+visibleCards.map(([k,v,s])=>'<article class="career-match-card"><small>'+escapeHtml(k)+'</small><strong>'+escapeHtml(v)+'</strong><span>'+escapeHtml(s)+'</span></article>').join('')+'</div>';
+  if(role){
+    html+='<div class="career-match-path"><span class="path-node">'+escapeHtml(role)+'</span><span class="path-arrow">→</span><span class="path-node">'+escapeHtml(target)+'</span><span style="color:#687083;font-size:12px">Your current context → career you are exploring</span></div>';
+  }
+  if(!isKnown){
+    html+='<div class="career-match-anon">Create or sign in to a free profile to make this career view personal. Your current role, goals and exploration context can then be used here.</div>';
+  }
+  html+='<p class="career-match-disclosure">This is contextual guidance, not a probability or validated “match percentage”. A deeper transition assessment can evaluate skills, evidence and preparation separately.</p>';
+  html+='</div>';
+  host.innerHTML=html;
+}
+
 function wireCareerWorkspace(){
   const detail=document.getElementById('careerDetails'); if(!detail)return;
   const nodes=[...detail.querySelectorAll('section,.career-card')];
@@ -448,7 +564,15 @@ async function renderCareer(career,country=selectedCountry,language=selectedLang
     detailsEl.innerHTML=CareerDiyaCareerLibrary.renderCareerData(data,career,directionId,country,language,audience);
     const isVaultJourney=vaultItemId&&new URLSearchParams(location.search).get('source')==='vault';
     let profile=null;
-    try{profile=window.CareerDiyaProfileAuth?.isAuthenticated()?await window.CareerDiyaProfileAuth.getProfile():null;}catch(_){}
+    let savedExploration=null;
+    try{
+      const authenticated=window.CareerDiyaProfileAuth?.isAuthenticated();
+      if(authenticated){
+        profile=await window.CareerDiyaProfileAuth.getProfile();
+        if(window.CareerDiyaProfileAuth?.getSavedExploration) savedExploration=await window.CareerDiyaProfileAuth.getSavedExploration();
+      }
+    }catch(_){}
+    renderCareerMatchContext(career,profile,savedExploration);
     try{
       const courseData=await SkillDiyaCourses.load();
       const courseMatches=SkillDiyaCourses.recommendationMatches(courseData,career?.id||'',career?.canonicalName||'this career');
