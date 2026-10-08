@@ -162,7 +162,16 @@
 .transition-list li strong{color:#202438}
 .transition-note{margin-top:16px;color:#7a8090;font-size:11px;line-height:1.5}
 @media(max-width:900px){.transition-grid{grid-template-columns:1fr}}
-</style></head><body><header class="site-header"><div class="container nav"><a href="index.html"><img class="logo" src="assets/careerdiya-horizontal-lockup.svg"></a><nav class="navlinks"><a href="explore.html">Explore Careers</a><a href="paths.html">Career Paths</a><a href="assessment.html">Assessment</a><a href="counselling.html">Counselling</a><a href="resources.html">Resources</a><a href="courses.html">Courses &amp; Training</a></nav><a class="profile-menu guest" data-profile-menu href="javascript:void(0)" title="Create a free profile to unlock your Career Diya workspace" aria-label="Profile locked for guests"><span class="profile-avatar">?</span></a></div></header><main><section class="page-hero mural-band"><div class="container"><div class="eyebrow">Career path</div><h1 id="careerName">Career path</h1><p id="careerIntro">Understand the work, identify the evidence you need, then decide whether the learning investment makes sense.</p><div class="career-hero-actions"><button type="button" class="btn btn-primary" id="personalizeCareerBtn">See how this fits me →</button><a class="btn btn-secondary" href="#career-work">Explore the work ↓</a></div></div></section><nav class="career-quicknav" id="careerQuickNav" aria-label="Career information"><div class="container"><a href="#career-overview" data-section="career-overview">Overview</a><a href="#career-work" data-section="career-work">Work</a><a href="#career-skills" data-section="career-skills">Skills</a><a href="#career-routes" data-section="career-routes">Routes</a><a href="#career-outlook" data-section="career-outlook">Outlook</a><a href="#career-learning" data-section="career-learning">Skill Diya</a><a href="#career-faq" data-section="career-faq">FAQs</a></div></nav><section class="section career-snapshot" id="career-overview"><div class="container"><div class="career-snapshot-grid" id="careerSnapshotGrid"></div></div></section><section class="section career-personalize-panel" id="careerPersonalizePanel"><div class="container"><div id="careerPersonalizeContent"></div></div></section><section class="section"><div class="container"><div id="careerDetails"></div></div></section><section class="section skilldiya-career-section"><div class="container"><div id="skillDiyaCareerCourses"></div></div></section><section class="section" id="careerAsanaBridge" style="padding-top:0;display:none">
+<style id="career-transition-lens-v2-css">
+.transition-type-badge{display:flex;align-items:center;gap:10px;margin:0 0 18px;padding:11px 14px;border-radius:13px;background:#f5f6fb;border:1px solid #e0e4f0}
+.transition-type-badge span{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#687083}
+.transition-type-badge strong{font-size:14px;color:#213a8f}
+.transition-card ul.transition-mini-list{margin:10px 0 0;padding:0;list-style:none;display:grid;gap:7px}
+.transition-mini-list li{position:relative;padding-left:14px;color:#596071;font-size:12px;line-height:1.4}
+.transition-mini-list li:before{content:'•';position:absolute;left:0;color:#213a8f;font-weight:800}
+.transition-guidance{margin-top:16px;padding:13px 15px;border-radius:13px;background:#f8f7f2;border:1px solid #e5e1d8;color:#596071;font-size:12px;line-height:1.5}
+.transition-guidance strong{color:#202438}
+</style></style></head><body><header class="site-header"><div class="container nav"><a href="index.html"><img class="logo" src="assets/careerdiya-horizontal-lockup.svg"></a><nav class="navlinks"><a href="explore.html">Explore Careers</a><a href="paths.html">Career Paths</a><a href="assessment.html">Assessment</a><a href="counselling.html">Counselling</a><a href="resources.html">Resources</a><a href="courses.html">Courses &amp; Training</a></nav><a class="profile-menu guest" data-profile-menu href="javascript:void(0)" title="Create a free profile to unlock your Career Diya workspace" aria-label="Profile locked for guests"><span class="profile-avatar">?</span></a></div></header><main><section class="page-hero mural-band"><div class="container"><div class="eyebrow">Career path</div><h1 id="careerName">Career path</h1><p id="careerIntro">Understand the work, identify the evidence you need, then decide whether the learning investment makes sense.</p><div class="career-hero-actions"><button type="button" class="btn btn-primary" id="personalizeCareerBtn">See how this fits me →</button><a class="btn btn-secondary" href="#career-work">Explore the work ↓</a></div></div></section><nav class="career-quicknav" id="careerQuickNav" aria-label="Career information"><div class="container"><a href="#career-overview" data-section="career-overview">Overview</a><a href="#career-work" data-section="career-work">Work</a><a href="#career-skills" data-section="career-skills">Skills</a><a href="#career-routes" data-section="career-routes">Routes</a><a href="#career-outlook" data-section="career-outlook">Outlook</a><a href="#career-learning" data-section="career-learning">Skill Diya</a><a href="#career-faq" data-section="career-faq">FAQs</a></div></nav><section class="section career-snapshot" id="career-overview"><div class="container"><div class="career-snapshot-grid" id="careerSnapshotGrid"></div></div></section><section class="section career-personalize-panel" id="careerPersonalizePanel"><div class="container"><div id="careerPersonalizeContent"></div></div></section><section class="section"><div class="container"><div id="careerDetails"></div></div></section><section class="section skilldiya-career-section"><div class="container"><div id="skillDiyaCareerCourses"></div></div></section><section class="section" id="careerAsanaBridge" style="padding-top:0;display:none">
   <div class="container">
     <div class="career-card" style="border:1px solid #dfe3eb;background:#f8f9fb">
       <span class="tag">Deeper · CareerAsana</span>
@@ -472,19 +481,24 @@ function careerTransitionLens(profile,saved,career,audienceKey){
   if(!role || audienceKey!=='professional') return null;
   const r=role.toLowerCase();
   const target=String(career?.canonicalName||'').toLowerCase();
+
+  // These are broad capability families, not claims of occupational equivalence.
+  // Keep the language directional until the structured career/skill graph is available.
   const targetGroups=[
-    {keys:['product management','product manager'],label:'Product thinking',need:'Customer discovery, prioritisation, product strategy and outcome ownership'},
-    {keys:['software engineering','full stack','mobile application','artificial intelligence','data science','ethical hacking','blockchain'],label:'Technical delivery',need:'Technical depth, systems thinking and evidence through shipped work'},
-    {keys:['project management','operations management','business management','strategy consulting','supply chain','logistics'],label:'Execution & coordination',need:'Planning, stakeholder alignment, decision-making and delivery ownership'},
-    {keys:['digital marketing','growth marketing','performance marketing','brand management','advertising','public relations','corporate communication'],label:'Market & communication',need:'Audience insight, experimentation, communication and measurable outcomes'},
-    {keys:['human resource','corporate training','career counselling','mentoring','coaching'],label:'People & development',need:'Stakeholder trust, facilitation, coaching and people-focused practice'},
-    {keys:['financial analysis','investment banking','investment advisory','risk management','financial planning','actuarial'],label:'Financial analysis',need:'Financial reasoning, quantitative analysis and domain-specific evidence'},
-    {keys:['mechanical engineering','electrical engineering','aerospace','chemical engineering','renewable energy','biomedical engineering'],label:'Engineering practice',need:'Engineering fundamentals, tools, domain projects and technical evidence'},
-    {keys:['architecture','interior design','industrial design','graphic design','user interface','fashion design','animation'],label:'Design practice',need:'Design methods, portfolio evidence and domain tools'},
-    {keys:['law'],label:'Legal practice',need:'Legal foundations, research, writing and jurisdiction-specific qualification where required'},
-    {keys:['clinical research','pharmacology','nutrition','physiotherapy','audiology','medical laboratory','radiology','occupational therapy','veterinary'],label:'Domain qualification',need:'Relevant subject knowledge, supervised practice and required credentials'},
-    {keys:['aviation','cabin services','air traffic','maritime'],label:'Sector qualification',need:'Role-specific training, safety requirements and sector credentials'}
+    {keys:['product management','product manager'],label:'Product thinking',need:['Customer discovery','Prioritisation','Product strategy','Outcome ownership']},
+    {keys:['software engineering','full stack','mobile application','artificial intelligence','data science','ethical hacking','blockchain','blockchain technology'],label:'Technical delivery',need:['Technical/domain fundamentals','Systems thinking','Role-specific technical skills','Practical technical evidence']},
+    {keys:['project management','operations management','business management','strategy consulting','supply chain','logistics'],label:'Execution & coordination',need:['Planning','Stakeholder alignment','Decision-making','Delivery ownership']},
+    {keys:['digital marketing','growth marketing','performance marketing'],label:'Digital marketing execution',need:['Campaign execution','Digital analytics','SEO/SEM or paid media','Marketing technology']},
+    {keys:['brand management','advertising','public relations','corporate communication'],label:'Market & communication',need:['Audience insight','Communication strategy','Experimentation','Measurable outcomes']},
+    {keys:['human resource','corporate training','career counselling','mentoring','coaching'],label:'People & development',need:['Stakeholder trust','Facilitation','Coaching','People-focused practice']},
+    {keys:['financial analysis','investment banking','investment advisory','risk management','financial planning','actuarial'],label:'Financial analysis',need:['Financial reasoning','Quantitative analysis','Domain knowledge','Role-specific evidence']},
+    {keys:['mechanical engineering','electrical engineering','aerospace','chemical engineering','renewable energy','biomedical engineering'],label:'Engineering practice',need:['Engineering fundamentals','Technical tools','Domain projects','Technical evidence']},
+    {keys:['architecture','interior design','industrial design','graphic design','user interface','fashion design','animation'],label:'Design practice',need:['Design methods','Domain tools','Portfolio evidence','User/problem understanding']},
+    {keys:['law'],label:'Legal practice',need:['Legal foundations','Research and writing','Jurisdiction-specific knowledge','Required credentials where applicable']},
+    {keys:['clinical research','pharmacology','nutrition','physiotherapy','audiology','medical laboratory','radiology','occupational therapy','veterinary'],label:'Domain qualification',need:['Subject knowledge','Supervised practice','Role-specific skills','Required credentials where applicable']},
+    {keys:['aviation','cabin services','air traffic','maritime'],label:'Sector qualification',need:['Sector knowledge','Safety requirements','Role-specific training','Required credentials']}
   ];
+
   const group=targetGroups.find(g=>g.keys.some(k=>target.includes(k)));
   const sourceSignals=[];
   if(/test|quality|qa|assurance/.test(r)) sourceSignals.push('quality thinking and structured problem-solving');
@@ -492,36 +506,63 @@ function careerTransitionLens(profile,saved,career,audienceKey){
   if(/project|program|delivery|operations/.test(r)) sourceSignals.push('planning, coordination and stakeholder management');
   if(/manager|lead|head|director/.test(r)) sourceSignals.push('leadership, prioritisation and stakeholder management');
   if(/analyst|data|research|finance/.test(r)) sourceSignals.push('analysis and evidence-based decision-making');
-  if(/sales|marketing|business|account|customer/.test(r)) sourceSignals.push('commercial and stakeholder-facing experience');
+  if(/sales|marketing|business|account|customer|communication/.test(r)) sourceSignals.push('commercial, audience and stakeholder understanding');
   if(!sourceSignals.length) sourceSignals.push('domain experience, transferable ways of working and professional evidence');
-  const need=group?.need||'role-specific knowledge, practical evidence and a clear understanding of the work';
+
+  const needs=group?.need||['Role-specific knowledge','Practical capability','Evidence of applied work'];
   const label=group?.label||'Target-career capabilities';
   const targetName=career?.canonicalName||'this career';
-  const sameFamily=(/software|test|qa|it|technology/.test(r)&&/software|full stack|mobile|artificial intelligence|ethical hacking|blockchain|testing|quality/.test(target))
-    ||(/marketing|sales|brand|communication/.test(r)&&/marketing|advertising|brand|public relations|communication/.test(target));
-  return {role,targetName,sourceSignals,need,label,sameFamily};
+
+  const sourceMarketing=/marketing|sales|brand|communication|customer|account/.test(r);
+  const targetMarketing=/digital marketing|growth marketing|performance marketing|brand management|advertising|public relations|corporate communication/.test(target);
+  const sourceTechnical=/software|developer|engineer|technical|it|technology|test|quality|qa/.test(r);
+  const targetTechnical=/software|full stack|mobile|artificial intelligence|data science|ethical hacking|blockchain|engineering/.test(target);
+
+  let transitionType='Broader move';
+  let transitionTone='This is a broader move. Keep the transferable strengths, but expect meaningful destination-specific preparation.';
+  if((sourceMarketing&&targetMarketing)||(sourceTechnical&&targetTechnical)){
+    transitionType='Adjacent move';
+    transitionTone='This is a relatively close move within a related capability family. Focus on the destination-specific skills and evidence rather than restarting from scratch.';
+  }else if((/project|program|delivery|operations|business|management/.test(r)) && /project management|operations management|business management|strategy consulting/.test(target)){
+    transitionType='Close move';
+    transitionTone='Your existing experience may overlap substantially with the destination. Validate the role expectations and identify the few capabilities that still need evidence.';
+  }else if(sourceMarketing && /product management|product manager/.test(target)){
+    transitionType='Adjacent move';
+    transitionTone='Your stakeholder and audience experience can carry over, while product discovery, prioritisation and outcome ownership need to be demonstrated.';
+  }
+
+  // Make the "already bring" list more conservative: only claim signals that the
+  // current role title itself supports. The deeper assessment will use structured skills.
+  const build=needs.slice(0,4);
+  return {role,targetName,sourceSignals:sourceSignals.slice(0,4),needs:build,label,transitionType,transitionTone};
 }
 function renderCareerTransitionLens(career,profile,saved){
   const host=document.getElementById('careerPersonalizeContent'); if(!host) return;
   const audienceKey=String(profile?.audience||audience||'').toLowerCase();
   const lens=careerTransitionLens(profile,saved,career,audienceKey);
   if(!lens) return;
-  const transferable=lens.sourceSignals.slice(0,3).map(s=>'<li><strong>Potentially transferable:</strong> '+escapeHtml(s)+'</li>').join('');
-  const route=lens.sameFamily
-    ? 'This looks like a closer move within a related capability family. Validate the target role before investing in a large learning path.'
-    : 'This may be a broader move. Separate what you already demonstrate from what the target career requires before choosing a course or credential.';
+
+  const transferable=lens.sourceSignals.slice(0,4).map(s=>'<li>'+escapeHtml(s)+'</li>').join('');
+  const build=lens.needs.map(s=>'<li>'+escapeHtml(s)+'</li>').join('');
+  const nextStep=lens.transitionType==='Close move'
+    ? 'Validate the role expectations, then build evidence for the few capabilities you do not already demonstrate.'
+    : lens.transitionType==='Adjacent move'
+      ? 'Test the destination work with a small practical project before making a large learning investment.'
+      : 'First clarify the specific target role, then compare its required capabilities with what you already demonstrate.';
+
   host.insertAdjacentHTML('beforeend',
     '<div class="career-transition-lens">'+
       '<div class="eyebrow">Transition lens</div>'+
-      '<h3>What may carry over — and what to validate</h3>'+
-      '<p class="lens-intro">'+escapeHtml(lens.role)+' → '+escapeHtml(lens.targetName)+'. Career Diya can identify plausible transfer areas, but it should not assume that experience in one role proves readiness for another.</p>'+
+      '<h3>How this career fits your starting point</h3>'+
+      '<p class="lens-intro">'+escapeHtml(lens.role)+' → '+escapeHtml(lens.targetName)+'. The aim is to separate what you may already bring from what the destination requires, without turning this into a match score.</p>'+
+      '<div class="transition-type-badge"><span>Transition type</span><strong>'+escapeHtml(lens.transitionType)+'</strong></div>'+
       '<div class="transition-grid">'+
-        '<article class="transition-card"><small>From your experience</small><strong>Potentially transferable strengths</strong><p>'+escapeHtml(lens.sourceSignals.join(' · '))+'</p></article>'+
-        '<article class="transition-card"><small>Target capability family</small><strong>'+escapeHtml(lens.label)+'</strong><p>'+escapeHtml(lens.need)+'</p></article>'+
-        '<article class="transition-card"><small>How to read this</small><strong>Validate before you commit</strong><p>'+escapeHtml(route)+'</p></article>'+
+        '<article class="transition-card"><small>You may already bring</small><strong>Transferable capabilities</strong><ul class="transition-mini-list">'+transferable+'</ul></article>'+
+        '<article class="transition-card"><small>You may need to build</small><strong>'+escapeHtml(lens.label)+'</strong><ul class="transition-mini-list">'+build+'</ul></article>'+
+        '<article class="transition-card"><small>Your next sensible step</small><strong>Test before you commit</strong><p>'+escapeHtml(nextStep)+'</p></article>'+
       '</div>'+
-      '<ul class="transition-list">'+transferable+'</ul>'+
-      '<p class="transition-note">This is a transition-planning lens, not a match score. The next deeper assessment should verify specific skills, evidence, qualifications and preparation requirements using structured career data.</p>'+
+      '<div class="transition-guidance"><strong>'+escapeHtml(lens.transitionType)+':</strong> '+escapeHtml(lens.transitionTone)+'</div>'+
+      '<p class="transition-note">These are directional signals based on the current role context, not proof of skill proficiency. A deeper assessment should verify specific skills, evidence, qualifications and preparation requirements using structured career data.</p>'+
     '</div>');
 }
 function renderCareerMatchContext(career,profile,saved){
