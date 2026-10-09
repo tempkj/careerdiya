@@ -495,7 +495,7 @@ function careerTransitionLens(profile,saved,career,audienceKey){
   // Keep the language directional until the structured career/skill graph is available.
   const targetGroups=[
     {keys:['product management','product manager'],label:'Product thinking',need:['Customer discovery','Prioritisation','Product strategy','Outcome ownership']},
-    {keys:['software engineering','full stack','mobile application','artificial intelligence','data science','ethical hacking','blockchain','blockchain technology'],label:'Technical delivery',need:['Technical/domain fundamentals','Systems thinking','Role-specific technical skills','Practical technical evidence']},
+    {keys:['full stack','mobile application','artificial intelligence','data science','ethical hacking','blockchain','blockchain technology'],label:'Technical delivery',need:['Technical/domain fundamentals','Systems thinking','Role-specific technical skills','Practical technical evidence']},
     {keys:['project management','operations management','business management','strategy consulting','supply chain','logistics'],label:'Execution & coordination',need:['Planning','Stakeholder alignment','Decision-making','Delivery ownership']},
     {keys:['digital marketing','growth marketing','performance marketing'],label:'Digital marketing execution',need:['Campaign execution','Digital analytics','SEO/SEM or paid media','Marketing technology']},
     {keys:['brand management','advertising','public relations','corporate communication'],label:'Market & communication',need:['Audience insight','Communication strategy','Experimentation','Measurable outcomes']},
@@ -621,8 +621,11 @@ function renderCareerMatchContext(career,profile,saved){
     : 'Career explorer';
 
   const startLabel=role || (audienceKey==='professional' ? 'Current role not added yet' : 'Starting point not added yet');
+  const experienceLabel=experience
+    ? (/(year|month|\+)/i.test(experience) ? experience+' experience' : experience+' years experience')
+    : '';
   const startSub=role
-    ? (experience ? experience+' years experience' : 'Current role')
+    ? (experienceLabel || 'Current role')
     : 'Add this in My Profile to personalise the transition';
 
   host.innerHTML=
