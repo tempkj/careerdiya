@@ -163,9 +163,9 @@
 .transition-note{margin-top:16px;color:#7a8090;font-size:11px;line-height:1.5}
 @media(max-width:900px){.transition-grid{grid-template-columns:1fr}}
 <style id="career-transition-lens-v2-css">
-.transition-type-badge{display:flex;align-items:center;gap:10px;margin:0 0 18px;padding:11px 14px;border-radius:13px;background:#f5f6fb;border:1px solid #e0e4f0}
-.transition-type-badge span{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#687083}
-.transition-type-badge strong{font-size:14px;color:#213a8f}
+.transition-type-badge{display:flex;align-items:baseline;flex-wrap:wrap;column-gap:12px;row-gap:4px;margin:0 0 18px;padding:11px 14px;border-radius:13px;background:#f5f6fb;border:1px solid #e0e4f0}
+.transition-type-badge span{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#687083;line-height:1.4}
+.transition-type-badge strong{display:block;font-size:14px;color:#213a8f;line-height:1.4}
 .transition-card ul.transition-mini-list{margin:10px 0 0;padding:0;list-style:none;display:grid;gap:7px}
 .transition-mini-list li{position:relative;padding-left:14px;color:#596071;font-size:12px;line-height:1.4}
 .transition-mini-list li:before{content:'•';position:absolute;left:0;color:#213a8f;font-weight:800}
@@ -499,7 +499,12 @@ function careerTransitionLens(profile,saved,career,audienceKey){
     {keys:['project management','operations management','business management','strategy consulting','supply chain','logistics'],label:'Execution & coordination',need:['Planning','Stakeholder alignment','Decision-making','Delivery ownership']},
     {keys:['digital marketing','growth marketing','performance marketing'],label:'Digital marketing execution',need:['Campaign execution','Digital analytics','SEO/SEM or paid media','Marketing technology']},
     {keys:['brand management','advertising','public relations','corporate communication'],label:'Market & communication',need:['Audience insight','Communication strategy','Experimentation','Measurable outcomes']},
-    {keys:['human resource','corporate training','career counselling','mentoring','coaching'],label:'People & development',need:['Stakeholder trust','Facilitation','Coaching','People-focused practice']},
+    {keys:['career counselling','career counselor','career coach'],label:'Guidance & counselling',need:['Active listening and structured questioning','Career information and guidance methods','Ethical boundaries and referral judgement','Evidence of supervised or practice-based counselling']},
+    {keys:['human resource','corporate training','mentoring','coaching'],label:'People & development',need:['Stakeholder trust','Facilitation','Coaching','People-focused practice']},
+    {keys:['machine learning engineer','machine learning','artificial intelligence engineer'],label:'Applied AI & machine learning',need:['Programming and data handling','Statistics and machine-learning foundations','Model evaluation and experimentation','Evidence from applied projects']},
+    {keys:['software engineering','software engineer','full stack','mobile application'],label:'Software development',need:['Programming and software design','Version control and testing','Building and debugging applications','Evidence from shipped or reviewed code']},
+    {keys:['content creation','content creator','content writing','copywriting'],label:'Content production',need:['Audience and format research','Writing, editing or production craft','Content planning and distribution','Portfolio evidence and audience feedback']},
+    {keys:['performing arts','actor','acting','music performance','dancer','theatre'],label:'Performance practice',need:['Discipline-specific performance technique','Rehearsal and collaboration','Audition or live-performance experience','Portfolio, reel or performance evidence']},
     {keys:['financial analysis','investment banking','investment advisory','risk management','financial planning','actuarial'],label:'Financial analysis',need:['Financial reasoning','Quantitative analysis','Domain knowledge','Role-specific evidence']},
     {keys:['mechanical engineering','electrical engineering','aerospace','chemical engineering','renewable energy','biomedical engineering'],label:'Engineering practice',need:['Engineering fundamentals','Technical tools','Domain projects','Technical evidence']},
     {keys:['architecture','interior design','industrial design','graphic design','user interface','fashion design','animation'],label:'Design practice',need:['Design methods','Domain tools','Portfolio evidence','User/problem understanding']},
@@ -641,12 +646,21 @@ async function renderCareer(career,country=selectedCountry,language=selectedLang
     let profile=null;
     let savedExploration=null;
     try{
-      const authenticated=window.CareerDiyaProfileAuth?.isAuthenticated();
+      // Reconcile the locally cached session with Supabase before deciding whether
+      // this visitor has a profile. A stale local token can otherwise make the panel
+      // show generic guest copy, or hide context after a valid session refresh.
+      const auth=window.CareerDiyaProfileAuth;
+      let session=null;
+      if(auth?.refreshLocalSession) session=await auth.refreshLocalSession();
+      else if(auth?.getSession) session=auth.getSession();
+      const authenticated=!!(session?.access_token || auth?.isAuthenticated?.());
       if(authenticated){
-        profile=await window.CareerDiyaProfileAuth.getProfile();
-        if(window.CareerDiyaProfileAuth?.getSavedExploration) savedExploration=await window.CareerDiyaProfileAuth.getSavedExploration();
+        profile=await auth.getProfile();
+        if(auth?.getSavedExploration) savedExploration=await auth.getSavedExploration();
       }
-    }catch(_){}
+    }catch(err){
+      console.warn('Career match context could not refresh profile state',err);
+    }
     renderCareerMatchContext(career,profile,savedExploration);
     renderCareerTransitionLens(career,profile,savedExploration);
 
