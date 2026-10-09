@@ -669,8 +669,14 @@ async function renderCareer(career,country=selectedCountry,language=selectedLang
       renderSkillDiyaForCareer(career);
       wireCareerAsanaBridge(career);
     }
-    wireCareerWorkspace();
-    wireRelatedCareerOptions();
+    // Optional workspace enhancements must never turn a successfully loaded career
+    // profile into a "Career profile unavailable" error.
+    if(typeof wireCareerWorkspace==='function'){
+      try{wireCareerWorkspace();}catch(err){console.warn('Career workspace wiring failed',err);}
+    }
+    if(typeof wireRelatedCareerOptions==='function'){
+      try{wireRelatedCareerOptions();}catch(err){console.warn('Related career wiring failed',err);}
+    }
     localStorage.setItem('careerDiyaCountry',country); localStorage.setItem('careerDiyaLanguage',language);
     const countrySelect=document.getElementById('careerCountrySelect');
     const languageSelect=document.getElementById('careerLanguageSelect');
