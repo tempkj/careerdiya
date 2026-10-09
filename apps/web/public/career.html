@@ -513,7 +513,12 @@ function careerTransitionLens(profile,saved,career,audienceKey){
     {keys:['aviation','cabin services','air traffic','maritime'],label:'Sector qualification',need:['Sector knowledge','Safety requirements','Role-specific training','Required credentials']}
   ];
 
-  const group=targetGroups.find(g=>g.keys.some(k=>target.includes(k)));
+  const group=targetGroups
+    .filter(g=>g.keys.some(k=>target.includes(k)))
+    .sort((a,b)=>{
+      const specificity=g=>Math.max(...g.keys.filter(k=>target.includes(k)).map(k=>k.length));
+      return specificity(b)-specificity(a);
+    })[0];
   const sourceSignals=[];
   if(/test|quality|qa|assurance/.test(r)) sourceSignals.push('quality thinking and structured problem-solving');
   if(/software|developer|engineer|technical|it|technology/.test(r)) sourceSignals.push('technical delivery and systems thinking');
@@ -653,7 +658,9 @@ async function renderCareer(career,country=selectedCountry,language=selectedLang
       let session=null;
       if(auth?.refreshLocalSession) session=await auth.refreshLocalSession();
       else if(auth?.getSession) session=auth.getSession();
-      const authenticated=!!(session?.access_token || auth?.isAuthenticated?.());
+      const authenticated=auth?.refreshLocalSession
+        ? !!session?.access_token
+        : !!auth?.isAuthenticated?.();
       if(authenticated){
         profile=await auth.getProfile();
         if(auth?.getSavedExploration) savedExploration=await auth.getSavedExploration();
