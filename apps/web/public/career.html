@@ -649,6 +649,26 @@ async function renderCareer(career,country=selectedCountry,language=selectedLang
     }catch(_){}
     renderCareerMatchContext(career,profile,savedExploration);
     renderCareerTransitionLens(career,profile,savedExploration);
+
+    // Wire the hero CTA after the personalization content has been rendered.
+    // Use onclick assignment so rerendering country/language cannot stack handlers.
+    const personalizeBtn=document.getElementById('personalizeCareerBtn');
+    const personalizePanel=document.getElementById('careerPersonalizePanel');
+    if(personalizeBtn && personalizePanel){
+      personalizeBtn.onclick=()=>{
+        const opening=!personalizePanel.classList.contains('open');
+        personalizePanel.classList.toggle('open',opening);
+        personalizeBtn.setAttribute('aria-expanded',String(opening));
+        personalizeBtn.textContent=opening?'Hide personal context ↑':'See how this fits me →';
+        if(opening){
+          personalizePanel.scrollIntoView({behavior:'smooth',block:'start'});
+          personalizePanel.setAttribute('tabindex','-1');
+          personalizePanel.focus({preventScroll:true});
+        }
+      };
+      personalizeBtn.setAttribute('aria-controls','careerPersonalizePanel');
+      personalizeBtn.setAttribute('aria-expanded',String(personalizePanel.classList.contains('open')));
+    }
     try{
       const courseData=await SkillDiyaCourses.load();
       const courseMatches=SkillDiyaCourses.recommendationMatches(courseData,career?.id||'',career?.canonicalName||'this career');
