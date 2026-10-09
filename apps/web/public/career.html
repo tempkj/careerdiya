@@ -171,6 +171,15 @@
 .transition-mini-list li:before{content:'•';position:absolute;left:0;color:#213a8f;font-weight:800}
 .transition-guidance{margin-top:16px;padding:13px 15px;border-radius:13px;background:#f8f7f2;border:1px solid #e5e1d8;color:#596071;font-size:12px;line-height:1.5}
 .transition-guidance strong{color:#202438}
+</style><style id="career-match-context-v2-css">
+.career-match-context-incomplete{padding-bottom:24px}
+.career-match-incomplete-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:20px}
+.career-match-incomplete-grid>div{background:#f8f7f2;border:1px solid #e5e1d8;border-radius:16px;padding:16px}
+.career-match-incomplete-grid small{display:block;color:#687083;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;margin-bottom:7px}
+.career-match-incomplete-grid strong{display:block;color:#202438;font-size:15px;line-height:1.35}
+.career-match-incomplete-grid span{display:block;color:#626979;font-size:12px;line-height:1.45;margin-top:5px}
+.career-match-incomplete-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+@media(max-width:900px){.career-match-incomplete-grid{grid-template-columns:1fr}}
 </style></style></head><body><header class="site-header"><div class="container nav"><a href="index.html"><img class="logo" src="assets/careerdiya-horizontal-lockup.svg"></a><nav class="navlinks"><a href="explore.html">Explore Careers</a><a href="paths.html">Career Paths</a><a href="assessment.html">Assessment</a><a href="counselling.html">Counselling</a><a href="resources.html">Resources</a><a href="courses.html">Courses &amp; Training</a></nav><a class="profile-menu guest" data-profile-menu href="javascript:void(0)" title="Create a free profile to unlock your Career Diya workspace" aria-label="Profile locked for guests"><span class="profile-avatar">?</span></a></div></header><main><section class="page-hero mural-band"><div class="container"><div class="eyebrow">Career path</div><h1 id="careerName">Career path</h1><p id="careerIntro">Understand the work, identify the evidence you need, then decide whether the learning investment makes sense.</p><div class="career-hero-actions"><button type="button" class="btn btn-primary" id="personalizeCareerBtn">See how this fits me →</button><a class="btn btn-secondary" href="#career-work">Explore the work ↓</a></div></div></section><nav class="career-quicknav" id="careerQuickNav" aria-label="Career information"><div class="container"><a href="#career-overview" data-section="career-overview">Overview</a><a href="#career-work" data-section="career-work">Work</a><a href="#career-skills" data-section="career-skills">Skills</a><a href="#career-routes" data-section="career-routes">Routes</a><a href="#career-outlook" data-section="career-outlook">Outlook</a><a href="#career-learning" data-section="career-learning">Skill Diya</a><a href="#career-faq" data-section="career-faq">FAQs</a></div></nav><section class="section career-snapshot" id="career-overview"><div class="container"><div class="career-snapshot-grid" id="careerSnapshotGrid"></div></div></section><section class="section career-personalize-panel" id="careerPersonalizePanel"><div class="container"><div id="careerPersonalizeContent"></div></div></section><section class="section"><div class="container"><div id="careerDetails"></div></div></section><section class="section skilldiya-career-section"><div class="container"><div id="skillDiyaCareerCourses"></div></div></section><section class="section" id="careerAsanaBridge" style="padding-top:0;display:none">
   <div class="container">
     <div class="career-card" style="border:1px solid #dfe3eb;background:#f8f9fb">
@@ -570,106 +579,58 @@ function renderCareerMatchContext(career,profile,saved){
   if(!host) return;
   const audienceKey=String(profile?.audience||audience||'').toLowerCase();
   const isKnown=['parent','student','professional'].includes(audienceKey);
+  const hasProfile=!!profile;
   const role=String(profile?.current_role_title||profile?.current_role_other||profile?.current_role||saved?.result?.currentRole||'').trim();
   const experience=String(profile?.experience_years||'').trim();
   const intent=careerMatchIntent(profile,saved,audienceKey);
-  const target=career?.canonicalName||heroTitle.textContent||'this career';
-  const work=String(profile?.exploration_work_preference||saved?.answers?.work||'').trim();
-  const environment=String(profile?.exploration_environment||saved?.answers?.environment||'').trim();
-  const priority=String(profile?.exploration_priority||saved?.answers?.priority||'').trim();
-  const learning=String(profile?.learning_preferences||saved?.answers?.learning||'').trim();
+  const target=career?.canonicalName||'this career';
 
-  const labelMap={
-    analytical:'Analytical / problem-solving',
-    builder:'Building / systems',
-    creative:'Creative / communication',
-    people:'People / influence',
-    quality:'Quality / reliability',
-    structured:'Structured',
-    dynamic:'Dynamic',
-    collaborative:'Collaborative',
-    independent:'Independent',
-    stability:'Stability',
-    growth:'Growth',
-    impact:'Impact',
-    flexibility:'Flexibility',
-    project:'Hands-on',
-    structured:'Structured',
-    mentor:'Mentor-led',
-    self:'Self-directed'
-  };
-
-  const cards=[];
-  if(isKnown) cards.push(['Your context',audienceKey==='professional'?'Professional':audienceKey==='student'?'Student / learner':'Parent / guardian',role||'Profile context available']);
-  else cards.push(['Your context','Guest','Sign in to connect this career to your profile']);
-
-  cards.push(['What you are trying to do',intent.label,intent.next]);
-  if(role) cards.push(['Starting point',role,experience?experience+' experience':'Current role from your profile']);
-  else if(audienceKey==='student') cards.push(['Starting point','Your current stage','Use your education and exploration context to shape the next step.']);
-  else if(audienceKey==='parent') cards.push(['Starting point','Your child’s situation','Use the parent exploration context rather than assuming an adult career profile.']);
-  if(work||environment||priority) cards.push(['How you tend to work',
-    [labelMap[work]||work,labelMap[environment]||environment,labelMap[priority]||priority].filter(Boolean).join(' · '),
-    'These are preference signals, not a psychometric verdict.']);
-  if(learning) cards.push(['How you prefer to learn',labelMap[learning]||learning,'Used to shape the suggested action route.']);
-
-  const visibleCards=cards.slice(0,4);
-  let html='<div class="career-match-context">';
-  html+='<div class="eyebrow">Career match context</div>';
-  html+='<h2>What '+escapeHtml(target)+' means for you</h2>';
-  html+='<p class="match-intro">Career Diya uses the context you have already shared — rather than treating every visitor as a blank-slate career seeker.</p>';
-  html+='<div class="career-match-grid">'+visibleCards.map(([k,v,s])=>'<article class="career-match-card"><small>'+escapeHtml(k)+'</small><strong>'+escapeHtml(v)+'</strong><span>'+escapeHtml(s)+'</span></article>').join('')+'</div>';
-  if(role){
-    html+='<div class="career-match-path"><span class="path-node">'+escapeHtml(role)+'</span><span class="path-arrow">→</span><span class="path-node">'+escapeHtml(target)+'</span><span style="color:#687083;font-size:12px">Your current context → career you are exploring</span></div>';
+  // If the page was opened with an audience but there is no authenticated profile,
+  // do not manufacture personalization. Show a useful "context needed" state instead.
+  if(!hasProfile){
+    const audienceLabel=audienceKey==='professional'?'Professional':audienceKey==='student'?'Student':audienceKey==='parent'?'Parent':'Career explorer';
+    host.innerHTML=
+      '<div class="career-match-context career-match-context-incomplete">'+
+        '<div class="eyebrow">Career match context</div>'+
+        '<h2>See how '+escapeHtml(target)+' fits you</h2>'+
+        '<p class="match-intro">You are viewing this career as a '+escapeHtml(audienceLabel.toLowerCase())+'. Sign in or create a free profile so Career Diya can use your starting point, goals and exploration context instead of giving you generic advice.</p>'+
+        '<div class="career-match-incomplete-grid">'+
+          '<div><small>We can use</small><strong>Current role & experience</strong><span>For professionals, this helps us distinguish a close move from a broader transition.</span></div>'+
+          '<div><small>We can use</small><strong>Your career intent</strong><span>For example: explore, grow, switch, learn or reset direction.</span></div>'+
+          '<div><small>We can use</small><strong>Your preferences</strong><span>Your existing exploration and learning preferences can shape the next step.</span></div>'+
+        '</div>'+
+        '<div class="career-match-incomplete-actions"><a class="btn btn-primary" href="auth.html?return='+encodeURIComponent(location.pathname+location.search)+'">Create / sign in →</a><a class="btn btn-secondary" href="#career-overview">Explore the career first</a></div>'+
+        '<p class="career-match-disclosure">No match score is shown here. Personalised transition guidance appears only when Career Diya has enough user context to ground it.</p>'+
+      '</div>';
+    return;
   }
-  if(!isKnown){
-    html+='<div class="career-match-anon">Create or sign in to a free profile to make this career view personal. Your current role, goals and exploration context can then be used here.</div>';
-  }
-  html+='<p class="career-match-disclosure">This is contextual guidance, not a probability or validated “match percentage”. A deeper transition assessment can evaluate skills, evidence and preparation separately.</p>';
-  html+='</div>';
-  host.innerHTML=html;
-}
 
-function wireCareerWorkspace(){
-  const detail=document.getElementById('careerDetails'); if(!detail)return;
-  const nodes=[...detail.querySelectorAll('section,.career-card')];
-  const sideNodes=[...detail.querySelectorAll('.career-side-card')];
-  const tx=el=>String(el?.textContent||'').trim().toLowerCase();
-  const find=words=>nodes.find(el=>words.some(w=>tx(el).includes(w)));
-  const findSide=words=>sideNodes.find(el=>words.some(w=>tx(el).includes(w)));
-  const overview=find(['who may enjoy this career','career profile']), work=find(['what the work is actually like','work reality','day-to-day']), routes=find(['ways into this career','your route into this career','how to move into this career','eligibility']), outlook=findSide(['where the field is heading','market outlook','demand']), faq=find(['frequently asked','faq','common questions']);
-  const set=(el,id)=>{if(el&&!el.id)el.id=id}; set(overview,'career-overview-detail'); set(work,'career-work'); set(routes,'career-routes'); set(outlook,'career-outlook'); set(faq,'career-faq');
-  const learning=document.getElementById('skillDiyaCareerCourses'); if(learning)learning.id='career-learning';
-  const whoShouldPursueForSnapshot=()=>{
-    const node=document.querySelector('#career-detail-content');
-    if(!node)return [];
-    const card=[...node.querySelectorAll('.career-detail-card')].find(el=>String(el.textContent||'').toLowerCase().includes('who may enjoy this career'));
-    return card?[...card.querySelectorAll('li')].map(li=>String(li.textContent||'').trim()).filter(Boolean):[];
-  };
-  const snap=document.getElementById('careerSnapshotGrid');
-  if(snap){
-    const cleanText=el=>String(el?.textContent||'').replace(/\\s+/g,' ').trim();
-    const toPoints=(text,max=99)=>{
-      return String(text||'').split(/(?<=[.!?])\\s+/).map(s=>s.trim()).filter(Boolean).slice(0,max);
-    };
-    const intro=cleanText(document.querySelector('.career-detail-hero-copy > p'));
-    const workText=cleanText(work?.querySelector('p'));
-    const whoItems=whoShouldPursueForSnapshot();
-    const marketText=cleanText(outlook?.querySelector('p,li'));
-    const cards=[
-      ['What it involves',toPoints(intro,2)],
-      ['Who it suits',whoItems.slice(0,2)],
-      ['Work reality',toPoints(workText,2)],
-      ['Market outlook',toPoints(marketText,2)]
-    ];
-    snap.innerHTML=cards.map(([label,items])=>{
-      const body=items.length?'<ul>'+items.map(s=>'<li>'+escapeHtml(s)+'</li>').join('')+'</ul>':'<p>See the detailed career profile below.</p>';
-      return '<article class="career-snapshot-item"><strong>'+label+'</strong><div class="career-snapshot-body">'+body+'</div></article>';
-    }).join('');
-  }  document.querySelectorAll('#careerQuickNav a').forEach(a=>{const target=document.getElementById(a.dataset.section);if(!target)a.style.display='none';});
-  const btn=document.getElementById('personalizeCareerBtn'),panel=document.getElementById('careerPersonalizePanel'); if(btn&&panel)btn.onclick=()=>{panel.classList.toggle('open');if(panel.classList.contains('open'))panel.scrollIntoView({behavior:'smooth',block:'start'})};
-  setupCareerQuickNav();
+  const isKnownProfile=isKnown;
+  const contextLabel=isKnownProfile
+    ? (audienceKey==='professional'?'Professional':audienceKey==='student'?'Student':'Parent')
+    : 'Career explorer';
+
+  const startLabel=role || (audienceKey==='professional' ? 'Current role not added yet' : 'Starting point not added yet');
+  const startSub=role
+    ? (experience ? experience+' years experience' : 'Current role')
+    : 'Add this in My Profile to personalise the transition';
+
+  host.innerHTML=
+    '<div class="career-match-context">'+
+      '<div class="eyebrow">Career match context</div>'+
+      '<h2>What '+escapeHtml(target)+' means for you</h2>'+
+      '<p class="match-intro">Career Diya uses the context you have already shared — rather than treating every visitor as a blank-slate career seeker.</p>'+
+      '<div class="career-match-grid">'+
+        '<article class="career-match-card"><small>Your context</small><strong>'+escapeHtml(contextLabel)+'</strong><span>'+escapeHtml(role || 'Profile context available')+'</span></article>'+
+        '<article class="career-match-card"><small>What you are trying to do</small><strong>'+escapeHtml(intent?.label||'Career exploration')+'</strong><span>'+escapeHtml(intent?.description||'Understand the work and decide whether this is worth exploring further.')+'</span></article>'+
+        '<article class="career-match-card"><small>Starting point</small><strong>'+escapeHtml(startLabel)+'</strong><span>'+escapeHtml(startSub)+'</span></article>'+
+      '</div>'+
+      (role
+        ? '<div class="career-match-path"><span class="path-node">'+escapeHtml(role)+'</span><span class="path-arrow">→</span><span class="path-node">'+escapeHtml(target)+'</span><span style="color:#687083;font-size:12px">Your current context → career you are exploring</span></div>'
+        : '<div class="career-match-anon">Add your current role and experience in <a href="profile.html">My Profile</a> to see a meaningful transition lens for this career.</div>')+
+      '<p class="career-match-disclosure">This is contextual guidance, not a probability or validated “match percentage”. A deeper transition assessment can evaluate skills, evidence and preparation separately.</p>'+
+    '</div>';
 }
-function setupCareerQuickNav(){const nav=document.getElementById('careerQuickNav');if(!nav)return;const links=[...nav.querySelectorAll('a')];const targets=links.map(a=>document.getElementById(a.dataset.section)).filter(Boolean);if('IntersectionObserver' in window){const obs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)links.forEach(a=>a.classList.toggle('active',a.dataset.section===e.target.id))}),{rootMargin:'-20% 0px -65% 0px'});targets.forEach(t=>obs.observe(t))}}
 async function renderCareer(career,country=selectedCountry,language=selectedLanguage){
   heroTitle.textContent=career.canonicalName; heroIntro.textContent='Career information, work reality, entry routes and market context — presented inside Career Diya.';
   detailsEl.innerHTML='<div class="career-library-loading"><div class="career-loader"></div><div><strong>Loading career profile</strong><p>Fetching the latest career information…</p></div></div>';
