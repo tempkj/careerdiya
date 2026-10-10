@@ -600,7 +600,7 @@ function resolveEffectiveCurrentRole(currentRole){
   return (currentRole||'').trim() || null;
 }
 
-function renderResults(root,answers,audience,profileMessage='',currentRole=null,targetRole=null,vaultItemId=null){
+function renderResults(root,answers,audience,profileMessage='',currentRole=null,targetRole=null,vaultItemId=null,options={}){
   const authenticated = !!(window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.isAuthenticated());
   if(!authenticated){
     gateBeforeResults(root,answers,audience,currentRole,targetRole,vaultItemId);
@@ -613,13 +613,18 @@ function renderResults(root,answers,audience,profileMessage='',currentRole=null,
   // anywhere else was the leak. See resolveEffectiveCurrentRole for the isolated, testable
   // form of this rule.
   const effectiveCurrentRole=resolveEffectiveCurrentRole(currentRole);
+  // Historical/resumed explorations are read-only. Their role belongs to that snapshot,
+  // not to the user's current profile; reopening one must never overwrite current context
+  // or create a duplicate snapshot.
+  const persistProfileContext=options.persistProfileContext!==false;
+  const persistSnapshot=options.persistSnapshot!==false;
   // Fix A: computed before generateRecommendations so the to-role can be passed into
   // scoring, not just stored for display.
   const effectiveTargetRole=(targetRole||'').trim()||null;
   // The first completed free exploration establishes the user's reusable profile
   // context. This write happens only after authentication and is intentionally separate
   // from the immutable exploration snapshot below.
-  if(window.CareerDiyaProfileAuth?.saveExplorationDefaults){
+  if(persistProfileContext && window.CareerDiyaProfileAuth?.saveExplorationDefaults){
     window.CareerDiyaProfileAuth.saveExplorationDefaults({
       audience,
       answers,
@@ -628,10 +633,8 @@ function renderResults(root,answers,audience,profileMessage='',currentRole=null,
   }
   const result=generateRecommendations(answers,audience,effectiveCurrentRole,effectiveTargetRole);
   const isBoundedRole=!!(effectiveCurrentRole && audience==='professional' && typeof isBoundedRoleValue==='function' && isBoundedRoleValue(effectiveCurrentRole));
-  if(window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.setCurrentRole){
-    // audience is passed through so setCurrentRole's own backstop guard (profile-auth.js)
-    // can refuse a write for any non-professional render, even if this call site were
-    // ever changed to pass a non-null role for one.
+  if(persistProfileContext && window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.setCurrentRole){
+    // Only a newly completed exploration may update the active profile role.
     window.CareerDiyaProfileAuth.setCurrentRole(effectiveCurrentRole, {isOther: !!effectiveCurrentRole && !isBoundedRole, audience}).catch(err=>console.warn('Career Diya current-role persistence failed:',err));
   }const top=result.chosen[0].direction;const alternatives=result.chosen.slice(1);const plan=skillPlan(top,answers);const isParent=audience==='parent';
   const signal=result.signal;
@@ -644,10 +647,12 @@ function renderResults(root,answers,audience,profileMessage='',currentRole=null,
     : '';
   const explanation=(result.routingNote ? `${result.routingNote} Within that set, your answers highlighted ${rationale}.` : `Your answers highlighted ${rationale}.`)+anchorNote;
   const storedResult={profileCreated:true,audience,currentRole:effectiveCurrentRole,targetRole:effectiveTargetRole,answers,recommendationMatrixVersion:FREE_ENGINE_CONFIG.version,score:result.chosen[0].score,signal,margin:result.margin,userProfile:result.userProfile,contextRouting:result.context?{intent:result.context.intent,roleFamily:result.context.roleFamily,currentRole:result.context.currentRole}:null,recommendations:result.chosen.map(x=>({id:x.direction.id,name:x.direction.name,score:x.score,similarities:x.similarities,penalty:x.penalty})),recs:result.chosen.map(x=>({id:x.direction.id,name:x.direction.name,skills:x.direction.skills||[],score:x.score,similarities:x.similarities,penalty:x.penalty})),updatedAt:new Date().toISOString()};
-  localStorage.setItem('careerdiya_profile',JSON.stringify(storedResult));
-  localStorage.removeItem('careerdiya_pending_exploration');
-  if(window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.saveExploration){
-    window.CareerDiyaProfileAuth.saveExploration({audience,answers,result:storedResult}).catch(err=>console.warn('Career Diya exploration persistence failed:',err));
+  if(persistSnapshot){
+    localStorage.setItem('careerdiya_profile',JSON.stringify(storedResult));
+    localStorage.removeItem('careerdiya_pending_exploration');
+    if(window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.saveExploration){
+      window.CareerDiyaProfileAuth.saveExploration({audience,answers,result:storedResult}).catch(err=>console.warn('Career Diya exploration persistence failed:',err));
+    }
   }
   const resultEyebrow=isParent?'Your child’s starting directions':'Your starting directions';
   const heading=isParent?`A direction worth exploring: ${top.name}`:`A direction worth exploring: ${top.name}`;
@@ -1152,13 +1157,13 @@ async function initDecisionEngine(){
       if(resumeRequested){
         const saved=JSON.parse(localStorage.getItem('careerdiya_profile')||'null');
         if(saved && saved.answers && saved.audience){
-          renderResults(root,saved.answers,saved.audience,'Here is your saved exploration result.',saved.currentRole||null,saved.targetRole||null,null);
+          renderResults(root,saved.answers,saved.audience,'Here is your saved exploration result.',saved.currentRole||null,saved.targetRole||null,null,{persistProfileContext:false,persistSnapshot:false});
           return;
         }
         if(window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.getSavedExploration){
           const persisted=await window.CareerDiyaProfileAuth.getSavedExploration();
           if(persisted && persisted.answers && persisted.audience){
-            renderResults(root,persisted.answers,persisted.audience,'Here is your saved exploration result.',persisted.result?.currentRole||null,persisted.result?.targetRole||null);
+            renderResults(root,persisted.answers,persisted.audience,'Here is your saved exploration result.',persisted.result?.currentRole||null,persisted.result?.targetRole||null,null,{persistProfileContext:false,persistSnapshot:false});
             return;
           }
         }
