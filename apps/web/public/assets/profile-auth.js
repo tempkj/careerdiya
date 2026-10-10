@@ -336,6 +336,8 @@
       graduation_year: values.graduation_year || null,
       current_role_title: isProfessional ? (values.current_role_title || values.current_role || null) : null,
       current_role_other: isProfessional ? (values.current_role_other || null) : null,
+      current_department: isProfessional ? (values.current_department || null) : null,
+      current_department_other: isProfessional ? (values.current_department_other || null) : null,
       industry: values.industry || null,
       industry_other: values.industry_other || null,
       experience_years: values.experience_years || null,
