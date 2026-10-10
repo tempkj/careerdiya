@@ -487,6 +487,8 @@ function careerMatchIntent(profile,saved,audience){
 
 function careerTransitionLens(profile,saved,career,audienceKey){
   const role=String(profile?.current_role_title||profile?.current_role_other||profile?.current_role||saved?.result?.currentRole||'').trim();
+  const department=String(profile?.current_department||profile?.current_department_other||'').trim();
+  const industry=String(profile?.industry||profile?.industry_other||'').trim();
   if(!role || audienceKey!=='professional') return null;
   const r=role.toLowerCase();
   const target=String(career?.canonicalName||'').toLowerCase();
@@ -573,7 +575,7 @@ function renderCareerTransitionLens(career,profile,saved){
     '<div class="career-transition-lens">'+
       '<div class="eyebrow">Transition lens</div>'+
       '<h3>How this career fits your starting point</h3>'+
-      '<p class="lens-intro">'+escapeHtml(lens.role)+' → '+escapeHtml(lens.targetName)+'. The aim is to separate what you may already bring from what the destination requires, without turning this into a match score.</p>'+
+      '<p class="lens-intro">'+escapeHtml([lens.industry,lens.department,lens.role].filter(Boolean).join(' → '))+' → '+escapeHtml(lens.targetName)+'. The aim is to separate what you may already bring from what the destination requires, without turning this into a match score.</p>'+
       '<div class="transition-type-badge"><span>Transition type</span><strong>'+escapeHtml(lens.transitionType)+'</strong></div>'+
       '<div class="transition-grid">'+
         '<article class="transition-card"><small>You may already bring</small><strong>Transferable capabilities</strong><ul class="transition-mini-list">'+transferable+'</ul></article>'+
@@ -591,6 +593,8 @@ function renderCareerMatchContext(career,profile,saved){
   const isKnown=['parent','student','professional'].includes(audienceKey);
   const hasProfile=!!profile;
   const role=String(profile?.current_role_title||profile?.current_role_other||profile?.current_role||saved?.result?.currentRole||'').trim();
+  const department=String(profile?.current_department||profile?.current_department_other||'').trim();
+  const industry=String(profile?.industry||profile?.industry_other||'').trim();
   const experience=String(profile?.experience_years||'').trim();
   const intent=careerMatchIntent(profile,saved,audienceKey);
   const target=career?.canonicalName||'this career';
