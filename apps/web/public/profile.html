@@ -76,7 +76,8 @@
           <div class="eyebrow">Professional</div><h2>Your Current Work Context</h2>
           <p class="profile-section-note">Keep this focused on what you are doing now. Your broader work and knowledge history is captured below.</p>
           <div class="profile-form-grid">
-            <label>Current Role<select class="input select" name="current_role_title"></select><input class="input other-field hidden" name="current_role_other" placeholder="Enter your role"></label>
+            <label>Department / Function<select class="input select" name="current_department"></select><input class="input other-field hidden" name="current_department_other" placeholder="Enter your department or function"></label>
+            <label>Current Role / Designation<select class="input select" name="current_role_title"></select><input class="input other-field hidden" name="current_role_other" placeholder="Enter your role or designation"></label>
             <label>Industry<select class="input select" name="industry"></select><input class="input other-field hidden" name="industry_other" placeholder="Enter your industry"></label>
             <label>Experience<select class="input select" name="experience_years"></select></label>
           </div>
@@ -146,18 +147,32 @@
     if(audienceSelect) audienceSelect.value=['parent','student','professional'].includes(audience)?audience:'professional';
     if(currentWorkSection) currentWorkSection.classList.toggle('hidden', audience!=='professional');
   }
+  const departmentSelect=form.elements.current_department, roleSelect=form.elements.current_role_title;
+  const refreshRoleOptions=(selected='')=>{
+    const roles=(options.roleTitlesByDepartment&&options.roleTitlesByDepartment[departmentSelect.value])||[];
+    const legacy=selected && !roles.includes(selected) && selected!=='Other' ? [selected] : [];
+    roleSelect.innerHTML=optionList([...roles,...legacy,'Other'],selected,'Select current role / designation');
+    if(selected && ![...roles,...legacy,'Other'].includes(selected)) roleSelect.value='Other';
+    wireOther(roleSelect,form.elements.current_role_other);
+  };
   function fillProfile(p){
     if(!p)return;
-    ['display_name','avatar_url','country','country_other','current_role_title','current_role_other','industry','industry_other','experience_years','exploration_work_preference','exploration_environment','exploration_priority'].forEach(k=>{const el=form.elements[k];if(el)el.value=p[k]??'';});
+    ['display_name','avatar_url','country','country_other','current_department','current_department_other','current_role_title','current_role_other','industry','industry_other','experience_years','exploration_work_preference','exploration_environment','exploration_priority'].forEach(k=>{const el=form.elements[k];if(el)el.value=p[k]??'';});
     syncAudienceUI(p.audience);
-    wireOther(form.elements.country,form.elements.country_other);wireOther(form.elements.current_role_title,form.elements.current_role_other);wireOther(form.elements.industry,form.elements.industry_other);
+    wireOther(form.elements.country,form.elements.country_other);wireOther(form.elements.current_department,form.elements.current_department_other);wireOther(form.elements.industry,form.elements.industry_other);refreshRoleOptions(p.current_role_title||'');
     const name=p.display_name||'Your Profile';namePreview.textContent=name;avatar.innerHTML=p.avatar_url?`<img src="${escapeHtml(p.avatar_url)}" alt="">`:(name.trim().split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase()||'?');
     wireChipSet(document.getElementById('careerInterests'),options.careerInterests,p.career_interests||[],p.career_interests_other||'');wireChipSet(document.getElementById('careerGoals'),options.careerGoals,(p.career_goals||'').split('|').filter(Boolean),p.career_goals_other||'');wireChipSet(document.getElementById('strengths'),options.strengths,(p.strengths||'').split('|').filter(Boolean),p.strengths_other||'');wireChipSet(document.getElementById('weaknesses'),options.developmentAreas,(p.weaknesses||'').split('|').filter(Boolean),p.weaknesses_other||'');wireChipSet(document.getElementById('learningPreferences'),options.learningPreferences,(p.learning_preferences||'').split('|').filter(Boolean),p.learning_preferences_other||'');
   }
   function collectEducation(){return Array.from(educationBox.querySelectorAll('.education-record')).map(card=>({education_level:card.querySelector('.education-level').value,education_level_other:card.querySelector('.education-level-other').value.trim(),field_of_study:card.querySelector('.field-of-study').value,field_of_study_other:card.querySelector('.field-of-study-other').value.trim(),institution:card.querySelector('.institution').value.trim(),graduation_year:card.querySelector('.graduation-year').value,is_current:card.querySelector('.is-current').checked}));}
   function collectExperience(){return Array.from(experienceBox.querySelectorAll('.experience-record')).map(card=>({domain:card.querySelector('.domain').value,domain_other:card.querySelector('.domain-other').value.trim(),exposure_type:card.querySelector('.exposure-type').value,exposure_level:card.querySelector('.exposure-level').value,role_family:card.querySelector('.role-family').value,role_family_other:card.querySelector('.role-family-other').value.trim(),years_bucket:card.querySelector('.years-bucket').value}));}
   function selectInit(){
-    form.elements.country.innerHTML=optionList(options.countries,'','Select country');form.elements.current_role_title.innerHTML=optionList(options.roleFamilies,'','Select current role');form.elements.industry.innerHTML=optionList(options.industries,'','Select industry');form.elements.experience_years.innerHTML=optionList(options.experienceBuckets,'','Select experience');
+    form.elements.country.innerHTML=optionList(options.countries,'','Select country');
+    form.elements.current_department.innerHTML=optionList(options.departments,'','Select department / function');
+    form.elements.current_role_title.innerHTML=optionList([], '', 'Select current role / designation');
+    form.elements.industry.innerHTML=optionList(options.industries,'','Select industry');
+    form.elements.experience_years.innerHTML=optionList(options.experienceBuckets,'','Select experience');
+    departmentSelect.addEventListener('change',()=>refreshRoleOptions(''));
+    roleSelect.addEventListener('change',()=>wireOther(roleSelect,form.elements.current_role_other));
     syncAudienceUI(audienceSelect?.value||'professional');
     audienceSelect?.addEventListener('change',()=>syncAudienceUI(audienceSelect.value));
   }
@@ -182,7 +197,7 @@
     const goals=chipValues('careerGoals');const strengths=chipValues('strengths');const weaknesses=chipValues('weaknesses');const learning=chipValues('learningPreferences');
     const otherValue=id=>{const el=document.querySelector(`#${id}`).parentElement.querySelector('.other-wrap input');return el?el.value.trim():''};
     const selectedAudience=String(d.get('audience')||profileAudience(loadedProfile||{})||'professional').toLowerCase();
-    const values={display_name:(d.get('display_name')||'').trim(),avatar_url:(d.get('avatar_url')||'').trim(),country:d.get('country')||null,country_other:(d.get('country_other')||'').trim(),current_role_title:d.get('current_role_title')||null,current_role_other:(d.get('current_role_other')||'').trim(),industry:d.get('industry')||null,industry_other:(d.get('industry_other')||'').trim(),experience_years:d.get('experience_years')||null,career_interests:interests,career_interests_other:otherValue('careerInterests'),career_goals:goals.join('|'),career_goals_other:otherValue('careerGoals'),strengths:strengths.join('|'),strengths_other:otherValue('strengths'),weaknesses:weaknesses.join('|'),weaknesses_other:otherValue('weaknesses'),learning_preferences:learning.join('|'),learning_preferences_other:otherValue('learningPreferences'),exploration_work_preference:d.get('exploration_work_preference')||null,exploration_environment:d.get('exploration_environment')||null,exploration_priority:d.get('exploration_priority')||null,audience:selectedAudience};
+    const values={display_name:(d.get('display_name')||'').trim(),avatar_url:(d.get('avatar_url')||'').trim(),country:d.get('country')||null,country_other:(d.get('country_other')||'').trim(),current_department:d.get('current_department')||null,current_department_other:(d.get('current_department_other')||'').trim(),current_role_title:d.get('current_role_title')||null,current_role_other:(d.get('current_role_other')||'').trim(),industry:d.get('industry')||null,industry_other:(d.get('industry_other')||'').trim(),experience_years:d.get('experience_years')||null,career_interests:interests,career_interests_other:otherValue('careerInterests'),career_goals:goals.join('|'),career_goals_other:otherValue('careerGoals'),strengths:strengths.join('|'),strengths_other:otherValue('strengths'),weaknesses:weaknesses.join('|'),weaknesses_other:otherValue('weaknesses'),learning_preferences:learning.join('|'),learning_preferences_other:otherValue('learningPreferences'),exploration_work_preference:d.get('exploration_work_preference')||null,exploration_environment:d.get('exploration_environment')||null,exploration_priority:d.get('exploration_priority')||null,audience:selectedAudience};
     try{
       const saved=await auth.saveProfile(values);
       try{
