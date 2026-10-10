@@ -147,7 +147,16 @@
     if(audienceSelect) audienceSelect.value=['parent','student','professional'].includes(audience)?audience:'professional';
     if(currentWorkSection) currentWorkSection.classList.toggle('hidden', audience!=='professional');
   }
-  const departmentSelect=form.elements.current_department, roleSelect=form.elements.current_role_title;
+  const departmentSelect=form.elements.current_department, roleSelect=form.elements.current_role_title, industrySelect=form.elements.industry;
+  const departmentPriorities={
+    'Healthcare & Pharmaceuticals':['Hospital Administration / Operations','Clinical Services','Nursing','Medical / Allied Health','Pharmacy','IT & Digital / Information Systems','Data & Analytics','Finance / Accounting','Human Resources / People'],
+    'Technology':['Software Engineering','IT & Digital / Information Systems','Data & Analytics','AI / Machine Learning','Cybersecurity','Infrastructure / Cloud / Networks','Product Management','Design / UX','Quality / Testing','Customer Success / Support'],
+    'Financial Services':['Finance / Accounting','Risk / Compliance / Audit','IT & Digital / Information Systems','Data & Analytics','AI / Machine Learning','Cybersecurity','Product Management','Business Operations'],
+    'Manufacturing':['Manufacturing / Production','Engineering / R&D','Quality / Testing','Supply Chain / Logistics','IT & Digital / Information Systems','Finance / Accounting','Human Resources / People'],
+    'Education':['Education / Training','IT & Digital / Information Systems','Research','Human Resources / People','Finance / Accounting','Facilities / Administration'],
+    'Retail & E-commerce':['Sales / Business Development','Marketing / Communications','Supply Chain / Logistics','Business Operations','Product Management','IT & Digital / Information Systems','Data & Analytics'],
+    'Travel & Hospitality':['Business Operations','Sales / Business Development','Marketing / Communications','Customer Success / Support','Facilities / Administration','Finance / Accounting','Human Resources / People']
+  };
   const refreshRoleOptions=(selected='')=>{
     const roles=(options.roleTitlesByDepartment&&options.roleTitlesByDepartment[departmentSelect.value])||[];
     const legacy=selected && !roles.includes(selected) && selected!=='Other' ? [selected] : [];
@@ -155,11 +164,17 @@
     if(selected && ![...roles,...legacy,'Other'].includes(selected)) roleSelect.value='Other';
     wireOther(roleSelect,form.elements.current_role_other);
   };
+  const refreshDepartmentOptions=(selected=departmentSelect.value)=>{
+    const priority=departmentPriorities[industrySelect.value]||[];
+    const ordered=[...priority,...(options.departments||[]).filter(x=>!priority.includes(x))];
+    departmentSelect.innerHTML=optionList(ordered,selected,'Select department / function');
+    refreshRoleOptions(form.elements.current_role_title.value||'');
+  };
   function fillProfile(p){
     if(!p)return;
     ['display_name','avatar_url','country','country_other','current_department','current_department_other','current_role_title','current_role_other','industry','industry_other','experience_years','exploration_work_preference','exploration_environment','exploration_priority'].forEach(k=>{const el=form.elements[k];if(el)el.value=p[k]??'';});
     syncAudienceUI(p.audience);
-    wireOther(form.elements.country,form.elements.country_other);wireOther(form.elements.current_department,form.elements.current_department_other);wireOther(form.elements.industry,form.elements.industry_other);refreshRoleOptions(p.current_role_title||'');
+    wireOther(form.elements.country,form.elements.country_other);wireOther(form.elements.current_department,form.elements.current_department_other);wireOther(form.elements.industry,form.elements.industry_other);refreshDepartmentOptions(p.current_department||'');refreshRoleOptions(p.current_role_title||'');
     const name=p.display_name||'Your Profile';namePreview.textContent=name;avatar.innerHTML=p.avatar_url?`<img src="${escapeHtml(p.avatar_url)}" alt="">`:(name.trim().split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase()||'?');
     wireChipSet(document.getElementById('careerInterests'),options.careerInterests,p.career_interests||[],p.career_interests_other||'');wireChipSet(document.getElementById('careerGoals'),options.careerGoals,(p.career_goals||'').split('|').filter(Boolean),p.career_goals_other||'');wireChipSet(document.getElementById('strengths'),options.strengths,(p.strengths||'').split('|').filter(Boolean),p.strengths_other||'');wireChipSet(document.getElementById('weaknesses'),options.developmentAreas,(p.weaknesses||'').split('|').filter(Boolean),p.weaknesses_other||'');wireChipSet(document.getElementById('learningPreferences'),options.learningPreferences,(p.learning_preferences||'').split('|').filter(Boolean),p.learning_preferences_other||'');
   }
@@ -171,6 +186,7 @@
     form.elements.current_role_title.innerHTML=optionList([], '', 'Select current role / designation');
     form.elements.industry.innerHTML=optionList(options.industries,'','Select industry');
     form.elements.experience_years.innerHTML=optionList(options.experienceBuckets,'','Select experience');
+    industrySelect.addEventListener('change',()=>refreshDepartmentOptions(departmentSelect.value));
     departmentSelect.addEventListener('change',()=>refreshRoleOptions(''));
     roleSelect.addEventListener('change',()=>wireOther(roleSelect,form.elements.current_role_other));
     syncAudienceUI(audienceSelect?.value||'professional');
