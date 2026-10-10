@@ -486,9 +486,9 @@ function careerMatchIntent(profile,saved,audience){
 
 
 function careerTransitionLens(profile,saved,career,audienceKey){
-  const role=String(profile?.current_role_title||profile?.current_role_other||profile?.current_role||saved?.result?.currentRole||'').trim();
-  const department=String(profile?.current_department||profile?.current_department_other||'').trim();
-  const industry=String(profile?.industry||profile?.industry_other||'').trim();
+  const role=String((profile?.current_role_title==='Other'?profile?.current_role_other:null)||profile?.current_role_title||profile?.current_role_other||profile?.current_role||saved?.result?.currentRole||'').trim();
+  const department=String((profile?.current_department==='Other'?profile?.current_department_other:null)||profile?.current_department||profile?.current_department_other||'').trim();
+  const industry=String((profile?.industry==='Other'?profile?.industry_other:null)||profile?.industry||profile?.industry_other||'').trim();
   if(!role || audienceKey!=='professional') return null;
   const r=role.toLowerCase();
   const target=String(career?.canonicalName||'').toLowerCase();
@@ -592,9 +592,9 @@ function renderCareerMatchContext(career,profile,saved){
   const audienceKey=String(profile?.audience||audience||'').toLowerCase();
   const isKnown=['parent','student','professional'].includes(audienceKey);
   const hasProfile=!!profile;
-  const role=String(profile?.current_role_title||profile?.current_role_other||profile?.current_role||saved?.result?.currentRole||'').trim();
-  const department=String(profile?.current_department||profile?.current_department_other||'').trim();
-  const industry=String(profile?.industry||profile?.industry_other||'').trim();
+  const role=String((profile?.current_role_title==='Other'?profile?.current_role_other:null)||profile?.current_role_title||profile?.current_role_other||profile?.current_role||saved?.result?.currentRole||'').trim();
+  const department=String((profile?.current_department==='Other'?profile?.current_department_other:null)||profile?.current_department||profile?.current_department_other||'').trim();
+  const industry=String((profile?.industry==='Other'?profile?.industry_other:null)||profile?.industry||profile?.industry_other||'').trim();
   const experience=String(profile?.experience_years||'').trim();
   const intent=careerMatchIntent(profile,saved,audienceKey);
   const target=career?.canonicalName||'this career';
