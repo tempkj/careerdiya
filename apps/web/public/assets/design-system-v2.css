@@ -386,3 +386,9 @@ html,body{background:var(--cd-bg-paper)!important;color:var(--cd-ink)}
 .vault-context-categories[hidden]{display:none}
 .vault-context-consent .vault-context-consent-note{font-size:12px;margin:12px 0 0}
 @media(max-width:600px){.vault-context-consent{padding:15px}.vault-context-categories{margin-left:0}}
+
+.career-context-used{margin-top:18px;padding:15px 17px;border:1px solid #e5e1d8;border-radius:14px;background:#fbfaf7}
+.career-context-used>strong{display:block;color:#202438;font-size:13px;margin-bottom:7px}
+.career-context-used ul{margin:0;padding-left:18px}
+.career-context-used li,.career-context-used p{font-size:12px;line-height:1.55;color:#626979;margin:4px 0}
+.career-context-used li span{font-weight:700;color:#41485a}
