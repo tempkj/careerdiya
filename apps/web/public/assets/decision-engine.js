@@ -983,46 +983,55 @@ function renderVaultCareerContext(root,audience,item,onContinue){
   const linked=findCanonicalCareerForVaultItem(item);
   const allOptions=typeof CAREER_LIBRARY_CATALOGUE!=='undefined'?CAREER_LIBRARY_CATALOGUE.filter(c=>c.canonicalStatus==='verified'):[];
   const options=Array.from(new Map(allOptions.map(c=>[c.id,c])).values()).sort((a,b)=>a.canonicalName.localeCompare(b.canonicalName));
-  // Prefer a strong match from the user's actual Vault text over a stale or
-  // previously incorrect linked_career_id. linked_career_id has no provenance field,
-  // so we can only safely treat it as authoritative when the raw thought does not
-  // produce a stronger deterministic match. Explicit phrases such as "career coach",
-  // "blockchain technology" and "performing arts" therefore correct stale links.
+  // The Vault link may be stale; the raw thought remains the user's source of truth.
   const textCandidates=findVaultCareerCandidates(item,options);
-  const inferred=textCandidates.length
-    ? textCandidates.slice(0,3)
-    : (linked?[linked]:[]);
+  const inferred=textCandidates.length ? textCandidates.slice(0,3) : (linked?[linked]:[]);
   const suggested=inferred[0]||null;
   const optionMarkup=options.map(c=>'<option value="'+escHtml(c.id)+'">'+escHtml(c.canonicalName)+'</option>').join('');
+  const contextCategories=[
+    {id:'interests',title:'Interests and perceived strengths',copy:'What attracts me and what I believe I am good at.'},
+    {id:'goals',title:'Career goals and aspirations',copy:'My longer-term ambitions and priorities.'},
+    {id:'preferences',title:'Learning preferences',copy:'How I prefer to develop new capabilities.'},
+    {id:'work',title:'Current role and work context',copy:'My current role, department, industry and experience level.'},
+    {id:'records',title:'Experience and knowledge records',copy:'My recorded education, projects, certifications and other exposure.'}
+  ];
+  const contextCategoryMarkup=contextCategories.map(c=>'<label class="vault-context-choice"><input type="checkbox" name="vaultContextCategory" value="'+c.id+'"><span><strong>'+c.title+'</strong><small>'+c.copy+'</small></span></label>').join('');
   root.innerHTML=`<div class="profile-context-card vault-explore-context">
     <div class="eyebrow">From your Career Vault</div>
     <h2>Let's explore this thought as a career.</h2>
     <p class="profile-context-lead">You saved:</p>
     <div class="vault-context-quote">“${escHtml(item.raw_text)}”</div>
-    ${item.context_note?`<p class="profile-context-lead"><b>Your context:</b> ${escHtml(item.context_note)}</p>`:''}
+    ${item.context_note?`<p class="profile-context-lead"><b>Your stated context:</b> ${escHtml(item.context_note)}</p>`:''}
     <div class="vault-career-suggestion">
       <div class="profile-context-label">What do you mean by this?</div>
       ${suggested?`<p class="profile-context-lead">Career Diya thinks you may mean <strong>${escHtml(suggested.canonicalName)}</strong>.</p>
-      <button class="btn btn-primary" id="confirmSuggested">Yes, explore this career →</button>`:'<p class="profile-context-lead">We could not confidently match this thought to a Career Library career.</p>'}
-      <button class="btn btn-secondary" id="chooseDifferent">${suggested?'Choose a different career':'Choose a career from the Library'}</button>
-      <button class="btn btn-secondary" id="noneAbove">None of these — I have another career in mind</button>
-      <p class="profile-context-status" id="vaultCareerStatus" role="status" aria-live="polite"></p>
+      <button class="btn btn-primary" id="confirmSuggested" type="button">Yes, explore this career →</button>`:'<p class="profile-context-lead">We could not confidently match this thought to a Career Library career.</p>'}
+      <button class="btn btn-secondary" id="chooseDifferent" type="button">${suggested?'Choose a different career':'Choose a career from the Library'}</button>
+      <button class="btn btn-secondary" id="noneAbove" type="button">None of these — I have another career in mind</button>
     </div>
     <div id="vaultCareerChooser" hidden>
       <label class="profile-context-label" for="vaultCareerChoice">Career Library career</label>
-      <select class="input" id="vaultCareerChoice">
-        <option value="">Select a career…</option>
-        ${optionMarkup}
-      </select>
+      <select class="input" id="vaultCareerChoice"><option value="">Select a career…</option>${optionMarkup}</select>
       <div class="vault-custom-career" id="vaultCustomCareer" hidden>
         <label class="profile-context-label" for="vaultCustomCareerInput">What career are you considering?</label>
         <input class="input" id="vaultCustomCareerInput" type="text" maxlength="160" placeholder="Enter the career or career idea">
       </div>
       <div class="wizard-footer">
-        <button class="btn btn-secondary" id="backVaultCareer">Back</button>
-        <button class="btn btn-primary" id="continueVaultCareer">Continue →</button>
+        <button class="btn btn-secondary" id="backVaultCareer" type="button">Back</button>
+        <button class="btn btn-primary" id="continueVaultCareer" type="button">Continue →</button>
       </div>
     </div>
+    <section class="vault-context-consent" aria-labelledby="vaultContextHeading">
+      <div class="eyebrow">Your choice</div>
+      <h3 id="vaultContextHeading">How would you like us to approach this exploration?</h3>
+      <p>We will always use the thought you saved and anything you explicitly tell us in this exploration. Choose whether background information from your profile may also inform the guidance.</p>
+      <label class="vault-context-mode"><input type="radio" name="vaultContextMode" value="all"><span><strong>Use all relevant profile context</strong><small>Consider relevant information from my profile, without treating it as a limit on what I can explore.</small></span></label>
+      <label class="vault-context-mode"><input type="radio" name="vaultContextMode" value="selected"><span><strong>Use only the context I select</strong><small>Choose the profile categories below. Anything not selected must not influence this exploration.</small></span></label>
+      <div id="vaultContextCategories" class="vault-context-categories" hidden>${contextCategoryMarkup}</div>
+      <label class="vault-context-mode"><input type="radio" name="vaultContextMode" value="fresh"><span><strong>Explore with fresh eyes</strong><small>Do not use background profile information for this exploration.</small></span></label>
+      <p class="vault-context-consent-note">This choice applies to this exploration only. It does not change or delete your saved profile.</p>
+    </section>
+    <p class="profile-context-status" id="vaultCareerStatus" role="status" aria-live="polite"></p>
   </div>`;
 
   const status=root.querySelector('#vaultCareerStatus');
@@ -1030,7 +1039,32 @@ function renderVaultCareerContext(root,audience,item,onContinue){
   const select=root.querySelector('#vaultCareerChoice');
   const customWrap=root.querySelector('#vaultCustomCareer');
   const customInput=root.querySelector('#vaultCustomCareerInput');
+  const categories=root.querySelector('#vaultContextCategories');
+  root.querySelectorAll('input[name="vaultContextMode"]').forEach(input=>input.addEventListener('change',()=>{
+    categories.hidden=input.value!=='selected' || !input.checked;
+    status.textContent='';
+    status.className='profile-context-status';
+  }));
+  const getContextChoice=()=>{
+    const mode=root.querySelector('input[name="vaultContextMode"]:checked')?.value||'';
+    const selected=Array.from(root.querySelectorAll('input[name="vaultContextCategory"]:checked')).map(input=>input.value);
+    return {mode,categories:selected};
+  };
   const saveAndContinue=async(career,customCareer=null)=>{
+    const choice=getContextChoice();
+    if(!choice.mode){
+      status.textContent='Choose how you want profile context to be used before continuing.';
+      status.className='profile-context-status err';
+      root.querySelector('input[name="vaultContextMode"]')?.focus();
+      return;
+    }
+    if(choice.mode==='selected'&&!choice.categories.length){
+      status.textContent='Choose at least one profile category, or select “Explore with fresh eyes”.';
+      status.className='profile-context-status err';
+      categories.hidden=false;
+      root.querySelector('input[name="vaultContextCategory"]')?.focus();
+      return;
+    }
     const btn=root.querySelector('#continueVaultCareer')||root.querySelector('#confirmSuggested');
     if(btn) btn.disabled=true;
     status.textContent='Opening your free exploration…';
@@ -1039,13 +1073,13 @@ function renderVaultCareerContext(root,audience,item,onContinue){
       if(career && window.CareerDiyaProfileAuth?.updateVaultItem){
         await window.CareerDiyaProfileAuth.updateVaultItem(item.id,{linked_career_id:career.id});
       }
-      // Await the complete launch chain so resolver/database errors are visible here
-      // instead of leaving the user on a non-responsive screen.
       await onContinue({
         ...item,
         linked_career_id:career?.id||null,
         linkedCareer:career||null,
-        customCareer:customCareer||null
+        customCareer:customCareer||null,
+        contextMode:choice.mode,
+        contextCategories:choice.mode==='all'?['interests','goals','preferences','work','records']:choice.mode==='selected'?choice.categories:[]
       });
     }catch(err){
       console.error('[Career Diya] vault exploration launch failed',err);
