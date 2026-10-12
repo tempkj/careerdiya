@@ -1149,13 +1149,17 @@ async function initDecisionEngine(){
               careerId:vaultContext.linkedCareer.id,
               source:'vault',
               vaultItem:item.id,
-              audience:audience||''
+              audience:audience||'',
+              contextMode:vaultContext.contextMode||'fresh',
+              contextCategories:(vaultContext.contextCategories||[]).join(',')
             });
             window.location.href='career.html?'+params.toString();
             return;
           }
 
           const explorerContext=await resolvePlatformExplorerContext(audience,vaultContext?.currentRole||null,vaultContext);
+          explorerContext.contextMode=vaultContext?.contextMode||'fresh';
+          explorerContext.contextCategories=vaultContext?.contextCategories||[];
           explorerContext.customCareer=vaultContext?.customCareer||null;
           explorerContext.targetCareerId=vaultContext?.linkedCareer?.id||null;
           explorerContext.targetCareerName=vaultContext?.linkedCareer?.canonicalName||vaultContext?.customCareer||null;
