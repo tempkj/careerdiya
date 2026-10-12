@@ -804,7 +804,9 @@ async function resolvePlatformExplorerContext(audience, currentRole=null, vaultC
     if(!allowed.has('interests')){profile.career_interests=null;profile.career_interests_other=null;profile.strengths=null;profile.strengths_other=null;profile.weaknesses=null;profile.weaknesses_other=null;}
     if(!allowed.has('goals')){profile.career_goals=null;profile.career_goals_other=null;}
     if(!allowed.has('preferences')){profile.learning_preferences=null;profile.learning_preferences_other=null;profile.exploration_work_preference=null;profile.exploration_environment=null;profile.exploration_priority=null;profile.exploration_default_context=null;}
-    if(!allowed.has('work')){profile.current_role_title=null;profile.current_role_other=null;profile.current_role=null;profile.current_department=null;profile.current_department_other=null;profile.industry=null;profile.industry_other=null;profile.experience_years=null;}
+    // Current role is a mandatory transition baseline in every mode.
+    // Work-context consent controls only the additional details around that role.
+    if(!allowed.has('work')){profile.current_department=null;profile.current_department_other=null;profile.industry=null;profile.industry_other=null;profile.experience_years=null;}
   }
   const resolvedAudience=['parent','student','professional'].includes(String(profile?.audience||'').toLowerCase())
     ? String(profile.audience).toLowerCase() : (savedDefaults?.audience || audience);
@@ -1032,8 +1034,8 @@ function renderVaultCareerContext(root,audience,item,onContinue){
       <label class="vault-context-mode"><input type="radio" name="vaultContextMode" value="all"><span><strong>Use all relevant profile context</strong><small>Consider relevant information from my profile, without treating it as a limit on what I can explore.</small></span></label>
       <label class="vault-context-mode"><input type="radio" name="vaultContextMode" value="selected"><span><strong>Use only the context I select</strong><small>Choose the profile categories below. Anything not selected must not influence this exploration.</small></span></label>
       <div id="vaultContextCategories" class="vault-context-categories" hidden>${contextCategoryMarkup}</div>
-      <label class="vault-context-mode"><input type="radio" name="vaultContextMode" value="fresh"><span><strong>Explore with fresh eyes</strong><small>Do not use background profile information for this exploration. A role-based transition classification will not be shown.</small></span></label>
-      <p class="vault-context-consent-note">For “Use only the context I select”, your current role is used only as the starting point for the transition classification; it is not treated as an additional selected profile category. This choice applies to this exploration only and does not change or delete your saved profile.</p>
+      <label class="vault-context-mode"><input type="radio" name="vaultContextMode" value="fresh"><span><strong>Explore with fresh eyes</strong><small>Keep your current role as the starting point for transition guidance, but do not use your other saved profile details.</small></span></label>
+      <p class="vault-context-consent-note">Your current role is always used as the starting point for the transition lens. “Use only the context I select” controls which additional profile categories may inform the guidance; “Fresh eyes” excludes optional saved details. This choice applies to this exploration only and does not change or delete your saved profile.</p>
     </section>
     <p class="profile-context-status" id="vaultCareerStatus" role="status" aria-live="polite"></p>
   </div>`;
