@@ -174,7 +174,16 @@
     if(!p)return;
     ['display_name','avatar_url','country','country_other','current_department','current_department_other','current_role_title','current_role_other','industry','industry_other','experience_years','exploration_work_preference','exploration_environment','exploration_priority'].forEach(k=>{const el=form.elements[k];if(el)el.value=p[k]??'';});
     syncAudienceUI(p.audience);
-    wireOther(form.elements.country,form.elements.country_other);wireOther(form.elements.current_department,form.elements.current_department_other);wireOther(form.elements.industry,form.elements.industry_other);refreshDepartmentOptions(p.current_department||'');refreshRoleOptions(p.current_role_title||'');
+    wireOther(form.elements.country,form.elements.country_other);wireOther(form.elements.industry,form.elements.industry_other);
+    // Restore legacy/free-text values through the explicit "Other" option. Older
+    // profiles may have current_department_other/current_role_other populated
+    // while the corresponding controlled taxonomy column is null.
+    const savedDepartment = p.current_department || (p.current_department_other ? 'Other' : '');
+    const savedRole = p.current_role_title || (p.current_role_other ? 'Other' : '');
+    refreshDepartmentOptions(savedDepartment);
+    wireOther(form.elements.current_department,form.elements.current_department_other);
+    refreshRoleOptions(savedRole);
+    wireOther(form.elements.current_role_title,form.elements.current_role_other);
     const name=p.display_name||'Your Profile';namePreview.textContent=name;avatar.innerHTML=p.avatar_url?`<img src="${escapeHtml(p.avatar_url)}" alt="">`:(name.trim().split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase()||'?');
     wireChipSet(document.getElementById('careerInterests'),options.careerInterests,p.career_interests||[],p.career_interests_other||'');wireChipSet(document.getElementById('careerGoals'),options.careerGoals,(p.career_goals||'').split('|').filter(Boolean),p.career_goals_other||'');wireChipSet(document.getElementById('strengths'),options.strengths,(p.strengths||'').split('|').filter(Boolean),p.strengths_other||'');wireChipSet(document.getElementById('weaknesses'),options.developmentAreas,(p.weaknesses||'').split('|').filter(Boolean),p.weaknesses_other||'');wireChipSet(document.getElementById('learningPreferences'),options.learningPreferences,(p.learning_preferences||'').split('|').filter(Boolean),p.learning_preferences_other||'');
   }
