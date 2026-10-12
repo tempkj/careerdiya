@@ -831,15 +831,10 @@ async function resolvePlatformExplorerContext(audience, currentRole=null, vaultC
     }
     if(inferredStage){ answers.stage=inferredStage; if(!skipQuestionIds.includes('stage')) skipQuestionIds.push('stage'); }
 
-    // Vault career pursuit + a known from-role is a career-switch intent, not a generic
-    // preference exploration. The target career is carried separately so it can anchor
-    // the final direction.
-    const vaultTarget=String(vaultContext?.linkedCareer?.canonicalName||vaultContext?.customCareer||'').trim();
+    // A chosen target career does not prove that the user wants to switch.
+    // Only use an explicit, permitted goal to prefill intent; otherwise ask.
     const savedGoals=String(profile?.career_goals||'').split('|').map(x=>x.trim()).filter(Boolean);
-    if(vaultTarget){
-      answers.intent='switch';
-      if(!skipQuestionIds.includes('intent')) skipQuestionIds.push('intent');
-    }else if(savedGoals.includes('Switch careers')){
+    if(savedGoals.includes('Switch careers')){
       answers.intent='switch';
       if(!skipQuestionIds.includes('intent')) skipQuestionIds.push('intent');
     }else if(savedGoals.includes('Grow in my current career')){
