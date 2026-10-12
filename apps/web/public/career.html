@@ -612,24 +612,21 @@ function renderCareerTransitionLens(career,profile,saved){
     return;
   }
   if(!lens){
-    // A role-to-career transition lens needs a current role. Missing work context
-    // is an intentional limitation, not an error and not permission to infer it.
-    if(explorationContextMode){
-      const workContextAllowed=explorationContextMode==='all' || (explorationContextMode==='selected' && explorationContextCategories.has('work'));
-      const hasRole=String((profile?.current_role_title==='Other'?profile?.current_role_other:null)||profile?.current_role_title||profile?.current_role_other||profile?.current_role||'').trim();
-      const title=!hasRole
-        ? 'Add a starting role to personalise your transition lens'
-        : 'Your transition lens needs a professional starting role';
-      const message=!hasRole
-        ? 'Career Diya will still show the career itself, but it cannot classify the move as close, adjacent or broader without a current role. Add your current role in My Profile; this is separate from the optional profile details controlled by your exploration choice.'
-        : 'A role-based transition comparison is available for professional starting roles. You can still explore this career and its requirements.';
-      host.insertAdjacentHTML('beforeend',
-        '<div class="career-transition-lens career-transition-lens-unavailable">'+
-          '<div class="eyebrow">Transition lens</div>'+
-          '<h3>'+escapeHtml(title)+'</h3>'+
-          '<p>'+escapeHtml(message)+'</p>'+
-        '</div>');
-    }
+    // Keep the transition lens present even when the current context is incomplete.
+    // Do not infer a role or classification from an unrelated historical exploration.
+    const hasRole=String((profile?.current_role_title==='Other'?profile?.current_role_other:null)||profile?.current_role_title||profile?.current_role_other||profile?.current_role||'').trim();
+    const title=!hasRole
+      ? 'Add a starting role to personalise your transition lens'
+      : 'A role-based comparison is available for professional starting roles';
+    const message=!hasRole
+      ? 'Career Diya will still show the career itself, but it cannot classify the move as close, adjacent or broader without a current role. Add your current role in My Profile; this is separate from the optional profile details controlled by your exploration choice.'
+      : 'Your current context does not support a professional role-to-role classification yet. You can still explore this career and its requirements.';
+    host.insertAdjacentHTML('beforeend',
+      '<div class="career-transition-lens career-transition-lens-unavailable">'+
+        '<div class="eyebrow">Transition lens</div>'+
+        '<h3>'+escapeHtml(title)+'</h3>'+
+        '<p>'+escapeHtml(message)+'</p>'+
+      '</div>');
     return;
   }
 
