@@ -703,9 +703,9 @@ async function renderCareer(career,country=selectedCountry,language=selectedLang
         // Vault exploration consent is scoped to this page journey. Do not let
         // saved profile fields outside the user's choice influence these panels.
         profile=profileForExploration(profile);
-        if(explorationContextMode==='fresh' || (explorationContextMode==='selected' && !explorationContextCategories.has('goals'))){
-          savedExploration=null;
-        }
+        // The most recent assessment may belong to a different thought. A Vault
+        // journey is anchored in its own saved item, not unrelated assessment intent.
+        if(explorationContextMode) savedExploration=null;
       }
     }catch(err){
       console.warn('Career match context could not refresh profile state',err);
