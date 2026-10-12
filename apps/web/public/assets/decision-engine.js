@@ -997,7 +997,6 @@ function renderVaultCareerContext(root,audience,item,onContinue){
     {id:'interests',title:'Interests and perceived strengths',copy:'What attracts me and what I believe I am good at.'},
     {id:'goals',title:'Career goals and aspirations',copy:'My longer-term ambitions and priorities.'},
     {id:'preferences',title:'Learning preferences',copy:'How I prefer to develop new capabilities.'},
-    {id:'work',title:'Current role and work context',copy:'My current role, department, industry and experience level.'},
     {id:'records',title:'Experience and knowledge records',copy:'My recorded education, projects, certifications and other exposure.'}
   ];
   const contextCategoryMarkup=contextCategories.map(c=>'<label class="vault-context-choice"><input type="checkbox" name="vaultContextCategory" value="'+c.id+'"><span><strong>'+c.title+'</strong><small>'+c.copy+'</small></span></label>').join('');
@@ -1029,12 +1028,12 @@ function renderVaultCareerContext(root,audience,item,onContinue){
     <section class="vault-context-consent" aria-labelledby="vaultContextHeading">
       <div class="eyebrow">Your choice</div>
       <h3 id="vaultContextHeading">How would you like us to approach this exploration?</h3>
-      <p>We will always use the thought you saved and anything you explicitly tell us in this exploration. Choose whether background information from your profile may also inform the guidance.</p>
+      <p>We will always use the thought you saved and anything you explicitly tell us in this exploration. For a transition comparison, your current role is the starting point used to describe the move as close, adjacent or broader; it does not restrict which career you can explore. Choose how other profile information may inform the guidance.</p>
       <label class="vault-context-mode"><input type="radio" name="vaultContextMode" value="all"><span><strong>Use all relevant profile context</strong><small>Consider relevant information from my profile, without treating it as a limit on what I can explore.</small></span></label>
       <label class="vault-context-mode"><input type="radio" name="vaultContextMode" value="selected"><span><strong>Use only the context I select</strong><small>Choose the profile categories below. Anything not selected must not influence this exploration.</small></span></label>
       <div id="vaultContextCategories" class="vault-context-categories" hidden>${contextCategoryMarkup}</div>
-      <label class="vault-context-mode"><input type="radio" name="vaultContextMode" value="fresh"><span><strong>Explore with fresh eyes</strong><small>Do not use background profile information for this exploration.</small></span></label>
-      <p class="vault-context-consent-note">This choice applies to this exploration only. It does not change or delete your saved profile.</p>
+      <label class="vault-context-mode"><input type="radio" name="vaultContextMode" value="fresh"><span><strong>Explore with fresh eyes</strong><small>Do not use background profile information for this exploration. A role-based transition classification will not be shown.</small></span></label>
+      <p class="vault-context-consent-note">For “Use only the context I select”, your current role is used only as the starting point for the transition classification; it is not treated as an additional selected profile category. This choice applies to this exploration only and does not change or delete your saved profile.</p>
     </section>
     <p class="profile-context-status" id="vaultCareerStatus" role="status" aria-live="polite"></p>
   </div>`;
@@ -1064,7 +1063,7 @@ function renderVaultCareerContext(root,audience,item,onContinue){
       return;
     }
     if(choice.mode==='selected'&&!choice.categories.length){
-      status.textContent='Choose at least one profile category, or select “Explore with fresh eyes”.';
+      status.textContent='Choose at least one optional profile category, or select “Explore with fresh eyes”.';
       status.className='profile-context-status err';
       categories.hidden=false;
       root.querySelector('input[name="vaultContextCategory"]')?.focus();
