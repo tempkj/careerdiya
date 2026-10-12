@@ -794,9 +794,18 @@ async function resolvePlatformExplorerContext(audience, currentRole=null, vaultC
   try{
     if(window.CareerDiyaProfileAuth?.isAuthenticated?.() && window.CareerDiyaProfileAuth?.getProfile){
       profile=await window.CareerDiyaProfileAuth.getProfile();
-      if(window.CareerDiyaProfileAuth?.getExplorationDefaults) savedDefaults=await window.CareerDiyaProfileAuth.getExplorationDefaults();
+      if(!vaultContext?.contextMode && window.CareerDiyaProfileAuth?.getExplorationDefaults) savedDefaults=await window.CareerDiyaProfileAuth.getExplorationDefaults();
     }
   }catch(_){}
+  if(vaultContext?.contextMode){
+    const mode=vaultContext.contextMode;
+    const allowed=new Set(mode==='all'?['interests','goals','preferences','work','records']:mode==='selected'?(vaultContext.contextCategories||[]):[]);
+    profile={...(profile||{})};
+    if(!allowed.has('interests')){profile.career_interests=null;profile.career_interests_other=null;profile.strengths=null;profile.strengths_other=null;profile.weaknesses=null;profile.weaknesses_other=null;}
+    if(!allowed.has('goals')){profile.career_goals=null;profile.career_goals_other=null;}
+    if(!allowed.has('preferences')){profile.learning_preferences=null;profile.learning_preferences_other=null;profile.exploration_work_preference=null;profile.exploration_environment=null;profile.exploration_priority=null;profile.exploration_default_context=null;}
+    if(!allowed.has('work')){profile.current_role_title=null;profile.current_role_other=null;profile.current_role=null;profile.current_department=null;profile.current_department_other=null;profile.industry=null;profile.industry_other=null;profile.experience_years=null;}
+  }
   const resolvedAudience=['parent','student','professional'].includes(String(profile?.audience||'').toLowerCase())
     ? String(profile.audience).toLowerCase() : (savedDefaults?.audience || audience);
   const profileRole=String(profile?.current_role_title||profile?.current_role_other||savedDefaults?.current_role||'').trim();
@@ -805,9 +814,10 @@ async function resolvePlatformExplorerContext(audience, currentRole=null, vaultC
   const skipQuestionIds=Object.keys(answers).filter(k=>answers[k]!==null && answers[k]!==undefined && answers[k]!=='');
   let education=[];
   let experience=[];
+  const mayUseRecords=!vaultContext?.contextMode || vaultContext.contextMode==='all' || (vaultContext.contextMode==='selected' && (vaultContext.contextCategories||[]).includes('records'));
   try{
-    if(window.CareerDiyaProfileAuth?.getEducationRecords) education=await window.CareerDiyaProfileAuth.getEducationRecords();
-    if(window.CareerDiyaProfileAuth?.getExperienceRecords) experience=await window.CareerDiyaProfileAuth.getExperienceRecords();
+    if(mayUseRecords && window.CareerDiyaProfileAuth?.getEducationRecords) education=await window.CareerDiyaProfileAuth.getEducationRecords();
+    if(mayUseRecords && window.CareerDiyaProfileAuth?.getExperienceRecords) experience=await window.CareerDiyaProfileAuth.getExperienceRecords();
   }catch(_){}
 
   if(resolvedAudience==='professional'){
