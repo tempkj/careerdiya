@@ -589,8 +589,34 @@ function careerTransitionLens(profile,saved,career,audienceKey){
 function renderCareerTransitionLens(career,profile,saved){
   const host=document.getElementById('careerPersonalizeContent'); if(!host) return;
   const audienceKey=String(profile?.audience||audience||'').toLowerCase();
-  const lens=careerTransitionLens(profile,saved,career,audienceKey);
-  if(!lens) return;
+  let lens=null;
+  try{
+    lens=careerTransitionLens(profile,saved,career,audienceKey);
+  }catch(err){
+    // A transition-lens failure must not break the rest of the career page.
+    console.error('[Career Diya] transition lens failed to render',err);
+    host.insertAdjacentHTML('beforeend',
+      '<div class="career-transition-lens career-transition-lens-unavailable">'+
+        '<div class="eyebrow">Transition lens</div>'+
+        '<h3>We could not prepare this view</h3>'+
+        '<p>Your career page is still available. Try refreshing; if this continues, check the browser console for the transition-lens error.</p>'+
+      '</div>');
+    return;
+  }
+  if(!lens){
+    // The user may deliberately exclude current-role/work context. In that case
+    // a from-role comparison is unavailable by design, not a failed exploration.
+    const workContextAllowed=!explorationContextMode || explorationContextMode==='all' || (explorationContextMode==='selected' && explorationContextCategories.has('work'));
+    if(explorationContextMode && !workContextAllowed){
+      host.insertAdjacentHTML('beforeend',
+        '<div class="career-transition-lens career-transition-lens-unavailable">'+
+          '<div class="eyebrow">Transition lens</div>'+
+          '<h3>Explore this career without a starting-role comparison</h3>'+
+          '<p>You chose not to include current-role and work context. Career Diya will respect that choice and will not infer a transition from your job history. You can still explore the career itself.</p>'+
+        '</div>');
+    }
+    return;
+  }
 
   const transferable=lens.sourceSignals.slice(0,4).map(s=>'<li>'+escapeHtml(s)+'</li>').join('');
   const build=lens.needs.map(s=>'<li>'+escapeHtml(s)+'</li>').join('');
