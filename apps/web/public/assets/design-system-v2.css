@@ -371,3 +371,18 @@ html,body{background:var(--cd-bg-paper)!important;color:var(--cd-ink)}
   .cd2-page-mural .mural-shape.square{right:-12px}
   .cd2-page-mural .mural-shape.ring{display:none}
 }
+
+/* Career Vault: explicit per-exploration profile-context consent */
+.vault-context-consent{margin-top:24px;padding:22px;border:1px solid #e5e1d8;border-radius:18px;background:#fbfaf7}
+.vault-context-consent h3{font-size:21px;line-height:1.3;margin:6px 0 8px}
+.vault-context-consent>p{font-size:14px;line-height:1.55;color:#626979;max-width:760px}
+.vault-context-mode,.vault-context-choice{display:flex;align-items:flex-start;gap:11px;padding:13px 14px;margin-top:9px;border:1px solid #e5e1d8;border-radius:12px;background:#fff;cursor:pointer}
+.vault-context-mode:has(input:checked),.vault-context-choice:has(input:checked){border-color:#29449b;background:#f5f7ff}
+.vault-context-mode input,.vault-context-choice input{margin-top:4px;accent-color:#243f96;flex:0 0 auto}
+.vault-context-mode span,.vault-context-choice span{display:grid;gap:4px}
+.vault-context-mode strong,.vault-context-choice strong{font-size:14px;color:#202438}
+.vault-context-mode small,.vault-context-choice small{font-size:12px;line-height:1.45;color:#626979}
+.vault-context-categories{margin:10px 0 12px 24px}
+.vault-context-categories[hidden]{display:none}
+.vault-context-consent .vault-context-consent-note{font-size:12px;margin:12px 0 0}
+@media(max-width:600px){.vault-context-consent{padding:15px}.vault-context-categories{margin-left:0}}
