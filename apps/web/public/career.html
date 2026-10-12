@@ -536,17 +536,32 @@ function careerTransitionLens(profile,saved,career,audienceKey){
 
   const sourceMarketing=/marketing|sales|brand|communication|customer|account/.test(r);
   const targetMarketing=/digital marketing|growth marketing|performance marketing|brand management|advertising|public relations|corporate communication/.test(target);
+  const sourceSoftware=/software|developer|programmer|full stack|mobile application|quality assurance|\bqa\b|test automation|sdet/.test(r);
+  const targetSoftware=/software engineering|software engineer|full stack|mobile application|web development|quality assurance|test automation|sdet/.test(target);
+  const sourceProject=/project|program|delivery|operations|business|management/.test(r);
+  const targetProject=/project management|operations management|business management|strategy consulting/.test(target);
+  const sourceEngineering=/mechanical|electrical|civil|aerospace|chemical|industrial|biomedical|engineering/.test(r);
+  const targetEngineering=/mechanical engineering|electrical engineering|civil engineering|aerospace engineering|chemical engineering|industrial engineering|biomedical engineering/.test(target);
   const sourceTechnical=/software|developer|engineer|technical|it|technology|test|quality|qa/.test(r);
-  const targetTechnical=/software|full stack|mobile|artificial intelligence|data science|ethical hacking|blockchain|engineering/.test(target);
+  const targetAppliedAI=/machine learning engineer|machine learning|artificial intelligence|data science/.test(target);
 
   let transitionType='Broader move';
   let transitionTone='This is a broader move. Keep the transferable strengths, but expect meaningful destination-specific preparation.';
-  if((sourceMarketing&&targetMarketing)||(sourceTechnical&&targetTechnical)){
-    transitionType='Adjacent move';
-    transitionTone='This is a relatively close move within a related capability family. Focus on the destination-specific skills and evidence rather than restarting from scratch.';
-  }else if((/project|program|delivery|operations|business|management/.test(r)) && /project management|operations management|business management|strategy consulting/.test(target)){
+  if(sourceSoftware && targetSoftware){
     transitionType='Close move';
-    transitionTone='Your existing experience may overlap substantially with the destination. Validate the role expectations and identify the few capabilities that still need evidence.';
+    transitionTone='Your current software experience may overlap with this destination. Validate the specific role expectations and identify the capabilities that still need evidence.';
+  }else if(sourceTechnical && targetAppliedAI){
+    transitionType='Adjacent move';
+    transitionTone='Your technical background may provide a useful starting point, but applied AI or data roles still require evidence in programming, data handling and role-specific methods.';
+  }else if(sourceEngineering && targetEngineering){
+    transitionType='Adjacent move';
+    transitionTone='Your engineering background may transfer across related engineering work, but the target discipline, tools and any required credentials need to be checked.';
+  }else if(sourceMarketing && targetMarketing){
+    transitionType='Adjacent move';
+    transitionTone='Your marketing or communication experience may transfer across related roles. Validate the target channel, tools and outcome expectations.';
+  }else if(sourceProject && targetProject){
+    transitionType='Close move';
+    transitionTone='Your existing delivery or operations experience may overlap substantially with the destination. Validate role expectations and identify the few capabilities that still need evidence.';
   }else if(sourceMarketing && /product management|product manager/.test(target)){
     transitionType='Adjacent move';
     transitionTone='Your stakeholder and audience experience can carry over, while product discovery, prioritisation and outcome ownership need to be demonstrated.';
