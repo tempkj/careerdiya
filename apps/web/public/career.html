@@ -596,6 +596,18 @@ function careerTransitionLens(profile,saved,career,audienceKey){
 function renderCareerTransitionLens(career,profile,saved){
   const host=document.getElementById('careerPersonalizeContent'); if(!host) return;
   const audienceKey=String(profile?.audience||audience||'').toLowerCase();
+  // Fresh-eyes is an explicit opt-out of profile-based transition inference.
+  // Enforce it here as well as in profileForExploration so a future data-source
+  // fallback cannot accidentally restore a role-based classification.
+  if(explorationContextMode==='fresh'){
+    host.insertAdjacentHTML('beforeend',
+      '<div class="career-transition-lens career-transition-lens-unavailable">'+
+        '<div class="eyebrow">Transition lens</div>'+
+        '<h3>Explore this career independently</h3>'+
+        '<p>You chose to explore without using your saved profile as a starting point. Career Diya won’t infer a transition from your work history. You can still explore the career itself using the thought you saved and any information you choose to share during this exploration.</p>'+
+      '</div>');
+    return;
+  }
   let lens=null;
   try{
     lens=careerTransitionLens(profile,saved,career,audienceKey);
@@ -621,7 +633,7 @@ function renderCareerTransitionLens(career,profile,saved){
         : 'Explore this career without a starting-role comparison';
       const message=workContextAllowed && !hasRole
         ? 'Your context choice allows current-role information, but no current role is available in your profile. Add it in My Profile to compare your starting point with this career.'
-        : 'You chose not to include current-role and work context. Career Diya will respect that choice and will not infer a transition from your job history. You can still explore the career itself.';
+        : 'You chose to explore without using your saved profile as a starting point. Career Diya will not infer a transition from your work history. You can still explore the career itself using the thought you saved and any information you choose to share during this exploration.';
       host.insertAdjacentHTML('beforeend',
         '<div class="career-transition-lens career-transition-lens-unavailable">'+
           '<div class="eyebrow">Transition lens</div>'+
@@ -661,7 +673,7 @@ function renderCareerMatchContext(career,profile,saved,contextRecords=[]){
   const audienceKey=String(profile?.audience||audience||'').toLowerCase();
   const isKnown=['parent','student','professional'].includes(audienceKey);
   const hasProfile=!!profile;
-  const role=String((profile?.current_role_title==='Other'?profile?.current_role_other:null)||profile?.current_role_title||profile?.current_role_other||profile?.current_role||saved?.result?.currentRole||'').trim();
+  const role=explorationContextMode==='fresh' ? '' : String((profile?.current_role_title==='Other'?profile?.current_role_other:null)||profile?.current_role_title||profile?.current_role_other||profile?.current_role||saved?.result?.currentRole||'').trim();
   const department=String((profile?.current_department==='Other'?profile?.current_department_other:null)||profile?.current_department||profile?.current_department_other||'').trim();
   const industry=String((profile?.industry==='Other'?profile?.industry_other:null)||profile?.industry||profile?.industry_other||'').trim();
   const experience=String(profile?.experience_years||'').trim();
@@ -715,13 +727,17 @@ function renderCareerMatchContext(career,profile,saved,contextRecords=[]){
     ? (audienceKey==='professional'?'Professional':audienceKey==='student'?'Student':'Parent')
     : 'Career explorer';
 
-  const startLabel=role || (audienceKey==='professional' ? 'Current role not added yet' : 'Starting point not added yet');
+  const startLabel=explorationContextMode==='fresh'
+    ? 'Independent exploration'
+    : role || (audienceKey==='professional' ? 'Current role not added yet' : 'Starting point not added yet');
   const experienceLabel=experience
     ? (/(year|month|\+)/i.test(experience) ? experience+' experience' : experience+' years experience')
     : '';
-  const startSub=role
-    ? (experienceLabel || 'Current role')
-    : 'Add this in My Profile to personalise the transition';
+  const startSub=explorationContextMode==='fresh'
+    ? 'Saved work history is not used for this exploration'
+    : role
+      ? (experienceLabel || 'Current role')
+      : 'Add this in My Profile to personalise the transition';
 
   host.innerHTML=
     '<div class="career-match-context">'+
@@ -733,9 +749,11 @@ function renderCareerMatchContext(career,profile,saved,contextRecords=[]){
         '<article class="career-match-card"><small>What you are trying to do</small><strong>'+escapeHtml(intent?.label||'Career exploration')+'</strong><span>'+escapeHtml(intent?.description||'Understand the work and decide whether this is worth exploring further.')+'</span></article>'+
         '<article class="career-match-card"><small>Starting point</small><strong>'+escapeHtml(startLabel)+'</strong><span>'+escapeHtml(startSub)+'</span></article>'+
       '</div>'+
-      (role
-        ? '<div class="career-match-path"><span class="path-node">'+escapeHtml(role)+'</span><span class="path-arrow">→</span><span class="path-node">'+escapeHtml(target)+'</span><span style="color:#687083;font-size:12px">Your current context → career you are exploring</span></div>'
-        : '<div class="career-match-anon">Add your current role and experience in <a href="profile.html">My Profile</a> to see a meaningful transition lens for this career.</div>')+
+      (explorationContextMode==='fresh'
+        ? '<div class="career-match-path"><span class="path-node">Independent exploration</span><span style="color:#687083;font-size:12px">No starting-role comparison is shown</span></div>'
+        : role
+          ? '<div class="career-match-path"><span class="path-node">'+escapeHtml(role)+'</span><span class="path-arrow">→</span><span class="path-node">'+escapeHtml(target)+'</span><span style="color:#687083;font-size:12px">Your current context → career you are exploring</span></div>'
+          : '<div class="career-match-anon">Add your current role and experience in <a href="profile.html">My Profile</a> to see a meaningful transition lens for this career.</div>')+
       contextSummaryHtml+
       '<p class="career-match-disclosure">This is contextual guidance, not a probability or validated “match percentage”. A deeper transition assessment can evaluate skills, evidence and preparation separately.</p>'+
     '</div>';
