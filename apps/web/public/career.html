@@ -604,15 +604,22 @@ function renderCareerTransitionLens(career,profile,saved){
     return;
   }
   if(!lens){
-    // The user may deliberately exclude current-role/work context. In that case
-    // a from-role comparison is unavailable by design, not a failed exploration.
-    const workContextAllowed=!explorationContextMode || explorationContextMode==='all' || (explorationContextMode==='selected' && explorationContextCategories.has('work'));
-    if(explorationContextMode && !workContextAllowed){
+    // A role-to-career transition lens needs a current role. Missing work context
+    // is an intentional limitation, not an error and not permission to infer it.
+    if(explorationContextMode){
+      const workContextAllowed=explorationContextMode==='all' || (explorationContextMode==='selected' && explorationContextCategories.has('work'));
+      const hasRole=String((profile?.current_role_title==='Other'?profile?.current_role_other:null)||profile?.current_role_title||profile?.current_role_other||profile?.current_role||'').trim();
+      const title=workContextAllowed && !hasRole
+        ? 'Add a starting role to see a transition comparison'
+        : 'Explore this career without a starting-role comparison';
+      const message=workContextAllowed && !hasRole
+        ? 'Your context choice allows current-role information, but no current role is available in your profile. Add it in My Profile to compare your starting point with this career.'
+        : 'You chose not to include current-role and work context. Career Diya will respect that choice and will not infer a transition from your job history. You can still explore the career itself.';
       host.insertAdjacentHTML('beforeend',
         '<div class="career-transition-lens career-transition-lens-unavailable">'+
           '<div class="eyebrow">Transition lens</div>'+
-          '<h3>Explore this career without a starting-role comparison</h3>'+
-          '<p>You chose not to include current-role and work context. Career Diya will respect that choice and will not infer a transition from your job history. You can still explore the career itself.</p>'+
+          '<h3>'+escapeHtml(title)+'</h3>'+
+          '<p>'+escapeHtml(message)+'</p>'+
         '</div>');
     }
     return;
