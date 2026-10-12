@@ -615,7 +615,7 @@ function renderCareerTransitionLens(career,profile,saved){
       '<p class="transition-note">These are directional signals based on the current role context, not proof of skill proficiency. A deeper assessment should verify specific skills, evidence, qualifications and preparation requirements using structured career data.</p>'+
     '</div>');
 }
-function renderCareerMatchContext(career,profile,saved){
+function renderCareerMatchContext(career,profile,saved,contextRecords=[]){
   const host=document.getElementById('careerPersonalizeContent');
   if(!host) return;
   const audienceKey=String(profile?.audience||audience||'').toLowerCase();
@@ -627,6 +627,26 @@ function renderCareerMatchContext(career,profile,saved){
   const experience=String(profile?.experience_years||'').trim();
   const intent=careerMatchIntent(profile,saved,audienceKey);
   const target=career?.canonicalName||'this career';
+  const contextSummary=[];
+  const asList=value=>Array.isArray(value)?value.map(x=>String(x).trim()).filter(Boolean):String(value||'').split('|').map(x=>x.trim()).filter(Boolean);
+  if(explorationContextMode){
+    const interests=asList(profile?.career_interests);
+    const strengths=asList(profile?.strengths);
+    const goals=asList(profile?.career_goals);
+    const learning=asList(profile?.learning_preferences);
+    if(interests.length) contextSummary.push({label:'Interests',value:interests.join(', ')});
+    if(strengths.length) contextSummary.push({label:'Self-reported strengths',value:strengths.join(', ')});
+    if(goals.length) contextSummary.push({label:'Career goals',value:goals.join(', ')});
+    if(learning.length) contextSummary.push({label:'Learning preferences',value:learning.join(', ')});
+    const work=[role,department,industry,experience].filter(Boolean);
+    if(work.length) contextSummary.push({label:'Current work context',value:work.join(' · ')});
+    const recordLabels=(contextRecords||[]).map(row=>[row.domain==='Other'?(row.domain_other||'Other'):row.domain,row.exposure_type,row.exposure_level,row.role_family].filter(Boolean).join(' · ')).filter(Boolean);
+    if(recordLabels.length) contextSummary.push({label:'Experience and knowledge records',value:recordLabels.join('; ')});
+  }
+  const contextSummaryHtml=contextSummary.length
+    ? '<div class="career-context-used"><strong>Profile context included</strong><ul>'+contextSummary.map(item=>'<li><span>'+escapeHtml(item.label)+':</span> '+escapeHtml(item.value)+'</li>').join('')+'</ul></div>'
+    : (explorationContextMode ? '<div class="career-context-used"><strong>Profile context included</strong><p>No information from the selected profile categories was available. This exploration will rely on your saved thought and answers here.</p></div>' : '');
+
 
   // If the page was opened with an audience but there is no authenticated profile,
   // do not manufacture personalization. Show a useful "context needed" state instead.
@@ -674,6 +694,7 @@ function renderCareerMatchContext(career,profile,saved){
       (role
         ? '<div class="career-match-path"><span class="path-node">'+escapeHtml(role)+'</span><span class="path-arrow">→</span><span class="path-node">'+escapeHtml(target)+'</span><span style="color:#687083;font-size:12px">Your current context → career you are exploring</span></div>'
         : '<div class="career-match-anon">Add your current role and experience in <a href="profile.html">My Profile</a> to see a meaningful transition lens for this career.</div>')+
+      contextSummaryHtml+
       '<p class="career-match-disclosure">This is contextual guidance, not a probability or validated “match percentage”. A deeper transition assessment can evaluate skills, evidence and preparation separately.</p>'+
     '</div>';
 }
@@ -686,6 +707,7 @@ async function renderCareer(career,country=selectedCountry,language=selectedLang
     const isVaultJourney=vaultItemId&&new URLSearchParams(location.search).get('source')==='vault';
     let profile=null;
     let savedExploration=null;
+    let contextRecords=[];
     try{
       // Reconcile the locally cached session with Supabase before deciding whether
       // this visitor has a profile. A stale local token can otherwise make the panel
@@ -703,6 +725,9 @@ async function renderCareer(career,country=selectedCountry,language=selectedLang
         // Vault exploration consent is scoped to this page journey. Do not let
         // saved profile fields outside the user's choice influence these panels.
         profile=profileForExploration(profile);
+        if(explorationContextMode && (explorationContextMode==='all' || explorationContextCategories.has('records')) && auth?.getExperienceRecords){
+          contextRecords=await auth.getExperienceRecords();
+        }
         // The most recent assessment may belong to a different thought. A Vault
         // journey is anchored in its own saved item, not unrelated assessment intent.
         if(explorationContextMode) savedExploration=null;
@@ -710,7 +735,7 @@ async function renderCareer(career,country=selectedCountry,language=selectedLang
     }catch(err){
       console.warn('Career match context could not refresh profile state',err);
     }
-    renderCareerMatchContext(career,profile,savedExploration);
+    renderCareerMatchContext(career,profile,savedExploration,contextRecords);
     renderCareerTransitionLens(career,profile,savedExploration);
 
     // Wire the hero CTA after the personalization content has been rendered.
