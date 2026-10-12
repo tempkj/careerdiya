@@ -209,6 +209,20 @@ const careerId=p.get('careerId');
 // unknown audience fails closed (no currentRole), never assumed professional.
 const audience=p.get('audience');
 const vaultItemId=p.get('vaultItem');
+const explorationContextMode=p.get('contextMode')||'';
+const explorationContextCategories=new Set((p.get('contextCategories')||'').split(',').filter(Boolean));
+function profileForExploration(profile){
+  if(!profile || !explorationContextMode) return profile;
+  const mode=explorationContextMode;
+  const allowed=new Set(mode==='all'?['interests','goals','preferences','work','records']:mode==='selected'?explorationContextCategories:[]);
+  const result={...profile};
+  if(!allowed.has('interests')){result.career_interests=null;result.career_interests_other=null;result.strengths=null;result.strengths_other=null;result.weaknesses=null;result.weaknesses_other=null;}
+  if(!allowed.has('goals')){result.career_goals=null;result.career_goals_other=null;}
+  if(!allowed.has('preferences')){result.learning_preferences=null;result.learning_preferences_other=null;result.exploration_work_preference=null;result.exploration_environment=null;result.exploration_priority=null;result.exploration_default_context=null;}
+  if(!allowed.has('work')){result.current_role_title=null;result.current_role_other=null;result.current_role=null;result.current_department=null;result.current_department_other=null;result.industry=null;result.industry_other=null;result.experience_years=null;}
+  return result;
+}
+
 const selectedCountry=(p.get('country')||localStorage.getItem('careerDiyaCountry')||'India');
 const selectedLanguage=(p.get('language')||localStorage.getItem('careerDiyaLanguage')||'English');
 const name=p.get('name');
@@ -686,6 +700,12 @@ async function renderCareer(career,country=selectedCountry,language=selectedLang
       if(authenticated){
         profile=await auth.getProfile();
         if(auth?.getSavedExploration) savedExploration=await auth.getSavedExploration();
+        // Vault exploration consent is scoped to this page journey. Do not let
+        // saved profile fields outside the user's choice influence these panels.
+        profile=profileForExploration(profile);
+        if(explorationContextMode==='fresh' || (explorationContextMode==='selected' && !explorationContextCategories.has('goals'))){
+          savedExploration=null;
+        }
       }
     }catch(err){
       console.warn('Career match context could not refresh profile state',err);
