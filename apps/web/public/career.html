@@ -219,7 +219,14 @@ function profileForExploration(profile){
   if(!allowed.has('interests')){result.career_interests=null;result.career_interests_other=null;result.strengths=null;result.strengths_other=null;result.weaknesses=null;result.weaknesses_other=null;}
   if(!allowed.has('goals')){result.career_goals=null;result.career_goals_other=null;}
   if(!allowed.has('preferences')){result.learning_preferences=null;result.learning_preferences_other=null;result.exploration_work_preference=null;result.exploration_environment=null;result.exploration_priority=null;result.exploration_default_context=null;}
-  if(!allowed.has('work')){result.current_role_title=null;result.current_role_other=null;result.current_role=null;result.current_department=null;result.current_department_other=null;result.industry=null;result.industry_other=null;result.experience_years=null;}
+  // Current role is the minimum baseline for classifying transition distance.
+  // Keep only that baseline for "selected" mode; other work details remain excluded.
+  if(mode==='fresh'){
+    result.current_role_title=null;result.current_role_other=null;result.current_role=null;
+    result.current_department=null;result.current_department_other=null;result.industry=null;result.industry_other=null;result.experience_years=null;
+  }else if(!allowed.has('work')){
+    result.current_department=null;result.current_department_other=null;result.industry=null;result.industry_other=null;result.experience_years=null;
+  }
   return result;
 }
 
@@ -671,8 +678,10 @@ function renderCareerMatchContext(career,profile,saved,contextRecords=[]){
     if(strengths.length) contextSummary.push({label:'Self-reported strengths',value:strengths.join(', ')});
     if(goals.length) contextSummary.push({label:'Career goals',value:goals.join(', ')});
     if(learning.length) contextSummary.push({label:'Learning preferences',value:learning.join(', ')});
-    const work=[role,department,industry,experience].filter(Boolean);
+    const workAllowed=explorationContextMode==='all' || (explorationContextMode==='selected' && explorationContextCategories.has('work'));
+    const work=workAllowed?[role,department,industry,experience].filter(Boolean):[];
     if(work.length) contextSummary.push({label:'Current work context',value:work.join(' · ')});
+    else if(explorationContextMode==='selected' && role) contextSummary.push({label:'Transition starting role',value:role});
     const recordLabels=(contextRecords||[]).map(row=>[row.domain==='Other'?(row.domain_other||'Other'):row.domain,row.exposure_type,row.exposure_level,row.role_family].filter(Boolean).join(' · ')).filter(Boolean);
     if(recordLabels.length) contextSummary.push({label:'Experience and knowledge records',value:recordLabels.join('; ')});
   }
