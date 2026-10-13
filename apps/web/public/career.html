@@ -754,23 +754,46 @@ async function renderCareer(career,country=selectedCountry,language=selectedLang
       // show generic guest copy, or hide context after a valid session refresh.
       const auth=window.CareerDiyaProfileAuth;
       let session=null;
-      if(auth?.refreshLocalSession) session=await auth.refreshLocalSession();
-      else if(auth?.getSession) session=auth.getSession();
-      const authenticated=auth?.refreshLocalSession
-        ? !!session?.access_token
-        : !!auth?.isAuthenticated?.();
-      if(authenticated){
-        profile=await auth.getProfile();
-        if(auth?.getSavedExploration) savedExploration=await auth.getSavedExploration();
-        // Vault exploration consent is scoped to this page journey. Do not let
-        // saved profile fields outside the user's choice influence these panels.
-        profile=profileForExploration(profile);
-        if(explorationContextMode && (explorationContextMode==='all' || explorationContextCategories.has('records')) && auth?.getExperienceRecords){
-          contextRecords=await auth.getExperienceRecords();
+      let authenticated=false;
+
+      // Supabase is the source of truth. A refresh error must not automatically
+      // downgrade a returning user to guest if the auth helper still has a valid
+      // cached session; likewise, a cached token alone is not enough to skip a
+      // fresh profile read.
+      if(auth?.refreshLocalSession){
+        try { session=await auth.refreshLocalSession(); }
+        catch(err) { console.warn('Supabase session refresh failed; checking existing auth state',err); }
+      }
+      if(session?.access_token) authenticated=true;
+      if(!authenticated && auth?.getSession){
+        try { authenticated=!!auth.getSession()?.access_token; } catch(_) {}
+      }
+      if(!authenticated && auth?.isAuthenticated){
+        try { authenticated=!!auth.isAuthenticated(); } catch(_) {}
+      }
+
+      if(authenticated && auth?.getProfile){
+        try {
+          profile=await auth.getProfile();
+        } catch(err) {
+          console.warn('Authenticated profile could not be loaded',err);
         }
-        // The most recent assessment may belong to a different thought. A Vault
-        // journey is anchored in its own saved item, not unrelated assessment intent.
-        if(explorationContextMode) savedExploration=null;
+        if(profile){
+          // Saved profile is authoritative for the current starting point. Do not
+          // substitute the URL audience or an old exploration for missing profile data.
+          profile=profileForExploration(profile);
+          if(auth?.getSavedExploration){
+            try { savedExploration=await auth.getSavedExploration(); }
+            catch(err) { console.warn('Saved exploration could not be loaded',err); }
+          }
+          if(explorationContextMode && (explorationContextMode==='all' || explorationContextCategories.has('records')) && auth?.getExperienceRecords){
+            try { contextRecords=await auth.getExperienceRecords(); }
+            catch(err) { console.warn('Experience records could not be loaded',err); }
+          }
+          // The most recent assessment may belong to a different thought. A Vault
+          // journey is anchored in its own saved item, not unrelated assessment intent.
+          if(explorationContextMode) savedExploration=null;
+        }
       }
     }catch(err){
       console.warn('Career match context could not refresh profile state',err);
