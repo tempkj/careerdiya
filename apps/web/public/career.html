@@ -594,6 +594,7 @@ function careerTransitionLens(profile,saved,career,audienceKey){
 }
 function renderCareerTransitionLens(career,profile,saved){
   const host=document.getElementById('careerPersonalizeContent'); if(!host) return;
+  if(profile?.__profileLoadError) return;
   const audienceKey=String(profile?.audience||audience||'').toLowerCase();
   // The current role is the mandatory transition baseline, including in Fresh Eyes.
   // Optional saved profile attributes remain governed by the selected context mode.
@@ -658,7 +659,18 @@ function renderCareerMatchContext(career,profile,saved,contextRecords=[]){
   if(!host) return;
   const audienceKey=String(profile?.audience||audience||'').toLowerCase();
   const isKnown=['parent','student','professional'].includes(audienceKey);
-  const hasProfile=!!profile;
+  const hasProfile=!!profile && !profile.__profileLoadError;
+  if(profile?.__profileLoadError){
+    host.innerHTML=
+      '<div class="career-match-context career-match-context-incomplete">'+
+        '<div class="eyebrow">Career match context</div>'+
+        '<h2>We could not load your saved profile</h2>'+
+        '<p class="match-intro">You are signed in, but Career Diya could not retrieve your profile right now. Your account has not been treated as a new visitor. Please retry before changing your profile or creating another account.</p>'+
+        '<div class="career-match-incomplete-actions"><button class="btn btn-primary" type="button" id="retryCareerProfileLoad">Try again →</button></div>'+
+      '</div>';
+    host.querySelector('#retryCareerProfileLoad')?.addEventListener('click',()=>window.location.reload());
+    return;
+  }
   const role=String((profile?.current_role_title==='Other'?profile?.current_role_other:null)||profile?.current_role_title||profile?.current_role_other||profile?.current_role||'').trim();
   const department=String((profile?.current_department==='Other'?profile?.current_department_other:null)||profile?.current_department||profile?.current_department_other||'').trim();
   const industry=String((profile?.industry==='Other'?profile?.industry_other:null)||profile?.industry||profile?.industry_other||'').trim();
@@ -777,8 +789,9 @@ async function renderCareer(career,country=selectedCountry,language=selectedLang
           profile=await auth.getProfile();
         } catch(err) {
           console.warn('Authenticated profile could not be loaded',err);
+          profile={__profileLoadError:true,audience:audienceKey};
         }
-        if(profile){
+        if(profile && !profile.__profileLoadError){
           // Saved profile is authoritative for the current starting point. Do not
           // substitute the URL audience or an old exploration for missing profile data.
           profile=profileForExploration(profile);
