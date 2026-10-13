@@ -33,6 +33,19 @@ assert('transition lens and career-match context are rendered after profile reso
   render.indexOf('renderCareerTransitionLens(career,profile,savedExploration)') >
   render.indexOf('renderCareerMatchContext(career,profile,savedExploration,contextRecords)'));
 
+
+assert('exploration audience is not the sole source of career-stage classification',
+  source.includes('function resolveCareerBaselineStage(profile)') &&
+  source.includes("if(role && hasExperience) return 'professional'"));
+assert('career context UI labels career baseline separately from exploration journey',
+  source.includes('Your career baseline') && source.includes('Journey: '));
+assert('transition lens eligibility uses resolved career baseline, not raw audience',
+  source.includes("if(!role || baselineStage!=='professional') return null;") &&
+  source.includes('const audienceKey=resolveCareerBaselineStage(profile);'));
+assert('ambiguous role context asks for clarification rather than claiming professional eligibility',
+  source.includes('Confirm your career starting point') &&
+  source.includes('not enough confirmed career-stage context'));
+
 if (failures.length) {
   console.error('\nFailed checks:', failures);
   process.exitCode = 1;
