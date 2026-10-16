@@ -425,12 +425,34 @@
   selectInit();
   let loadedProfile=null;
   try{
-    const [profile, education, experience]=await Promise.all([auth.getProfile(),auth.getEducationRecords(),auth.getExperienceRecords()]);
-    loadedProfile=profile||{};
+    loadedProfile=await auth.getProfile()||{};
     fillProfile(loadedProfile);
-    education.forEach(addEducationRecord); if(!education.length)addEducationRecord();
-    experience.forEach(addExperienceRecord); if(!experience.length)addExperienceRecord();
-  }catch(e){status.textContent='Could not load your profile yet.';status.className='profile-gate-status err';}
+    let backgroundLoadFailed=false;
+    try{
+      const education=await auth.getEducationRecords();
+      education.forEach(addEducationRecord); if(!education.length)addEducationRecord();
+    }catch(e){
+      console.error('Career Diya education records could not be loaded:',e);
+      addEducationRecord();
+      backgroundLoadFailed=true;
+    }
+    try{
+      const experience=await auth.getExperienceRecords();
+      experience.forEach(addExperienceRecord); if(!experience.length)addExperienceRecord();
+    }catch(e){
+      console.error('Career Diya experience records could not be loaded:',e);
+      addExperienceRecord();
+      backgroundLoadFailed=true;
+    }
+    if(backgroundLoadFailed){
+      status.textContent='Your main profile loaded, but Education / Experience could not be loaded. Apply the latest database migration, then refresh before saving changes to those sections.';
+      status.className='profile-gate-status err';
+    }
+  }catch(e){
+    console.error('Career Diya profile load failed:',e);
+    status.textContent='Could not load your profile yet. Please check your connection and database permissions.';
+    status.className='profile-gate-status err';
+  }
   form.addEventListener('submit',async e=>{
     e.preventDefault();
     const saveButton=form.querySelector('button[type="submit"]');
