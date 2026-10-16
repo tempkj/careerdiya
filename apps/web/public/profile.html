@@ -216,6 +216,167 @@
   }
   function collectEducation(){return Array.from(educationBox.querySelectorAll('.education-record')).map(card=>({education_level:card.querySelector('.education-level').value,education_level_other:card.querySelector('.education-level-other').value.trim(),field_of_study:card.querySelector('.field-of-study').value,field_of_study_other:card.querySelector('.field-of-study-other').value.trim(),institution:card.querySelector('.institution').value.trim(),graduation_year:card.querySelector('.graduation-year').value,is_current:card.querySelector('.is-current').checked}));}
   function collectExperience(){return Array.from(experienceBox.querySelectorAll('.experience-record')).map(card=>({domain:card.querySelector('.domain').value,domain_other:card.querySelector('.domain-other').value.trim(),exposure_type:card.querySelector('.exposure-type').value,exposure_level:card.querySelector('.exposure-level').value,role_family:card.querySelector('.role-family').value,role_family_other:card.querySelector('.role-family-other').value.trim(),years_bucket:card.querySelector('.years-bucket').value}));}
+  const resumeFile=document.getElementById('resumeFile');
+  const parseResumeBtn=document.getElementById('parseResumeBtn');
+  const resumeStatus=document.getElementById('resumeImportStatus');
+  const resumeReview=document.getElementById('resumeReview');
+  const resumeVerify=document.getElementById('resumeVerify');
+  const saveProfileButton=form.querySelector('button[type="submit"]');
+  let resumeImportState='manual';
+  const setResumeStatus=(message,state='')=>{
+    resumeStatus.textContent=message;
+    resumeStatus.className='profile-gate-status'+(state?' '+state:'');
+  };
+  const setSaveEnabled=enabled=>{if(saveProfileButton)saveProfileButton.disabled=!enabled;};
+  async function extractResumeText(file){
+    const ext=file.name.toLowerCase().split('.').pop();
+    if(ext==='txt') return await file.text();
+    if(ext==='docx'){
+      if(!window.mammoth?.extractRawText) throw new Error('DOCX extraction library did not load. Try a PDF or TXT file, or fill the profile manually.');
+      const result=await window.mammoth.extractRawText({arrayBuffer:await file.arrayBuffer()});
+      return result.value||'';
+    }
+    if(ext==='pdf'){
+      if(!window.pdfjsLib?.getDocument) throw new Error('PDF extraction library did not load. Try a DOCX or TXT file, or fill the profile manually.');
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const doc=await window.pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+      const pages=[];
+      for(let pageNo=1;pageNo<=doc.numPages;pageNo++){
+        const page=await doc.getPage(pageNo);
+        const text=await page.getTextContent();
+        pages.push(text.items.map(item=>item.str||'').join(' '));
+      }
+      return pages.join('\n');
+    }
+    throw new Error('Unsupported file type. Choose a PDF, DOCX or TXT resume.');
+  }
+  function firstMatch(text,patterns){
+    for(const pattern of patterns){const match=text.match(pattern);if(match&&match[1])return match[1].trim();}
+    return '';
+  }
+  function extractResumeFields(text){
+    const clean=text.replace(/\r/g,'\n').replace(/[\t\u00a0]+/g,' ').replace(/[ ]{2,}/g,' ').replace(/\n{3,}/g,'\n\n');
+    const lines=clean.split('\n').map(line=>line.trim()).filter(Boolean);
+    const email=(clean.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)||[])[0]||'';
+    const phone=(clean.match(/(?:\+?\d[\d ()-]{7,}\d)/)||[])[0]||'';
+    const nameCandidates=lines.slice(0,8).filter(line=>line.length<=65&&!/@|https?:|linkedin|resume|curriculum vitae/i.test(line)&&!/[0-9]{3,}/.test(line));
+    const name=nameCandidates.find(line=>/^[A-Za-z][A-Za-z .'-]{2,}$/.test(line))||'';
+    const role=firstMatch(clean,[
+      /(?:current\s+role|current\s+position|designation|job\s+title|professional\s+title)\s*[:\-]\s*([^\n|]{2,90})/i,
+      /(?:working\s+as|currently\s+(?:working\s+as|employed\s+as))\s+([^\n,.|]{2,90})/i
+    ]);
+    const experience=firstMatch(clean,[
+      /(?:total\s+)?(?:professional\s+)?experience\s*[:\-]\s*(\d+(?:\.\d+)?\s*\+?\s*(?:years?|yrs?)(?:\s*\d+\s*months?)?)/i,
+      /(\d+(?:\.\d+)?\s*\+?\s*(?:years?|yrs?)\s+(?:of\s+)?experience)/i
+    ]);
+    const industry=firstMatch(clean,[
+      /industry\s*[:\-]\s*([^\n|]{2,70})/i,
+      /sector\s*[:\-]\s*([^\n|]{2,70})/i
+    ]);
+    const educationSection=clean.match(/(?:education|academic background|qualifications)\s*[:\n]([\s\S]{0,1400}?)(?=\n\s*(?:experience|employment|projects|skills|certifications|achievements|summary|professional profile)\b|$)/i);
+    const educationText=educationSection?educationSection[1]:clean;
+    const degreePatterns=[
+      /\b(Ph\.?D\.?|Doctor of Philosophy)\b/i,
+      /\b(MBA|Master of Business Administration)\b/i,
+      /\b(M\.?Tech|Master of Technology|M\.?Sc|Master of Science|M\.?A\.?|Master of Arts|LL\.?M\.?|Master of Laws|M\.?Com|Master of Commerce)\b/i,
+      /\b(B\.?Tech|Bachelor of Technology|B\.?E\.?|Bachelor of Engineering|B\.?Sc|Bachelor of Science|B\.?A\.?|Bachelor of Arts|LL\.?B\.?|Bachelor of Laws|B\.?Com|Bachelor of Commerce|BCA|Bachelor of Computer Applications)\b/i,
+      /\b(12th|Higher Secondary|Senior Secondary|Class XII|10\+2)\b/i,
+      /\b(10th|Secondary School|Class X|SSLC|Matriculation)\b/i
+    ];
+    let degree='';
+    for(const pattern of degreePatterns){const m=educationText.match(pattern);if(m){degree=m[1];break;}}
+    const field=firstMatch(educationText,[
+      /(?:major|speciali[sz]ation|field of study|stream)\s*[:\-]\s*([^\n|]{2,90})/i
+    ]);
+    const institution=firstMatch(educationText,[
+      /(?:university|college|institute|school)\s*[:\-]\s*([^\n|]{2,100})/i
+    ]);
+    const graduation=firstMatch(educationText,[
+      /(?:graduation year|year of passing|completed in)\s*[:\-]?\s*((?:19|20)\d{2})/i,
+      /\b((?:19|20)\d{2})\b/
+    ]);
+    const country=firstMatch(clean,[/country\s*[:\-]\s*([^\n|]{2,60})/i]);
+    return {name,email,phone,role,experience,industry,degree,field,institution,graduation,country,hasExtractableData:!!(name||role||experience||degree||field||institution)};
+  }
+  function setSelectOrOther(select,otherInput,value,allowed){
+    if(!select||!value)return;
+    const exact=allowed.find(item=>item.toLowerCase()===value.toLowerCase());
+    if(exact){select.value=exact;select.dispatchEvent(new Event('change',{bubbles:true}));return;}
+    if(select.querySelector('option[value="Other"]')){
+      select.value='Other';select.dispatchEvent(new Event('change',{bubbles:true}));
+      if(otherInput)otherInput.value=value;
+    }else{
+      const option=document.createElement('option');option.value=value;option.textContent=value;select.appendChild(option);select.value=value;
+    }
+  }
+  function applyResumeFields(data){
+    const set=(key,value)=>{const el=form.elements[key];if(el&&value&&!String(el.value||'').trim())el.value=value;};
+    set('display_name',data.name);
+    set('country_other',data.country);
+    if(data.country)setSelectOrOther(form.elements.country,form.elements.country_other,data.country,options.countries||[]);
+    set('industry_other',data.industry);
+    if(data.industry)setSelectOrOther(industrySelect,form.elements.industry_other,data.industry,options.industries||[]);
+    if(data.role){
+      set('current_role_other',data.role);
+      refreshRoleOptions(data.role);
+      setSelectOrOther(roleSelect,form.elements.current_role_other,data.role,(options.roleTitlesByDepartment&&options.roleTitlesByDepartment[departmentSelect.value])||[]);
+    }
+    if(data.experience){
+      const value=data.experience.toLowerCase();
+      const bucket=(options.experienceBuckets||[]).find(x=>x.toLowerCase()===value||value.includes(x.toLowerCase())||x.toLowerCase().includes(value));
+      if(bucket)form.elements.experience_years.value=bucket;
+      else form.elements.experience_years.value=data.experience;
+    }
+    if(data.degree||data.field||data.institution||data.graduation){
+      const row={education_level:data.degree,field_of_study:data.field,institution:data.institution,graduation_year:data.graduation};
+      if(educationBox.children.length===1){
+        const existing=educationBox.querySelector('.education-record');
+        const empty=existing&&![...existing.querySelectorAll('input,select')].some(el=>el.type==='checkbox'?el.checked:!!el.value);
+        if(empty&&existing)existing.remove();
+      }
+      addEducationRecord(row);
+    }
+    if(data.name){namePreview.textContent=data.name;avatar.textContent=data.name.trim().split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase();}
+  }
+  resumeFile.addEventListener('change',()=>{
+    const hasFile=!!resumeFile.files?.[0];
+    resumeImportState='manual';
+    resumeReview.classList.add('hidden');
+    resumeVerify.checked=false;
+    parseResumeBtn.disabled=!hasFile;
+    setSaveEnabled(true);
+    setResumeStatus(hasFile?'Resume selected. Extracting is optional; click “Extract profile details” to prefill the form.':'No resume selected. Manual profile entry is available below.');
+  });
+  parseResumeBtn.addEventListener('click',async()=>{
+    const file=resumeFile.files?.[0];if(!file)return;
+    if(file.size>10*1024*1024){setResumeStatus('Please choose a file smaller than 10 MB. You can continue manually.','err');return;}
+    parseResumeBtn.disabled=true;setSaveEnabled(false);resumeImportState='processing';
+    resumeReview.classList.add('hidden');resumeVerify.checked=false;
+    setResumeStatus('Reading your resume locally…');
+    try{
+      const text=await extractResumeText(file);
+      if(!text.trim())throw new Error('No readable text found. If this is a scanned PDF, use a text-based PDF/DOCX or fill the profile manually.');
+      const data=extractResumeFields(text);
+      if(!data.hasExtractableData)throw new Error('We could not confidently identify profile fields in this resume. You can fill the profile manually.');
+      applyResumeFields(data);
+      resumeImportState='review';
+      resumeReview.classList.remove('hidden');
+      setResumeStatus('Fields have been prefilled where we could identify them. Please review every field and correct any mistakes before confirming. Extracted text is not saved automatically.','ok');
+    }catch(err){
+      resumeImportState='manual';
+      setSaveEnabled(true);
+      setResumeStatus((err?.message||'Could not read this resume.')+' Manual profile entry remains available.','err');
+    }finally{
+      parseResumeBtn.disabled=false;
+      if(resumeImportState==='review')setSaveEnabled(!!resumeVerify.checked);
+    }
+  });
+  resumeVerify.addEventListener('change',()=>{
+    if(resumeImportState==='review'){
+      setSaveEnabled(resumeVerify.checked);
+      setResumeStatus(resumeVerify.checked?'Review confirmed. You can now save your profile.':'Please verify the extracted information before saving.');
+    }
+  });
   function selectInit(){
     form.elements.country.innerHTML=optionList(options.countries,'','Select country');
     form.elements.current_department.innerHTML=optionList(options.departments,'','Select department / function');
