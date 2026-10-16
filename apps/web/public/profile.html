@@ -1,4 +1,13 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet"><title>My Profile — Career Diya</title><link rel="stylesheet" href="assets/site.css"><link rel="stylesheet" href="assets/design-system-v2.css"></head><body>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet"><title>My Profile — Career Diya</title><link rel="stylesheet" href="assets/site.css"><link rel="stylesheet" href="assets/design-system-v2.css"><style id="resume-import-css">
+.resume-import-card{border:1px solid #dce3f5;border-radius:18px;background:#f8f9ff;padding:22px}
+.resume-import-controls{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:14px 0}
+.resume-file-label{display:grid;gap:7px;font-weight:600;color:#30364b}
+.resume-file-label input{max-width:100%;font:inherit;font-size:13px}
+.resume-review{margin-top:14px;padding:14px;border:1px solid #e4d49d;background:#fffaf0;border-radius:12px}
+.resume-verify-line{display:flex;gap:10px;align-items:flex-start;font-weight:600}
+.resume-verify-line input{margin-top:4px}
+#profileForm button[type="submit"]:disabled{opacity:.5;cursor:not-allowed}
+</style></head><body>
 <header class="site-header"><div class="container nav"><a href="index.html"><img class="logo" src="assets/careerdiya-horizontal-lockup.svg" alt="Career Diya"></a><nav class="navlinks"><a href="explore.html">Explore Careers</a><a href="paths.html">Career Paths</a><a href="assessment.html">Assessment</a><a href="counselling.html">Counselling</a><a href="resources.html">Resources</a><a href="courses.html">Courses &amp; Training</a></nav><a class="profile-menu guest" data-profile-menu href="javascript:void(0)"><span class="profile-avatar">?</span></a></div></header>
 <main class="profile-page"><div class="container">
   <div class="page-hero mural-band" style="border-bottom:0;padding-bottom:20px"><div class="eyebrow">My Profile</div><h1>Tell Career Diya More About You.</h1><p>The more you choose to share, the more relevant your future career guidance can become.</p></div>
@@ -6,6 +15,22 @@
     <aside class="profile-side"><div class="profile-side-card"><div class="profile-big-avatar" id="profileAvatar">?</div><h3 id="profileNamePreview">Your Profile</h3><p>Private to your Career Diya account.</p><a class="btn btn-secondary" href="dashboard.html">Back To My Career</a></div></aside>
     <section class="profile-form-card">
       <form id="profileForm" class="profile-edit-form">
+        <section class="profile-section resume-import-card" aria-labelledby="resumeImportTitle">
+          <div class="eyebrow">Optional shortcut</div>
+          <h2 id="resumeImportTitle">Fill your profile from a resume</h2>
+          <p class="profile-section-note">Upload a PDF, DOCX or TXT resume. Career Diya will extract details in your browser and prefill fields it can identify. Your resume is not uploaded to a server by this feature. Review every field and correct anything that is wrong before saving. You can skip this and fill the profile manually.</p>
+          <div class="resume-import-controls">
+            <label class="resume-file-label">Choose resume
+              <input id="resumeFile" type="file" accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain">
+            </label>
+            <button class="btn btn-secondary" id="parseResumeBtn" type="button" disabled>Extract profile details</button>
+          </div>
+          <p id="resumeImportStatus" class="profile-gate-status" role="status" aria-live="polite">No resume selected. Manual profile entry is available below.</p>
+          <div id="resumeReview" class="resume-review hidden">
+            <label class="resume-verify-line"><input type="checkbox" id="resumeVerify"> I reviewed the extracted information, corrected any mistakes, and confirm it is accurate enough to save.</label>
+            <p class="field-help">Save My Profile will remain disabled until you confirm this review. You can still edit any field before saving.</p>
+          </div>
+        </section>
         <div class="profile-section">
           <div class="eyebrow">Personal</div><h2>About You</h2>
           <div class="profile-form-grid">
@@ -108,6 +133,8 @@
 </div></main>
 <footer class="footer"><div class="container footer-grid"><div><img class="logo" src="assets/careerdiya-horizontal-lockup-white.svg" alt="Career Diya"><p style="color:#f8f8f9;max-width:430px">Career guidance that helps you make the next decision with more clarity.</p><small class="footer-unit">Unit of Swakojo Group</small></div><div><b>Explore</b><a href="explore.html">Career Explorer</a><a href="paths.html">Career Paths</a><a href="assessment.html">Assessment</a></div><div><b>Guidance</b><a href="counselling.html">Counselling</a><a href="dashboard.html">My Career</a><a href="resources.html">Resources</a></div><div><b>Career Ecosystem</b><a href="courses.html">Courses &amp; Training</a><a href="https://careerdiya.edumilestones.com/">Deeper Assessment</a></div></div></footer>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="assets/supabase-config.js"></script><script src="assets/profile-options.js"></script><script src="assets/profile-auth.js"></script><script src="assets/site.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 (async()=>{
   const auth=window.CareerDiyaProfileAuth, options=window.CAREER_DIYA_PROFILE_OPTIONS||{};
