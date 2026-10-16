@@ -317,9 +317,19 @@
     set('industry_other',data.industry);
     if(data.industry)setSelectOrOther(industrySelect,form.elements.industry_other,data.industry,options.industries||[]);
     if(data.role){
-      set('current_role_other',data.role);
       refreshRoleOptions(data.role);
-      setSelectOrOther(roleSelect,form.elements.current_role_other,data.role,(options.roleTitlesByDepartment&&options.roleTitlesByDepartment[departmentSelect.value])||[]);
+      const roleOptions=(options.roleTitlesByDepartment&&options.roleTitlesByDepartment[departmentSelect.value])||[];
+      const exactRole=roleOptions.find(item=>item.toLowerCase()===data.role.toLowerCase());
+      if(exactRole){
+        roleSelect.value=exactRole;
+        form.elements.current_role_other.value='';
+      }else if(roleSelect.querySelector('option[value="Other"]')){
+        roleSelect.value='Other';
+        form.elements.current_role_other.value=data.role;
+      }else{
+        const option=document.createElement('option');option.value=data.role;option.textContent=data.role;roleSelect.appendChild(option);roleSelect.value=data.role;
+      }
+      wireOther(roleSelect,form.elements.current_role_other);
     }
     if(data.experience){
       const value=data.experience.toLowerCase();
@@ -375,6 +385,20 @@
     if(resumeImportState==='review'){
       setSaveEnabled(resumeVerify.checked);
       setResumeStatus(resumeVerify.checked?'Review confirmed. You can now save your profile.':'Please verify the extracted information before saving.');
+    }
+  });
+  form.addEventListener('input',event=>{
+    if(resumeImportState==='review' && resumeVerify.checked && event.target!==resumeVerify){
+      resumeVerify.checked=false;
+      setSaveEnabled(false);
+      setResumeStatus('You changed a field after confirming. Please review the updated information and confirm again.');
+    }
+  });
+  form.addEventListener('change',event=>{
+    if(resumeImportState==='review' && resumeVerify.checked && event.target!==resumeVerify){
+      resumeVerify.checked=false;
+      setSaveEnabled(false);
+      setResumeStatus('You changed a field after confirming. Please review the updated information and confirm again.');
     }
   });
   function selectInit(){
