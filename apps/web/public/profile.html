@@ -345,6 +345,13 @@
         if(empty&&existing)existing.remove();
       }
       addEducationRecord(row);
+      const educationCard=educationBox.querySelector('.education-record:last-child');
+      if(educationCard){
+        setSelectOrOther(educationCard.querySelector('.education-level'),educationCard.querySelector('.education-level-other'),data.degree,options.educationLevels||[]);
+        setSelectOrOther(educationCard.querySelector('.field-of-study'),educationCard.querySelector('.field-of-study-other'),data.field,options.studyFields||[]);
+        wireOther(educationCard.querySelector('.education-level'),educationCard.querySelector('.education-level-other'));
+        wireOther(educationCard.querySelector('.field-of-study'),educationCard.querySelector('.field-of-study-other'));
+      }
     }
     if(data.name){namePreview.textContent=data.name;avatar.textContent=data.name.trim().split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase();}
   }
