@@ -138,7 +138,14 @@
 <script>
 (async()=>{
   const auth=window.CareerDiyaProfileAuth, options=window.CAREER_DIYA_PROFILE_OPTIONS||{};
-  if(!auth||!auth.isAuthenticated()){location.replace('auth.html?return=profile');return;}
+  if(!auth){location.replace('auth.html?return=profile');return;}
+  try {
+    const session=await auth.refreshLocalSession();
+    if(!session){location.replace('auth.html?return=profile');return;}
+  } catch(err) {
+    console.error('Career Diya profile session restore failed:',err);
+    location.replace('auth.html?return=profile');return;
+  }
   const form=document.getElementById('profileForm'), status=document.getElementById('profileStatus');
   const currentWorkSection=document.getElementById('currentWorkSection');
   const audienceSelect=document.getElementById('profileAudience');
