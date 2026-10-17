@@ -6,7 +6,14 @@
 <section class="section" style="padding:28px 0"><div class="section-head"><div><div class="eyebrow">Remembered Context</div><h2 style="font-size:30px">Career Vault</h2><p>Thoughts and pursuits you have asked Career Diya to remember.</p></div><a class="btn btn-secondary" href="vault.html">Open Vault →</a></div><div id="vaultPreview" class="cards"></div></section><section class="section" style="padding:28px 0"><div class="section-head"><div><div class="eyebrow">Career Repository</div><h2 style="font-size:30px">Your Career Directions</h2><p>Career choices you have explicitly started pursuing through Career Diya.</p></div></div><div id="careerDirections" class="cards"><div class="notice">Loading…</div></div></section><section class="section" style="padding:28px 0"><div class="career-card" style="background:linear-gradient(135deg,#fffdf7,#eef2fb)"><div class="eyebrow">Career Vault</div><h2 style="font-size:30px;margin:8px 0">Have career thoughts you don't know what to do with yet?</h2><p>Put aspirations, side gigs, learning ideas, experiments and other pursuits here. Career Diya will help you add context and organize them over time.</p><a class="btn btn-primary" href="vault.html">Open my Career Vault →</a></div></section><section><div class="redirect-strip"><div><strong>Need More Evidence?</strong><p>Open the deeper assessment when you want a fuller assessment/report journey.</p></div><a class="btn btn-secondary" href="https://careerdiya.edumilestones.com/career-lab/">Open Deeper Assessment</a></div></section></main></div><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="assets/supabase-config.js"></script><script src="assets/profile-auth.js"></script><script src="assets/site.js"></script><script>
 (async()=>{
   const auth=window.CareerDiyaProfileAuth;
-  if(!auth||!auth.isAuthenticated()){location.replace('auth.html?return=dashboard');return;}
+  if(!auth){location.replace('auth.html?return=dashboard');return;}
+  try {
+    const session=await auth.refreshLocalSession();
+    if(!session){location.replace('auth.html?return=dashboard');return;}
+  } catch(err) {
+    console.error('Career Diya dashboard session restore failed:',err);
+    location.replace('auth.html?return=dashboard');return;
+  }
 
   const notice=document.getElementById('profileNotice');
   const grid=document.getElementById('dashGrid');
