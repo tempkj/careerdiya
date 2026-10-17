@@ -44,8 +44,30 @@
     const client = getSupabaseClient();
     const { data, error } = await client.auth.getSession();
     if (error) throw error;
-    if (data && data.session) rememberSession(data.session); else localStorage.removeItem('careerdiya_auth_session');
-    return data && data.session ? data.session : null;
+    let session = data && data.session ? data.session : null;
+
+    // Older Career Diya flows also cached a session under a product-specific key.
+    // If Supabase JS has no session but that cache has both tokens, restore it into
+    // the SDK so PostgREST requests carry the user's JWT instead of the anon key.
+    if (!session) {
+      let cached = null;
+      try { cached = JSON.parse(localStorage.getItem('careerdiya_auth_session') || 'null'); } catch (_) {}
+      if (cached && cached.access_token && cached.refresh_token) {
+        const restored = await client.auth.setSession({
+          access_token: cached.access_token,
+          refresh_token: cached.refresh_token
+        });
+        if (restored.error) {
+          localStorage.removeItem('careerdiya_auth_session');
+          throw restored.error;
+        }
+        session = restored.data && restored.data.session ? restored.data.session : null;
+      }
+    }
+
+    if (session) rememberSession(session);
+    else localStorage.removeItem('careerdiya_auth_session');
+    return session;
   }
 
   async function signUp({ name, email, password, audience }) {
@@ -374,6 +396,7 @@
 
 
   async function getEducationRecords() {
+    await refreshLocalSession();
     if (!isAuthenticated()) return [];
     const client = getSupabaseClient();
     const { data, error } = await coreTable('career_diya_profile_education')
@@ -383,6 +406,7 @@
   }
 
   async function getExperienceRecords() {
+    await refreshLocalSession();
     if (!isAuthenticated()) return [];
     const client = getSupabaseClient();
     const { data, error } = await coreTable('career_diya_profile_experience')
@@ -465,6 +489,7 @@
   }
 
   async function getSavedExploration() {
+    await refreshLocalSession();
     if (!isAuthenticated()) return null;
     const client = getSupabaseClient();
     const { data: sessionData, error: sessionError } = await client.auth.getSession();
@@ -541,6 +566,7 @@
   }
 
   async function getVaultItems() {
+    await refreshLocalSession();
     if (!isAuthenticated()) return [];
     const { data, error } = await coreTable('career_diya_vault_item')
       .select('*').order('updated_at', { ascending: false });
@@ -581,6 +607,7 @@
   }
 
   async function getCareerDirections() {
+    await refreshLocalSession();
     if (!isAuthenticated()) return [];
     const { data, error } = await coreTable('career_diya_direction')
       .select('*').order('updated_at', { ascending: false });
