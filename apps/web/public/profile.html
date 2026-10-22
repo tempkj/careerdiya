@@ -262,48 +262,89 @@
     return '';
   }
   function extractResumeFields(text){
-    const clean=text.replace(/\r/g,'\n').replace(/[\t\u00a0]+/g,' ').replace(/[ ]{2,}/g,' ').replace(/\n{3,}/g,'\n\n');
+    // Preserve line boundaries: DOCX/PDF extraction often uses them to separate
+    // role, qualification, institution and date-range evidence.
+    const clean=String(text||'').replace(/\r/g,'\n').replace(/[\t\u00a0]+/g,' ').replace(/[ ]{2,}/g,' ').replace(/\n[ ]+/g,'\n').replace(/\n{3,}/g,'\n\n');
     const lines=clean.split('\n').map(line=>line.trim()).filter(Boolean);
     const email=(clean.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)||[])[0]||'';
     const phone=(clean.match(/(?:\+?\d[\d ()-]{7,}\d)/)||[])[0]||'';
-    const nameCandidates=lines.slice(0,8).filter(line=>line.length<=65&&!/@|https?:|linkedin|resume|curriculum vitae/i.test(line)&&!/[0-9]{3,}/.test(line));
+    const nameCandidates=lines.slice(0,10).filter(line=>line.length<=65&&!/@|https?:|linkedin|resume|curriculum vitae/i.test(line)&&!/[0-9]{3,}/.test(line));
     const name=nameCandidates.find(line=>/^[A-Za-z][A-Za-z .'-]{2,}$/.test(line))||'';
-    const role=firstMatch(clean,[
-      /(?:current\s+role|current\s+position|designation|job\s+title|professional\s+title)\s*[:\-]\s*([^\n|]{2,90})/i,
+    let role=firstMatch(clean,[
+      /(?:current\s+role|current\s+position|designation|job\s+title|professional\s+title|role)\s*[:\-]\s*([^\n|]{2,90})/i,
       /(?:working\s+as|currently\s+(?:working\s+as|employed\s+as))\s+([^\n,.|]{2,90})/i
     ]);
-    const experience=firstMatch(clean,[
+    if(!role){
+      const roleLine=lines.find(line=>line.length<=90&&!/@|https?:|\b(?:19|20)\d{2}\b/.test(line)&&/\b(?:engineer|developer|architect|manager|lead|director|analyst|consultant|tester|qa|quality|designer|scientist|administrator|specialist|coordinator|executive|officer|intern|teacher|lawyer|counsel)\b/i.test(line)&&!/\b(?:seeking|objective|responsibilities|skills|experience|education)\b/i.test(line));
+      if(roleLine)role=roleLine.replace(/\s*[|•].*$/,'').trim();
+    }
+    let experience=firstMatch(clean,[
       /(?:total\s+)?(?:professional\s+)?experience\s*[:\-]\s*(\d+(?:\.\d+)?\s*\+?\s*(?:years?|yrs?)(?:\s*\d+\s*months?)?)/i,
-      /(\d+(?:\.\d+)?\s*\+?\s*(?:years?|yrs?)\s+(?:of\s+)?experience)/i
+      /(\d+(?:\.\d+)?\s*\+?\s*(?:years?|yrs?)\s+(?:of\s+)?experience)/i,
+      /(?:over|more than)\s+(\d+(?:\.\d+)?\s+years?)/i
     ]);
-    const industry=firstMatch(clean,[
-      /industry\s*[:\-]\s*([^\n|]{2,70})/i,
-      /sector\s*[:\-]\s*([^\n|]{2,70})/i
-    ]);
-    const educationSection=clean.match(/(?:education|academic background|qualifications)\s*[:\n]([\s\S]{0,1400}?)(?=\n\s*(?:experience|employment|projects|skills|certifications|achievements|summary|professional profile)\b|$)/i);
+    if(!experience){
+      const dateMatches=[...clean.matchAll(/\b((?:19|20)\d{2})\s*(?:-|–|—|to)\s*(Present|Current|(?:19|20)\d{2})\b/gi)];
+      if(dateMatches.length){
+        const years=dateMatches.reduce((sum,m)=>sum+Math.max(0,(String(m[2]).match(/present|current/i)?new Date().getFullYear():Number(m[2]))-Number(m[1])),0);
+        if(years>0)experience=years+' years';
+      }
+    }
+    let industry=firstMatch(clean,[/industry\s*[:\-]\s*([^\n|]{2,70})/i,/sector\s*[:\-]\s*([^\n|]{2,70})/i]);
+    if(!industry){
+      const industryHints=[
+        [/\b(software|information technology|\bIT services\b|SaaS|cloud computing)\b/i,'Technology'],
+        [/\b(bank|banking|financial services|insurance|fintech)\b/i,'Financial Services'],
+        [/\b(hospital|healthcare|pharma|pharmaceutical|clinical)\b/i,'Healthcare & Pharmaceuticals'],
+        [/\b(education|university|school|teaching)\b/i,'Education'],
+        [/\b(consulting|consultancy)\b/i,'Consulting'],
+        [/\b(manufacturing|factory|production)\b/i,'Manufacturing'],
+        [/\b(retail|e-commerce|ecommerce)\b/i,'Retail & E-commerce']
+      ];
+      const hit=industryHints.find(([pattern])=>pattern.test(clean));
+      if(hit)industry=hit[1];
+    }
+    const educationSection=clean.match(/(?:education|academic background|qualifications|academic details)\s*[:\n]([\s\S]{0,1800}?)(?=\n\s*(?:experience|employment|projects|skills|certifications|achievements|summary|professional profile|awards)\b|$)/i);
     const educationText=educationSection?educationSection[1]:clean;
     const degreePatterns=[
-      /\b(Ph\.?D\.?|Doctor of Philosophy)\b/i,
-      /\b(MBA|Master of Business Administration)\b/i,
-      /\b(M\.?Tech|Master of Technology|M\.?Sc|Master of Science|M\.?A\.?|Master of Arts|LL\.?M\.?|Master of Laws|M\.?Com|Master of Commerce)\b/i,
-      /\b(B\.?Tech|Bachelor of Technology|B\.?E\.?|Bachelor of Engineering|B\.?Sc|Bachelor of Science|B\.?A\.?|Bachelor of Arts|LL\.?B\.?|Bachelor of Laws|B\.?Com|Bachelor of Commerce|BCA|Bachelor of Computer Applications)\b/i,
-      /\b(12th|Higher Secondary|Senior Secondary|Class XII|10\+2)\b/i,
-      /\b(10th|Secondary School|Class X|SSLC|Matriculation)\b/i
+      [/\b(?:Ph\.?D\.?|Doctor of Philosophy)\b/i,'Doctoral'],
+      [/\b(?:MBA|Master of Business Administration|M\.?Tech|Master of Technology|M\.?Sc|Master of Science|M\.?A\.?|Master of Arts|LL\.?M\.?|Master of Laws|M\.?Com|Master of Commerce|M\.?E\.?|Master of Engineering|MCA|Master of Computer Applications)\b/i,'Postgraduate'],
+      [/\b(?:B\.?Tech|Bachelor of Technology|B\.?E\.?|Bachelor of Engineering|B\.?Sc|Bachelor of Science|B\.?A\.?|Bachelor of Arts|LL\.?B\.?|Bachelor of Laws|B\.?Com|Bachelor of Commerce|BCA|Bachelor of Computer Applications|Bachelor of Design|BBA|Bachelor of Business Administration)\b/i,'Undergraduate'],
+      [/\b(?:12th|Higher Secondary|Senior Secondary|Class XII|10\+2|HSC)\b/i,'School'],
+      [/\b(?:10th|Secondary School|Class X|SSLC|Matriculation)\b/i,'School'],
+      [/\b(?:diploma|polytechnic)\b/i,'Diploma']
     ];
     let degree='';
-    for(const pattern of degreePatterns){const m=educationText.match(pattern);if(m){degree=m[1];break;}}
-    const field=firstMatch(educationText,[
-      /(?:major|speciali[sz]ation|field of study|stream)\s*[:\-]\s*([^\n|]{2,90})/i
-    ]);
+    for(const [pattern,level] of degreePatterns){if(pattern.test(educationText)){degree=level;break;}}
+    const degreeLine=lines.find(line=>/\b(?:b\.?e\.?|b\.?tech|bachelor|m\.?tech|master|mba|mca|ph\.?d|diploma|class\s+(?:x|xii)|12th|10th)\b/i.test(line));
+    let field=firstMatch(educationText,[/(?:major|speciali[sz]ation|field of study|stream|discipline)\s*[:\-]\s*([^\n|]{2,90})/i]);
+    if(!field&&degreeLine){
+      const afterDegree=degreeLine.match(/\b(?:in|of)\s+([A-Za-z][A-Za-z &/.-]{2,65}?)(?=\s*(?:,|\||\(|\b(?:20)\d{2}\b|$))/i);
+      if(afterDegree)field=afterDegree[1].trim().replace(/[.,;]+$/,'');
+    }
+    if(!field){
+      const fieldHints=[
+        [/\b(computer science|computer engineering|information technology|software engineering)\b/i,'Computer Science & IT'],
+        [/\b(electrical|mechanical|civil|electronics|chemical|automobile|instrumentation) engineering\b/i,'Engineering'],
+        [/\b(business administration|management studies|business management)\b/i,'Business & Management'],
+        [/\b(accounting|accountancy|commerce)\b/i,'Commerce'],
+        [/\b(finance|financial management)\b/i,'Finance & Accounting'],
+        [/\b(mathematics|statistics)\b/i,'Mathematics & Statistics'],
+        [/\b(law|legal studies)\b/i,'Law']
+      ];
+      const hit=fieldHints.find(([pattern])=>pattern.test(educationText));
+      if(hit)field=hit[1];
+    }
     const institution=firstMatch(educationText,[
-      /(?:university|college|institute|school)\s*[:\-]\s*([^\n|]{2,100})/i
+      /(?:institution|university|college|institute|school)\s*[:\-]\s*([^\n|]{2,100})/i,
+      /(?:at|from)\s+([A-Z][A-Za-z&.' -]{2,80}\b(?:University|College|Institute|School)\b[^\n|]{0,25})/
     ]);
     const graduation=firstMatch(educationText,[
-      /(?:graduation year|year of passing|completed in)\s*[:\-]?\s*((?:19|20)\d{2})/i,
+      /(?:graduation year|year of passing|completed in|year)\s*[:\-]?\s*((?:19|20)\d{2})/i,
       /\b((?:19|20)\d{2})\b/
     ]);
     const country=firstMatch(clean,[/country\s*[:\-]\s*([^\n|]{2,60})/i]);
-    return {name,email,phone,role,experience,industry,degree,field,institution,graduation,country,hasExtractableData:!!(name||role||experience||degree||field||institution)};
+    return {name,email,phone,role,experience,industry,degree,field,institution,graduation,country,hasExtractableData:!!(name||role||experience||degree||field||institution||industry)};
   }
   function setSelectOrOther(select,otherInput,value,allowed){
     if(!select||!value)return;
@@ -339,10 +380,20 @@
       wireOther(roleSelect,form.elements.current_role_other);
     }
     if(data.experience){
-      const value=data.experience.toLowerCase();
-      const bucket=(options.experienceBuckets||[]).find(x=>x.toLowerCase()===value||value.includes(x.toLowerCase())||x.toLowerCase().includes(value));
+      const yearsMatch=String(data.experience).match(/(\d+(?:\.\d+)?)/);
+      const years=yearsMatch?Number(yearsMatch[1]):NaN;
+      let bucket='';
+      if(/less than 1|under 1|<\s*1/i.test(data.experience))bucket='Less than 1 year';
+      else if(Number.isFinite(years)){
+        if(years<1)bucket='Less than 1 year';
+        else if(years<=2)bucket='1–2 years';
+        else if(years<=5)bucket='3–5 years';
+        else if(years<=10)bucket='6–10 years';
+        else if(years<=15)bucket='11–15 years';
+        else if(years<=20)bucket='16–20 years';
+        else bucket='20+ years';
+      }
       if(bucket)form.elements.experience_years.value=bucket;
-      else form.elements.experience_years.value=data.experience;
     }
     if(data.degree||data.field||data.institution||data.graduation){
       const row={education_level:data.degree,field_of_study:data.field,institution:data.institution,graduation_year:data.graduation};
@@ -354,6 +405,8 @@
       addEducationRecord(row);
       const educationCard=educationBox.querySelector('.education-record:last-child');
       if(educationCard){
+        // Store the controlled category when recognised, rather than putting a
+        // degree's literal text (e.g. "Bachelor of Engineering") into Other.
         setSelectOrOther(educationCard.querySelector('.education-level'),educationCard.querySelector('.education-level-other'),data.degree,options.educationLevels||[]);
         setSelectOrOther(educationCard.querySelector('.field-of-study'),educationCard.querySelector('.field-of-study-other'),data.field,options.studyFields||[]);
         wireOther(educationCard.querySelector('.education-level'),educationCard.querySelector('.education-level-other'));
