@@ -348,8 +348,8 @@
   }
   async function parseResumeWithAI(text){
     const cfg=window.CAREER_DIYA_SUPABASE;
-    if(!cfg?.url||!cfg?.anonKey||!window.auth?.refreshLocalSession) throw new Error('AI parsing is not configured in this session.');
-    const session=await window.auth.refreshLocalSession();
+    if(!cfg?.url||!cfg?.anonKey||!auth?.refreshLocalSession) throw new Error('AI parsing is not configured in this session.');
+    const session=await auth.refreshLocalSession();
     if(!session?.access_token) throw new Error('Please sign in again to use AI resume parsing.');
     const response=await fetch(cfg.url.replace(/\\/$/,'')+'/functions/v1/parse-resume',{
       method:'POST',
