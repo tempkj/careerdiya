@@ -346,6 +346,26 @@
     const country=firstMatch(clean,[/country\s*[:\-]\s*([^\n|]{2,60})/i]);
     return {name,email,phone,role,experience,industry,degree,field,institution,graduation,country,hasExtractableData:!!(name||role||experience||degree||field||institution||industry)};
   }
+  async function parseResumeWithAI(text){
+    const cfg=window.CAREER_DIYA_SUPABASE;
+    if(!cfg?.url||!cfg?.anonKey||!window.auth?.refreshLocalSession) throw new Error('AI parsing is not configured in this session.');
+    const session=await window.auth.refreshLocalSession();
+    if(!session?.access_token) throw new Error('Please sign in again to use AI resume parsing.');
+    const response=await fetch(cfg.url.replace(/\\/$/,'')+'/functions/v1/parse-resume',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':cfg.anonKey,'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({text:String(text||'').slice(0,30000)})
+    });
+    const payload=await response.json().catch(()=>({}));
+    if(!response.ok) throw new Error(payload.error||'AI parsing is temporarily unavailable.');
+    const fields=payload.fields;
+    if(!fields||typeof fields!=='object') throw new Error('AI returned an invalid profile result.');
+    const keys=['name','email','phone','role','experience','industry','degree','field','institution','graduation','country'];
+    const data={};
+    for(const key of keys)data[key]=typeof fields[key]==='string'?fields[key].trim().slice(0,160):'';
+    data.hasExtractableData=!!(data.name||data.role||data.experience||data.degree||data.field||data.institution||data.industry||data.email||data.phone);
+    return data;
+  }
   function setSelectOrOther(select,otherInput,value,allowed){
     if(!select||!value)return;
     const exact=allowed.find(item=>item.toLowerCase()===value.toLowerCase());
@@ -433,12 +453,20 @@
     try{
       const text=await extractResumeText(file);
       if(!text.trim())throw new Error('No readable text found. If this is a scanned PDF, use a text-based PDF/DOCX or fill the profile manually.');
-      const data=extractResumeFields(text);
+      let data,sourceNote='';
+      try{
+        setResumeStatus('Using AI to identify profile details…');
+        data=await parseResumeWithAI(text);
+        sourceNote='AI-assisted extraction completed. ';
+      }catch(aiError){
+        data=extractResumeFields(text);
+        sourceNote='AI parsing was unavailable, so the local parser was used instead. ';
+      }
       if(!data.hasExtractableData)throw new Error('We could not confidently identify profile fields in this resume. You can fill the profile manually.');
       applyResumeFields(data);
       resumeImportState='review';
       resumeReview.classList.remove('hidden');
-      setResumeStatus('Fields have been prefilled where we could identify them. Please review every field and correct any mistakes before confirming. Extracted text is not saved automatically.','ok');
+      setResumeStatus(sourceNote+'Fields have been prefilled where identified. Review every field and correct mistakes before confirming. Nothing is saved until you confirm and submit.','ok');
     }catch(err){
       resumeImportState='manual';
       setSaveEnabled(true);
