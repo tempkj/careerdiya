@@ -29,12 +29,6 @@ serve(async (req) => {
       ["name", "email", "phone", "role", "experience", "industry", "degree", "field", "institution", "graduation", "country"]
         .map((name) => [name, { type: "string" }]),
     );
-    const schema = {
-      type: "object",
-      additionalProperties: false,
-      properties,
-      required: Object.keys(properties),
-    };
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
