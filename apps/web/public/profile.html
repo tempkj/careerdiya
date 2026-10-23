@@ -351,7 +351,7 @@
     if(!cfg?.url||!cfg?.anonKey||!auth?.refreshLocalSession) throw new Error('AI parsing is not configured in this session.');
     const session=await auth.refreshLocalSession();
     if(!session?.access_token) throw new Error('Please sign in again to use AI resume parsing.');
-    const response=await fetch(cfg.url.replace(/\\/$/,'')+'/functions/v1/parse-resume',{
+    const response=await fetch(cfg.url.replace(/\/$/,'')+'/functions/v1/parse-resume',{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':cfg.anonKey,'Authorization':'Bearer '+session.access_token},
       body:JSON.stringify({text:String(text||'').slice(0,30000)})
