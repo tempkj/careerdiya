@@ -435,6 +435,9 @@
       }
     }
     const educationRows=Array.isArray(data.education_records)?data.education_records:[];
+    // Remove the blank starter card before applying extracted records.
+    const blankEducation=educationBox.querySelectorAll('.education-record');
+    if(blankEducation.length===1&&!collectEducation().some(row=>row.education_level||row.field_of_study||row.institution||row.graduation_year))blankEducation[0].remove();
     educationRows.slice(0,6).forEach((item,index)=>{
       if(index===0&&(data.degree||data.field||data.institution||data.graduation))return;
       if(!item||!(item.degree||item.field||item.institution||item.graduation))return;
@@ -446,6 +449,9 @@
       }
     });
     const experienceRows=Array.isArray(data.experience_records)?data.experience_records:[];
+    // Remove the blank starter card so imported records are visible as distinct entries.
+    const blankExperience=experienceBox.querySelectorAll('.experience-record');
+    if(blankExperience.length===1&&!collectExperience().some(row=>row.domain||row.exposure_type||row.exposure_level||row.role_family||row.years_bucket))blankExperience[0].remove();
     experienceRows.slice(0,8).forEach(item=>{
       if(!item||!(item.domain||item.exposure_type||item.role_family))return;
       addExperienceRecord({domain:item.domain,exposure_type:item.exposure_type,exposure_level:item.exposure_level,role_family:item.role_family,years_bucket:item.years_bucket});
@@ -475,6 +481,7 @@
     selectEvidenceChips('weaknesses',options.developmentAreas||[],data.development_areas);
     selectEvidenceChips('learningPreferences',options.learningPreferences||[],data.learning_preferences);
     selectEvidenceChips('careerInterests',options.careerInterests||[],data.career_interests);
+    const importedCounts=[educationRows.length,experienceRows.length,(data.strengths||[]).length,(data.development_areas||[]).length].join(', ');
     if(data.name){namePreview.textContent=data.name;avatar.textContent=data.name.trim().split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase();}
   }
   resumeFile.addEventListener('change',()=>{
