@@ -363,7 +363,8 @@
     const keys=['name','email','phone','role','experience','industry','degree','field','institution','graduation','country'];
     const data={};
     for(const key of keys)data[key]=typeof fields[key]==='string'?fields[key].trim().slice(0,160):'';
-    data.hasExtractableData=!!(data.name||data.role||data.experience||data.degree||data.field||data.institution||data.industry||data.email||data.phone);
+    for(const key of ['education_records','experience_records','strengths','development_areas','learning_preferences','career_interests'])data[key]=Array.isArray(fields[key])?fields[key]:[];
+    data.hasExtractableData=!!(data.name||data.role||data.experience||data.degree||data.field||data.institution||data.industry||data.email||data.phone||data.education_records.length||data.experience_records.length||data.strengths.length);
     return data;
   }
   function setSelectOrOther(select,otherInput,value,allowed){
@@ -433,6 +434,47 @@
         wireOther(educationCard.querySelector('.field-of-study'),educationCard.querySelector('.field-of-study-other'));
       }
     }
+    const educationRows=Array.isArray(data.education_records)?data.education_records:[];
+    educationRows.slice(0,6).forEach((item,index)=>{
+      if(index===0&&(data.degree||data.field||data.institution||data.graduation))return;
+      if(!item||!(item.degree||item.field||item.institution||item.graduation))return;
+      addEducationRecord({education_level:item.degree,field_of_study:item.field,institution:item.institution,graduation_year:item.graduation});
+      const card=educationBox.querySelector('.education-record:last-child');
+      if(card){
+        setSelectOrOther(card.querySelector('.education-level'),card.querySelector('.education-level-other'),item.degree,options.educationLevels||[]);
+        setSelectOrOther(card.querySelector('.field-of-study'),card.querySelector('.field-of-study-other'),item.field,options.studyFields||[]);
+      }
+    });
+    const experienceRows=Array.isArray(data.experience_records)?data.experience_records:[];
+    experienceRows.slice(0,8).forEach(item=>{
+      if(!item||!(item.domain||item.exposure_type||item.role_family))return;
+      addExperienceRecord({domain:item.domain,exposure_type:item.exposure_type,exposure_level:item.exposure_level,role_family:item.role_family,years_bucket:item.years_bucket});
+      const card=experienceBox.querySelector('.experience-record:last-child');
+      if(card){
+        setSelectOrOther(card.querySelector('.domain'),card.querySelector('.domain-other'),item.domain,options.domains||[]);
+        if(item.exposure_type&&[...card.querySelector('.exposure-type').options].some(o=>o.value===item.exposure_type))card.querySelector('.exposure-type').value=item.exposure_type;
+        if(item.exposure_level&&[...card.querySelector('.exposure-level').options].some(o=>o.value===item.exposure_level))card.querySelector('.exposure-level').value=item.exposure_level;
+        setSelectOrOther(card.querySelector('.role-family'),card.querySelector('.role-family-other'),item.role_family,options.roleFamilies||[]);
+        if(item.years_bucket&&[...card.querySelector('.years-bucket').options].some(o=>o.value===item.years_bucket))card.querySelector('.years-bucket').value=item.years_bucket;
+      }
+    });
+    const selectEvidenceChips=(id,allowed,values)=>{
+      const box=document.getElementById(id);
+      if(!box||!Array.isArray(values))return;
+      const existing=new Set(chipValues(id));
+      values.slice(0,12).forEach(value=>{
+        if(typeof value!=='string')return;
+        const exact=allowed.find(item=>item.toLowerCase()===value.trim().toLowerCase());
+        if(exact&&!existing.has(exact)){
+          const button=[...box.querySelectorAll('.chip-option')].find(b=>b.dataset.value===exact);
+          if(button){button.classList.add('selected');existing.add(exact);}
+        }
+      });
+    };
+    selectEvidenceChips('strengths',options.strengths||[],data.strengths);
+    selectEvidenceChips('weaknesses',options.developmentAreas||[],data.development_areas);
+    selectEvidenceChips('learningPreferences',options.learningPreferences||[],data.learning_preferences);
+    selectEvidenceChips('careerInterests',options.careerInterests||[],data.career_interests);
     if(data.name){namePreview.textContent=data.name;avatar.textContent=data.name.trim().split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase();}
   }
   resumeFile.addEventListener('change',()=>{
