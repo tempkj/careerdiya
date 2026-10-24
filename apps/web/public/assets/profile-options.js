@@ -67,6 +67,12 @@ window.CAREER_DIYA_PROFILE_OPTIONS = {
   experienceBuckets: [
     'No experience','Less than 1 year','1–2 years','3–5 years','6–10 years','11–15 years','16–20 years','20+ years'
   ],
+  industryExposures: [
+    'Banking & Financial Services','Insurance','Payments & FinTech','Healthcare & Life Sciences',
+    'Retail & E-commerce','Telecommunications','Manufacturing','Education','Travel & Hospitality',
+    'Government & Public Sector','Media & Entertainment','Energy & Utilities','Logistics & Supply Chain',
+    'Real Estate & Construction','Agriculture','Professional Services','Cross-industry / Multiple','Other'
+  ],
   domains: [
     'Technology & IT','Data & AI','Engineering','Science & Research','Business & Management','Finance & Economics',
     'Marketing & Communications','Sales','Design & UX','Operations & Supply Chain','Human Resources',
