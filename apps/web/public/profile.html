@@ -251,7 +251,19 @@
       for(let pageNo=1;pageNo<=doc.numPages;pageNo++){
         const page=await doc.getPage(pageNo);
         const text=await page.getTextContent();
-        pages.push(text.items.map(item=>item.str||'').join(' '));
+        // Reconstruct line boundaries from PDF text item coordinates. Joining all
+        // items with spaces destroys headings and employer/date relationships.
+        const rows=[];
+        for(const item of (text.items||[])){
+          const value=String(item.str||'').trim();
+          if(!value)continue;
+          const y=Number(item.transform?.[5]||0);
+          let row=rows.find(entry=>Math.abs(entry.y-y)<3);
+          if(!row){row={y,parts:[]};rows.push(row);}
+          row.parts.push({x:Number(item.transform?.[4]||0),value});
+        }
+        rows.sort((a,b)=>b.y-a.y);
+        pages.push(rows.map(row=>row.parts.sort((a,b)=>a.x-b.x).map(part=>part.value).join(' ')).join('\\n'));
       }
       return pages.join('\n');
     }
@@ -583,6 +595,10 @@
       const card=experienceBox.querySelector('.experience-record:last-child');
       if(card){
         setSelectOrOther(card.querySelector('.domain'),card.querySelector('.domain-other'),item.domain,options.domains||[]);
+        if(item.industry_exposure){
+          const exposureSelect=card.querySelector('.industry-exposure');
+          if(exposureSelect)setSelectOrOther(exposureSelect,card.querySelector('.industry-exposure-other'),item.industry_exposure,options.industryExposures||[]);
+        }
         if(item.exposure_type&&[...card.querySelector('.exposure-type').options].some(o=>o.value===item.exposure_type))card.querySelector('.exposure-type').value=item.exposure_type;
         if(item.exposure_level&&[...card.querySelector('.exposure-level').options].some(o=>o.value===item.exposure_level))card.querySelector('.exposure-level').value=item.exposure_level;
         setSelectOrOther(card.querySelector('.role-family'),card.querySelector('.role-family-other'),item.role_family,options.roleFamilies||[]);
