@@ -280,8 +280,9 @@
     const lines=clean.split('\n').map(line=>line.trim()).filter(Boolean);
     const email=(clean.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)||[])[0]||'';
     const phone=(clean.match(/(?:\+?\d[\d ()-]{7,}\d)/)||[])[0]||'';
-    const nameCandidates=lines.slice(0,10).filter(line=>line.length<=65&&!/@|https?:|linkedin|resume|curriculum vitae/i.test(line)&&!/[0-9]{3,}/.test(line));
-    const name=nameCandidates.find(line=>/^[A-Za-z][A-Za-z .'-]{2,}$/.test(line))||'';
+    const nonNameHeadings=/^(?:resume|curriculum vitae|cv|professional summary|profile|summary|objective|contact|contact information|education|experience|work experience|skills|technical skills|certifications|projects|references)$/i;
+    const nameCandidates=lines.slice(0,8).filter(line=>line.length<=65&&!/@|https?:|linkedin|github\.com|curriculum vitae/i.test(line)&&!/[0-9]{3,}/.test(line)&&!nonNameHeadings.test(line.replace(/[:|•].*$/,'').trim()));
+    const name=nameCandidates.find(line=>/^[A-Za-z][A-Za-z .'-]{2,}$/.test(line)&&line.trim().split(/\s+/).length<=5)||'';
     let role=firstMatch(clean,[
       /(?:current\s+role|current\s+position|designation|job\s+title|professional\s+title|role)\s*[:\-]\s*([^\n|]{2,90})/i,
       /(?:working\s+as|currently\s+(?:working\s+as|employed\s+as))\s+([^\n,.|]{2,90})/i
@@ -298,24 +299,17 @@
     if(!experience){
       const dateMatches=[...clean.matchAll(/\b((?:19|20)\d{2})\s*(?:-|–|—|to)\s*(Present|Current|(?:19|20)\d{2})\b/gi)];
       if(dateMatches.length){
-        const years=dateMatches.reduce((sum,m)=>sum+Math.max(0,(String(m[2]).match(/present|current/i)?new Date().getFullYear():Number(m[2]))-Number(m[1])),0);
+        // Merge overlapping ranges so concurrent roles/projects are not double-counted.
+        const ranges=dateMatches.map(m=>({start:Number(m[1]),end:/present|current/i.test(m[2])?new Date().getFullYear():Number(m[2])})).filter(r=>r.end>=r.start).sort((a,b)=>a.start-b.start);
+        const merged=[];
+        for(const range of ranges){const last=merged[merged.length-1];if(last&&range.start<=last.end+1)last.end=Math.max(last.end,range.end);else merged.push({...range});}
+        const years=merged.reduce((sum,r)=>sum+r.end-r.start,0);
         if(years>0)experience=years+' years';
       }
     }
     let industry=firstMatch(clean,[/industry\s*[:\-]\s*([^\n|]{2,70})/i,/sector\s*[:\-]\s*([^\n|]{2,70})/i]);
-    if(!industry){
-      const industryHints=[
-        [/\b(software|information technology|\bIT services\b|SaaS|cloud computing)\b/i,'Technology'],
-        [/\b(bank|banking|financial services|insurance|fintech)\b/i,'Financial Services'],
-        [/\b(hospital|healthcare|pharma|pharmaceutical|clinical)\b/i,'Healthcare & Pharmaceuticals'],
-        [/\b(education|university|school|teaching)\b/i,'Education'],
-        [/\b(consulting|consultancy)\b/i,'Consulting'],
-        [/\b(manufacturing|factory|production)\b/i,'Manufacturing'],
-        [/\b(retail|e-commerce|ecommerce)\b/i,'Retail & E-commerce']
-      ];
-      const hit=industryHints.find(([pattern])=>pattern.test(clean));
-      if(hit)industry=hit[1];
-    }
+    // Do not infer a person's industry from any keyword anywhere in the resume.
+    // Client and project mentions can indicate industry exposure, not professional domain.
     const educationSection=clean.match(/(?:education|academic background|qualifications|academic details)\s*[:\n]([\s\S]{0,1800}?)(?=\n\s*(?:experience|employment|projects|skills|certifications|achievements|summary|professional profile|awards)\b|$)/i);
     const educationText=educationSection?educationSection[1]:clean;
     const degreePatterns=[
