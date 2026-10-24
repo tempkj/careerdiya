@@ -95,7 +95,7 @@ serve(async (req) => {
     // Keep the resume's explicit total experience, and guard against an
     // implausible category duration exceeding a stated total.
     const statedTotal = fields.experience as string;
-    const totalMatch = statedTotal.match(/(\\d+)\\s*\\+?\\s*years?/i);
+    const totalMatch = statedTotal.match(/(\d+)\s*\+?\s*years?/i);
     if (totalMatch) {
       const totalYears = Number(totalMatch[1]);
       const buckets: Record<string, number> = {
