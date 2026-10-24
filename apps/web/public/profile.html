@@ -344,7 +344,132 @@
       /\b((?:19|20)\d{2})\b/
     ]);
     const country=firstMatch(clean,[/country\s*[:\-]\s*([^\n|]{2,60})/i]);
-    return {name,email,phone,role,experience,industry,degree,field,institution,graduation,country,hasExtractableData:!!(name||role||experience||degree||field||institution||industry)};
+
+    // ATS-style deterministic section parser. It creates records only from text
+    // inside recognised sections and preserves the source wording for review.
+    const headingAliases={
+      education:/^(?:education|academic background|educational qualifications|qualifications|academic details|education & qualifications)\s*:?$/i,
+      experience:/^(?:professional experience|work experience|employment history|career history|work history|experience)\s*:?$/i,
+      projects:/^(?:projects|selected projects|key projects|project experience)\s*:?$/i,
+      certifications:/^(?:certifications|certificates|credentials|licenses|licences|courses & certifications)\s*:?$/i,
+      awards:/^(?:awards|honours|honors|achievements|recognition)\s*:?$/i,
+      skills:/^(?:skills|technical skills|core competencies|competencies|key skills|areas of expertise)\s*:?$/i,
+      summary:/^(?:professional summary|profile summary|career summary|summary|profile|career objective|objective|about me)\s*:?$/i
+    };
+    const sectionNames=Object.keys(headingAliases);
+    const sections={preamble:[]};let currentSection='preamble';
+    for(const line of lines){
+      const heading=sectionNames.find(key=>headingAliases[key].test(line.replace(/[•▪]+$/,'').trim()));
+      if(heading){currentSection=heading;if(!sections[heading])sections[heading]=[];continue;}
+      // Also recognise compact heading + content lines without treating long prose as a heading.
+      sections[currentSection].push(line);
+    }
+    const yearPattern=/\b(?:19|20)\d{2}\b/;
+    const degreeMatchers=[
+      [/\b(?:Ph\.?D\.?|Doctor of Philosophy|Doctorate)\b/i,'Doctoral'],
+      [/\b(?:MBA|Master of Business Administration|M\.?Tech|Master of Technology|M\.?Sc|Master of Science|M\.?A\.?|Master of Arts|LL\.?M\.?|Master of Laws|M\.?Com|Master of Commerce|M\.?E\.?|Master of Engineering|MCA|Master of Computer Applications|PGDM|Post Graduate Diploma)\b/i,'Postgraduate'],
+      [/\b(?:B\.?Tech|Bachelor of Technology|B\.?E\.?|Bachelor of Engineering|B\.?Sc|Bachelor of Science|B\.?A\.?|Bachelor of Arts|LL\.?B\.?|Bachelor of Laws|B\.?Com|Bachelor of Commerce|BCA|Bachelor of Computer Applications|BBA|Bachelor of Business Administration|Bachelor of Design)\b/i,'Undergraduate'],
+      [/\b(?:diploma|polytechnic)\b/i,'Diploma'],
+      [/\b(?:12th|higher secondary|senior secondary|class XII|10\+2|HSC|10th|secondary school|class X|SSLC|matriculation)\b/i,'School']
+    ];
+    const educationLines=sections.education||[];
+    const educationRecords=[];
+    for(let i=0;i<educationLines.length;i++){
+      const line=educationLines[i];
+      const degreeMatch=degreeMatchers.find(([pattern])=>pattern.test(line));
+      if(!degreeMatch)continue;
+      const nearby=[line,educationLines[i+1]||'',educationLines[i+2]||''].join(' | ');
+      let recordField='';
+      const fieldMatch=nearby.match(/\b(?:in|major(?:ed)? in|speciali[sz]ation(?: in)?|discipline\s*[:\-])\s+([A-Za-z][A-Za-z &/.-]{2,60}?)(?=\s*(?:\||,|\(|\b(?:19|20)\d{2}\b|$))/i);
+      if(fieldMatch)recordField=fieldMatch[1].trim();
+      const fieldHints=[
+        [/\b(computer science|computer engineering|information technology|software engineering)\b/i,'Computer Science & IT'],
+        [/\b(electrical|mechanical|civil|electronics|chemical|automobile|instrumentation) engineering\b/i,'Engineering'],
+        [/\b(business administration|management studies|business management|management)\b/i,'Business & Management'],
+        [/\b(accounting|accountancy)\b/i,'Finance & Accounting'],
+        [/\b(finance|financial management|economics)\b/i,'Finance & Accounting'],
+        [/\bcommerce\b/i,'Commerce'],
+        [/\b(mathematics|statistics)\b/i,'Mathematics & Statistics'],
+        [/\b(law|legal studies)\b/i,'Law']
+      ];
+      if(recordField){const hint=fieldHints.find(([pattern])=>pattern.test(recordField));if(hint)recordField=hint[1];}
+      if(!recordField){const hint=fieldHints.find(([pattern])=>pattern.test(nearby));if(hint)recordField=hint[1];}
+      const institutionMatch=nearby.match(/\b([A-Z][A-Za-z&.'() -]{2,90}\b(?:University|College|Institute|School)\b(?:[^|,]{0,35})?)/);
+      const years=[...nearby.matchAll(/\b((?:19|20)\d{2})\b/g)].map(m=>m[1]);
+      const record={degree:degreeMatch[1],field:recordField,institution:institutionMatch?institutionMatch[1].trim():'',graduation:years.length?years[years.length-1]:''};
+      if(!educationRecords.some(item=>JSON.stringify(item)===JSON.stringify(record)))educationRecords.push(record);
+    }
+    // If headings are absent, keep the previous single-record heuristic as a conservative fallback.
+    if(!educationRecords.length&&(degree||field||institution||graduation))educationRecords.push({degree,field,institution,graduation});
+
+    const experienceRecords=[];
+    const experienceLines=[...(sections.experience||[]),...(sections.projects||[])];
+    const dateRange=/\b((?:19|20)\d{2})\s*(?:-|–|—|to)\s*(Present|Current|(?:19|20)\d{2})\b/i;
+    const rolePattern=/\b(?:engineer|developer|architect|manager|lead|director|analyst|consultant|tester|QA|quality|designer|scientist|administrator|specialist|coordinator|executive|officer|intern|product owner|scrum master)\b/i;
+    const roleFamilyFor=(value)=>{
+      if(/quality|\bQA\b|test(?:ing|er)?|automation/i.test(value))return 'Software / Technology';
+      if(/data|analytics|machine learning|\bAI\b/i.test(value))return 'Data / AI / Analytics';
+      if(/product/i.test(value))return 'Product';
+      if(/design|UX/i.test(value))return 'Design / UX';
+      if(/finance|account|controller|treasury/i.test(value))return 'Finance / Accounting';
+      if(/human resources|\bHR\b|talent/i.test(value))return 'Human Resources';
+      if(/sales|business development/i.test(value))return 'Sales / Business Development';
+      if(/marketing|communications/i.test(value))return 'Marketing / Communications';
+      if(/consult/i.test(value))return 'Consulting';
+      if(/operations/i.test(value))return 'Operations';
+      return '';
+    };
+    const domainFor=(family,title)=>{
+      if(family==='Software / Technology')return 'Technology & IT';
+      if(family==='Data / AI / Analytics')return 'Data & AI';
+      if(family==='Product')return 'Business & Management';
+      if(family==='Design / UX')return 'Design & UX';
+      if(family==='Finance / Accounting')return 'Finance & Economics';
+      if(family==='Human Resources')return 'Human Resources';
+      if(family==='Sales / Business Development')return 'Sales';
+      if(family==='Marketing / Communications')return 'Marketing & Communications';
+      if(family==='Operations')return 'Operations & Supply Chain';
+      if(family==='Consulting')return 'Business & Management';
+      return '';
+    };
+    for(let i=0;i<experienceLines.length;i++){
+      const line=experienceLines[i];
+      if(!dateRange.test(line)&&!rolePattern.test(line))continue;
+      const nearby=experienceLines.slice(Math.max(0,i-1),Math.min(experienceLines.length,i+3));
+      const roleLine=nearby.find(item=>rolePattern.test(item)&&item.length<140)||'';
+      if(!roleLine)continue;
+      const range=line.match(dateRange)||nearby.join(' ').match(dateRange);
+      const family=roleFamilyFor(roleLine);
+      // Industry exposure is only set for explicit sector evidence in the same role block.
+      const block=nearby.join(' ');
+      let industryExposure='';
+      if(/\b(banking|bank|BFSI|financial services|payments|fintech)\b/i.test(block))industryExposure=/\b(payments|fintech)\b/i.test(block)?'Payments & FinTech':'Banking & Financial Services';
+      else if(/\b(healthcare|hospital|clinical|pharma)\b/i.test(block))industryExposure='Healthcare & Life Sciences';
+      else if(/\b(retail|e-commerce|ecommerce)\b/i.test(block))industryExposure='Retail & E-commerce';
+      const startYear=range?Number(range[1]):0;
+      const endYear=range?( /present|current/i.test(range[2])?new Date().getFullYear():Number(range[2])):0;
+      const duration=startYear&&endYear>=startYear?endYear-startYear:null;
+      let yearsBucket='';
+      if(duration!==null){if(duration<1)yearsBucket='Less than 1 year';else if(duration<=2)yearsBucket='1–2 years';else if(duration<=5)yearsBucket='3–5 years';else if(duration<=10)yearsBucket='6–10 years';else if(duration<=15)yearsBucket='11–15 years';else if(duration<=20)yearsBucket='16–20 years';else yearsBucket='20+ years';}
+      const record={domain:domainFor(family,roleLine),industry_exposure:industryExposure,exposure_type:'Work experience',exposure_level:'',role_family:family,years_bucket:yearsBucket};
+      if((record.domain||record.role_family||record.industry_exposure)&&!experienceRecords.some(item=>JSON.stringify(item)===JSON.stringify(record)))experienceRecords.push(record);
+    }
+    // Do not infer strengths, interests, or learning preferences from seniority or client industries.
+    const strengths=[];
+    const explicitStrengthLines=sections.skills||[];
+    const strengthMap=[
+      [/\banalytical thinking\b/i,'Analytical thinking'],[/\bproblem solving\b/i,'Problem solving'],
+      [/\bcommunication\b/i,'Communication'],[/\bleadership\b/i,'Leadership'],
+      [/\bcreativity\b/i,'Creativity'],[/\bresearch\b/i,'Research'],
+      [/\bwriting\b/i,'Writing'],[/\bnumerical ability\b/i,'Numerical ability'],
+      [/\brelationship building\b/i,'Relationship building'],[/\borganisation|organization\b/i,'Organisation'],
+      [/\battention to detail\b/i,'Attention to detail'],[/\bdecision making\b/i,'Decision making'],
+      [/\badaptability\b/i,'Adaptability'],[/\bcollaboration\b/i,'Collaboration'],
+      [/\bstrategic thinking\b/i,'Strategic thinking'],[/\btechnical ability\b/i,'Technical ability']
+    ];
+    for(const [pattern,label] of strengthMap){if(explicitStrengthLines.some(line=>pattern.test(line)))strengths.push(label);}
+    const countryExplicit=country||(/\bIndia\b/i.test(lines.slice(0,12).join(' '))?'India':'');
+    return {name,email,phone,role,experience,industry,degree,field,institution,graduation,country:countryExplicit,education_records:educationRecords,experience_records:experienceRecords,strengths,development_areas:[],learning_preferences:[],career_interests:[],hasExtractableData:!!(name||email||phone||role||experience||educationRecords.length||experienceRecords.length)};
   }
   async function parseResumeWithAI(text){
     const cfg=window.CAREER_DIYA_SUPABASE;
