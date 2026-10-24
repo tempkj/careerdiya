@@ -509,7 +509,9 @@
         sourceNote='AI-assisted extraction completed. ';
       }catch(aiError){
         data=extractResumeFields(text);
-        sourceNote='AI parsing was unavailable, so the local parser was used instead. ';
+        const reason=String(aiError?.message||'Unknown AI parsing error').slice(0,180);
+        sourceNote='AI parsing failed ('+reason+'); the local parser was used instead. ';
+        console.warn('Career Diya AI resume parsing failed:',aiError);
       }
       if(!data.hasExtractableData)throw new Error('We could not confidently identify profile fields in this resume. You can fill the profile manually.');
       applyResumeFields(data);
