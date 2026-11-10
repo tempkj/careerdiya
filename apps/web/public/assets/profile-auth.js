@@ -506,6 +506,24 @@
     return data || null;
   }
 
+  async function getSavedExplorations({ limit = 50 } = {}) {
+    await refreshLocalSession();
+    if (!isAuthenticated()) return [];
+    const client = getSupabaseClient();
+    const { data: sessionData, error: sessionError } = await client.auth.getSession();
+    if (sessionError) throw sessionError;
+    const session = sessionData && sessionData.session;
+    if (!session || !session.user) return [];
+    const safeLimit = Math.max(2, Math.min(Number(limit) || 50, 100));
+    const { data, error } = await coreTable('career_diya_exploration')
+      .select('id,user_id,audience,answers,result,engine_version,completed_at,pinned')
+      .eq('user_id', session.user.id)
+      .order('completed_at', { ascending: false })
+      .limit(safeLimit);
+    if (error) throw error;
+    return Array.isArray(data) ? data : [];
+  }
+
   // Fix B (state-contamination) — pure, directly testable, exported below for tests.
   // Trusts ONLY the argument the calling page passed; no fallback to any shared storage.
   function resolveHandoffCurrentRole(currentRole) {
@@ -645,5 +663,5 @@
     }
   }
 
-  window.CareerDiyaProfileAuth = { saveVaultItem, getVaultItems, updateVaultItem, deleteVaultItem, getCareerDirections, upsertCareerDirection, openCareerAsana, setCurrentRole, resolveHandoffCurrentRole, signUp, signIn, signInWithProvider, handleOAuthReturn, refreshLocalSession, ensureProfile, getProfile, saveExplorationDefaults, getExplorationDefaults, saveProfile, getEducationRecords, getExperienceRecords, saveBackground, saveExploration, getSavedExploration, setAudience, signOut, getSession, isAuthenticated };
+  window.CareerDiyaProfileAuth = { saveVaultItem, getVaultItems, updateVaultItem, deleteVaultItem, getCareerDirections, upsertCareerDirection, openCareerAsana, setCurrentRole, resolveHandoffCurrentRole, signUp, signIn, signInWithProvider, handleOAuthReturn, refreshLocalSession, ensureProfile, getProfile, saveExplorationDefaults, getExplorationDefaults, saveProfile, getEducationRecords, getExperienceRecords, saveBackground, saveExploration, getSavedExploration, getSavedExplorations, setAudience, signOut, getSession, isAuthenticated };
 })();
