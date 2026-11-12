@@ -79,8 +79,8 @@ function assessmentDestination(){
   const authenticated=hasAuthenticatedProfile();
   const profile=getStoredProfile();
   if(authenticated && profile && profile.answers){return {href:'explore.html?resume=1',label:'Explore My Assessment'};}
-  if(authenticated){return {href:'explore.html?start=1',label:'Start Exploration'};}
-  return {href:'explore.html?start=1',label:'Start Exploration'};
+  if(authenticated){return {href:'explore.html?start=1',label:'Jump straight to the questions'};}
+  return {href:'explore.html?start=1',label:'Jump straight to the questions'};
 }
 function initialsForUser(user){
   const meta=user&&user.user_metadata||{};
@@ -129,7 +129,7 @@ function syncAssessmentCtas(){
     window.CareerDiyaProfileAuth.getSavedExploration().then(saved=>{
       const finalDest=(saved && saved.answers && saved.audience)
         ? {href:'explore.html?resume=1',label:'Explore My Assessment'}
-        : {href:'explore.html?start=1',label:'Start Exploration'};
+        : {href:'explore.html?start=1',label:'Jump straight to the questions'};
       els('[data-audience-assessment-cta]').forEach(x=>{x.href=finalDest.href;x.textContent=finalDest.label;});
     }).catch(()=>{});
   }

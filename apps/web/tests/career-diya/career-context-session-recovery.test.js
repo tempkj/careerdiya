@@ -1,11 +1,11 @@
 /* Regression guard for Career Diya career-page returning-user context recovery.
- * Run: node apps/web/public/assets/career-context-session-recovery.test.js
+ * Run: node apps/web/tests/career-diya/career-context-session-recovery.test.js
  * This is a source-level guard for the static page's auth/profile orchestration;
  * it does not replace a live Supabase browser test.
  */
 const fs = require('node:fs');
 const path = require('node:path');
-const source = fs.readFileSync(path.join(__dirname, '..', 'career.html'), 'utf8');
+const source = fs.readFileSync(path.join(__dirname, '..', '..', 'public', 'career.html'), 'utf8');
 const failures = [];
 function assert(name, condition) {
   if (!condition) failures.push(name);

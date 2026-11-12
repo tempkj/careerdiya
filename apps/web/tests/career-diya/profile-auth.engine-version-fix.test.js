@@ -13,7 +13,7 @@
  * NOT NULL constraint itself, so this fails the same way a real insert would if the
  * fix regresses.
  *
- * Run: node apps/web/public/assets/profile-auth.engine-version-fix.test.js
+ * Run: node apps/web/tests/career-diya/profile-auth.engine-version-fix.test.js
  */
 const fs = require('node:fs');
 const path = require('node:path');
@@ -26,7 +26,7 @@ const assert = (name, condition, details) => {
 };
 
 function loadProfileAuth(sandbox) {
-  const src = fs.readFileSync(path.join(__dirname, 'profile-auth.js'), 'utf8');
+  const src = fs.readFileSync(path.join(__dirname, '..', '..', 'public', 'assets', 'profile-auth.js'), 'utf8');
   const ctx = vm.createContext(sandbox);
   vm.runInContext(src, ctx, { filename: 'profile-auth.js' });
   return ctx.window.CareerDiyaProfileAuth;
