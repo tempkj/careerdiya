@@ -9,7 +9,7 @@
  * so the assertions below exercise the REAL shipped markup's wireCareerAsanaBridge /
  * wireRelatedCareerOptions functions, not a reimplementation of them.
  *
- * Run: node apps/web/public/assets/career.state-leak-fix.test.js
+ * Run: node apps/web/tests/career-diya/career.state-leak-fix.test.js
  */
 const fs = require('node:fs');
 const path = require('node:path');
@@ -34,7 +34,7 @@ function makeFakeElement() {
 }
 
 async function run(scenario) {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'career.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', '..', 'public', 'career.html'), 'utf8');
   const script = extractInlineScript(html);
 
   // Lazily create (and cache) a fake element for ANY id the script asks for — the top-

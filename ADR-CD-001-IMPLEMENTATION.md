@@ -16,7 +16,7 @@ Applied to the full Career Diya + CareerAsana integrated project.
   - passes current/most-recent role into recommendation generation
   - stores routing context
   - explanation reflects the actual routing path
-- `apps/web/public/assets/tests/decision-engine.adr-cd-001.test.js`
+- `apps/web/tests/career-diya/adr-cd-001/decision-engine.adr-cd-001.test.js`
   - deterministic regression fixtures from ADR-CD-001
 
 ## Not changed

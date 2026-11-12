@@ -1,9 +1,9 @@
 /* Source-level regression guards for the optional resume-import UX.
- * Run in a checkout with: node apps/web/public/assets/profile-resume-import.test.js
+ * Run in a checkout with: node apps/web/tests/career-diya/profile-resume-import.test.js
  */
 const fs = require('node:fs');
 const path = require('node:path');
-const source = fs.readFileSync(path.join(__dirname, '..', 'profile.html'), 'utf8');
+const source = fs.readFileSync(path.join(__dirname, '..', '..', 'public', 'profile.html'), 'utf8');
 const checks = [
   ['resume upload is optional and manual entry remains available', /optional shortcut/i.test(source) && /fill the profile manually/i.test(source)],
   ['PDF, DOCX and TXT are accepted', /\.pdf,\.docx,\.txt/.test(source) && /ext==='pdf'/.test(source) && /ext==='docx'/.test(source) && /ext==='txt'/.test(source)],

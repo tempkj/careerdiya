@@ -392,3 +392,27 @@ html,body{background:var(--cd-bg-paper)!important;color:var(--cd-ink)}
 .career-context-used ul{margin:0;padding-left:18px}
 .career-context-used li,.career-context-used p{font-size:12px;line-height:1.55;color:#626979;margin:4px 0}
 .career-context-used li span{font-weight:700;color:#41485a}
+
+/* Beta fix (Nov 2026): the guest "Sign In / Create Profile" tooltip started at the avatar's
+   left edge and ran past the right side of the screen, so every page scrolled sideways on
+   phones. Anchor it to the avatar's right edge so it opens leftwards instead. */
+.profile-menu.guest::after{right:0;left:auto}
+/* Beta fix (Nov 2026): on narrow phones (360px) a course card's content was wider than the
+   single grid column, so the Courses page scrolled sideways. Let cards shrink and wrap. */
+@media(max-width:650px){
+  .course-grid{grid-template-columns:minmax(0,1fr)}
+  .course-card{min-width:0}
+  .course-card h3,.course-card p{overflow-wrap:anywhere}
+  .course-card-top{flex-wrap:wrap}
+}
+/* Beta fix (Nov 2026): legal and contact row in every footer, plus readable legal pages. */
+.footer-legal{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px 24px;margin-top:28px;padding-top:18px;border-top:1px solid rgba(255,255,255,.14);font-size:13px;color:rgba(248,248,249,.72);position:relative;z-index:1}
+.footer-legal span{display:flex;flex-wrap:wrap;gap:8px 20px}
+.footer .footer-legal a{display:inline;margin:0;color:rgba(248,248,249,.86)}
+.footer .footer-legal a:hover{color:#fff}
+.legal-page{max-width:780px}
+.legal-page h2{font-size:22px;margin:34px 0 10px}
+.legal-page p,.legal-page li{font-size:15px;line-height:1.7;color:#3f4555}
+.legal-page ul{padding-left:20px;margin:8px 0}
+.legal-page li{margin:6px 0}
+.legal-page a{color:var(--cd2-navy,#213A8F);text-decoration:underline}
