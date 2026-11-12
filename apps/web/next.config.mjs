@@ -12,7 +12,7 @@ loadDotenv({ path: resolve(__dirname, '../../.env.local'), override: true });
 
 /** @type {import('next').NextConfig} */
 const careerDiyaConfigPath = resolve(__dirname, 'public/assets/supabase-config.js');
-const careerDiyaConfig = `// Generated at Next.js startup/build from server environment.\nwindow.CAREER_DIYA_SUPABASE = {\n  url: ${JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_URL || '')},\n  anonKey: ${JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '')}\n};\n`;
+const careerDiyaConfig = `// Generated at Next.js startup/build from server environment.\nwindow.CAREER_DIYA_SUPABASE = {\n  url: ${JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_URL || '')},\n  anonKey: ${JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '')},\n  // Login toggle (see src/lib/access-mode.ts). false = visitors get an anonymous session.\n  requireLogin: ${process.env.CAREERDIYA_REQUIRE_LOGIN !== 'false'}\n};\n`;
 try {
   const fs = await import('node:fs/promises');
   await fs.mkdir(dirname(careerDiyaConfigPath), { recursive: true });

@@ -40,6 +40,28 @@
     return !!(s && s.access_token);
   }
 
+  // Login toggle (CAREERDIYA_REQUIRE_LOGIN, see apps/web/src/lib/access-mode.ts).
+  // When login is not required, a visitor without a session gets an anonymous Supabase
+  // session. Every signed-in feature then runs unchanged, and RLS still scopes the data
+  // to that visitor. If anonymous sign-ins are disabled in Supabase, this fails quietly
+  // and the normal sign-in flow applies.
+  const loginRequired = cfg.requireLogin !== false;
+
+  function isGuestSession() {
+    const s = getSession();
+    return !!(s && s.user && s.user.is_anonymous);
+  }
+
+  async function ensureGuestSession() {
+    if (loginRequired) return null;
+    const client = getSupabaseClient();
+    const current = await client.auth.getSession();
+    if (current.data && current.data.session) return rememberSession(current.data.session);
+    const { data, error } = await client.auth.signInAnonymously();
+    if (error) throw error;
+    return data && data.session ? rememberSession(data.session) : null;
+  }
+
   async function refreshLocalSession() {
     const client = getSupabaseClient();
     const { data, error } = await client.auth.getSession();
@@ -63,6 +85,11 @@
         }
         session = restored.data && restored.data.session ? restored.data.session : null;
       }
+    }
+
+    if (!session && !loginRequired) {
+      try { session = await ensureGuestSession(); }
+      catch (err) { console.warn('Career Diya guest session unavailable:', err); }
     }
 
     if (session) rememberSession(session);
@@ -645,5 +672,19 @@
     }
   }
 
-  window.CareerDiyaProfileAuth = { saveVaultItem, getVaultItems, updateVaultItem, deleteVaultItem, getCareerDirections, upsertCareerDirection, openCareerAsana, setCurrentRole, resolveHandoffCurrentRole, signUp, signIn, signInWithProvider, handleOAuthReturn, refreshLocalSession, ensureProfile, getProfile, saveExplorationDefaults, getExplorationDefaults, saveProfile, getEducationRecords, getExperienceRecords, saveBackground, saveExploration, getSavedExploration, setAudience, signOut, getSession, isAuthenticated };
+  window.CareerDiyaProfileAuth = { isLoginRequired: () => loginRequired, isGuestSession, ensureGuestSession, saveVaultItem, getVaultItems, updateVaultItem, deleteVaultItem, getCareerDirections, upsertCareerDirection, openCareerAsana, setCurrentRole, resolveHandoffCurrentRole, signUp, signIn, signInWithProvider, handleOAuthReturn, refreshLocalSession, ensureProfile, getProfile, saveExplorationDefaults, getExplorationDefaults, saveProfile, getEducationRecords, getExperienceRecords, saveBackground, saveExploration, getSavedExploration, setAudience, signOut, getSession, isAuthenticated };
+
+  // Guest bootstrap: pages check isAuthenticated() synchronously on load, so when login
+  // is not required we create the anonymous session once and reload, after which every
+  // page sees a signed-in visitor. sessionStorage stops a reload loop if sign-in fails.
+  if (!loginRequired && !isAuthenticated()) {
+    let attempted = false;
+    try { attempted = sessionStorage.getItem('careerdiya_guest_attempted') === '1'; } catch (_) {}
+    if (!attempted) {
+      try { sessionStorage.setItem('careerdiya_guest_attempted', '1'); } catch (_) {}
+      ensureGuestSession()
+        .then(session => { if (session) window.location.reload(); })
+        .catch(err => console.warn('Career Diya guest session unavailable:', err));
+    }
+  }
 })();

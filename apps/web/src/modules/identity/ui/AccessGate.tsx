@@ -31,11 +31,13 @@ export default function CareerAsanaAccessGate({
         </div>
 
         <div className="mt-6 rounded-xl border border-dashed border-gray-300 p-4">
-          <p className="text-sm font-medium text-gray-900">Paid access is being wired in.</p>
+          <p className="text-sm font-medium text-gray-900">Available on request during early access.</p>
           <p className="mt-1 text-xs leading-relaxed text-gray-500">
-            The production gate is entitlement-based. During internal preview, this screen is
-            bypassed with <code>CAREERASANA_ACCESS_MODE=preview</code>. No payment is implied by
-            preview access.
+            Write to{' '}
+            <a href="mailto:info@careerdiya.com" className="underline">
+              info@careerdiya.com
+            </a>{' '}
+            and we will set up access for you.
           </p>
         </div>
 

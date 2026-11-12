@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { isPremiumRequired } from '@/lib/access-mode';
 
 export const CAREERASANA_PRODUCT = 'careerasana';
 
@@ -6,7 +7,8 @@ export async function hasCareerAsanaAccess(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<boolean> {
-  if (process.env.CAREERASANA_ACCESS_MODE === 'preview') return true;
+  // Premium toggle (see src/lib/access-mode.ts). Off = everyone gets access.
+  if (!isPremiumRequired()) return true;
 
   const { data, error } = await (supabase as any)
     .schema('core')
