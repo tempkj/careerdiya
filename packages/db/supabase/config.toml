@@ -20,3 +20,12 @@ verify_jwt = false
 
 [functions.career-library-refresh]
 verify_jwt = true
+
+# Career Diya counsellor platform (ADR-015)
+# Razorpay calls this directly; it authenticates by webhook signature, not a JWT.
+[functions.counselling-razorpay-webhook]
+verify_jwt = false
+
+# Called on a schedule and by the webhook, with the service-role key.
+[functions.counselling-notify]
+verify_jwt = true

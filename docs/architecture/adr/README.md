@@ -26,5 +26,6 @@ These were the CTO-mandated baseline before implementation. With them recorded, 
 | [011](./ADR-011-role-substrate-derive-on-the-fly.md) | Role substrates stored; transitions derived on-the-fly, not materialized |
 | [012](./ADR-012-blueprint.md) | Blueprint model defined: derived paths, promoted to a versioned, dependency-ordered roadmap over a task library — coexists with ADR-005's Readiness-hosting decision |
 | [013](./ADR-013-blueprint-task-identification.md) | *(Proposed)* Blueprint task identification as an AI-first reasoning layer upstream of `derivePaths` — design only, build is a later chapter |
+| [015](./ADR-015-counsellor-platform-mvp.md) | *(Proposed)* Career Diya counsellor platform MVP: `core.cd_*` tables behind RLS, booking/payment RPCs, Razorpay confirmed only by signed webhook |
 
 > ADR-001 consolidates two earlier draft records (Twin-immutable + signals-append-only) into one decision. Numbering was settled pre-implementation so the foundational four sit at 001-004; from here ADRs accrete and are not renumbered.

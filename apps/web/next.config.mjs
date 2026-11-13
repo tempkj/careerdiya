@@ -26,5 +26,10 @@ const nextConfig = {
   typedRoutes: true,
   // Tell Next.js the correct monorepo root so it doesn't infer from a stray lockfile.
   outputFileTracingRoot: resolve(__dirname, '../..'),
+  // Counsellor certificate (5 MB) and report PDF (10 MB) uploads go through server actions,
+  // whose default body limit is 1 MB (ADR-015).
+  experimental: {
+    serverActions: { bodySizeLimit: '12mb' },
+  },
 };
 export default nextConfig;

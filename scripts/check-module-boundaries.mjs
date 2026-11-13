@@ -35,6 +35,9 @@ const ALLOWED = {
   // would be silently truncated to 'career' and this check would stop meaning anything
   // for it.
   careerdiya: [],
+  // Career Diya counsellor platform (ADR-015). Same footing as careerdiya: free surface,
+  // auth via @/lib/supabase/server, no cross-module dependencies.
+  counselling: [],
 };
 
 const modules = readdirSync(MODULES_DIR).filter((d) => statSync(join(MODULES_DIR, d)).isDirectory());
