@@ -416,3 +416,14 @@ html,body{background:var(--cd-bg-paper)!important;color:var(--cd-ink)}
 .legal-page ul{padding-left:20px;margin:8px 0}
 .legal-page li{margin:6px 0}
 .legal-page a{color:var(--cd2-navy,#213A8F);text-decoration:underline}
+/* Beta fix (Nov 2026): on phones the single-column My Career and Profile layouts grew to fit
+   their widest content (long dropdown options, the four-step timeline), so both pages scrolled sideways.
+   Pin the column to the screen width and let content shrink inside it. */
+@media(max-width:900px){
+  .dashboard,.profile-layout{grid-template-columns:minmax(0,1fr)}
+  .dashboard>*,.profile-layout>*{min-width:0}
+  .profile-layout select,.profile-layout input,.dashboard select,.dashboard input{max-width:100%}
+  .timeline{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .redirect-strip{flex-wrap:wrap}
+}
+@media(max-width:480px){.timeline{grid-template-columns:minmax(0,1fr)}}

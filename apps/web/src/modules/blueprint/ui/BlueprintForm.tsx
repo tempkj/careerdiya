@@ -126,8 +126,7 @@ function PathCard({
 
       {recommended && (
         <p className="text-xs text-gray-400 italic">
-          Balances speed and depth — a good default starting point. (Placeholder reasoning; real
-          per-user recommendation logic is live-mode work, not yet built.)
+          Balances speed and depth — a good default starting point.
         </p>
       )}
 

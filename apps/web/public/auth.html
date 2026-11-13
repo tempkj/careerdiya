@@ -9,7 +9,7 @@
   function show(text,type='ok'){message.textContent=text;message.className='auth-message '+type;}
   try{
     const returned=await auth.handleOAuthReturn();
-    if(returned && returned.authenticated && qs.get('confirmed')!=='1'){
+    if(returned && returned.authenticated && !(auth.isGuestSession && auth.isGuestSession()) && qs.get('confirmed')!=='1'){
       const returnTo=qs.get('return') || localStorage.getItem('careerdiya_post_auth_return') || 'explore';
       window.location.replace(returnTo==='dashboard' ? 'dashboard.html' : returnTo==='profile' ? 'profile.html' : 'explore.html?resume=1');
       return;
