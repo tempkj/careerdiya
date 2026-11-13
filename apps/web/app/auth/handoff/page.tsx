@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import CareerDiyaShell from '../../_components/CareerDiyaShell';
 
 export default function CareerDiyaHandoffPage() {
   const [message, setMessage] = useState('Connecting your Career Diya profile…');
@@ -49,17 +50,13 @@ export default function CareerDiyaHandoffPage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <section className="w-full max-w-md bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
-          Career Diya → CareerAsana
-        </p>
-        <h1 className="text-lg font-semibold text-gray-900">Opening your deeper planning layer</h1>
-        <p className="mt-2 text-sm text-gray-600">{message}</p>
-        <a href="/" className="mt-5 inline-block text-sm text-gray-700 underline">
+    <CareerDiyaShell eyebrow="Career Diya → CareerĀsanā" title="Opening your planning workspace">
+      <section className="ca-panel max-w-xl mx-auto">
+        <p className="text-sm text-gray-600">{message}</p>
+        <a href="/dashboard.html" className="btn btn-secondary mt-5">
           Back to Career Diya
         </a>
       </section>
-    </main>
+    </CareerDiyaShell>
   );
 }

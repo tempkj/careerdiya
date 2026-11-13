@@ -4,22 +4,18 @@ export default function CareerAsanaAccessGate({
   desiredRole?: string | null;
 }) {
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <section className="w-full max-w-xl bg-white border border-gray-200 rounded-2xl p-7 shadow-sm">
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
-          CareerAsana · deeper execution
-        </p>
-        <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-          Ready to turn the decision into a plan?
-        </h1>
+    <section className="ca-panel w-full max-w-2xl mx-auto">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          How CareerĀsanā helps
+        </h2>
         <p className="text-sm leading-relaxed text-gray-600">
-          Career Diya helps you decide whether a direction is worth pursuing. CareerAsana is the
+          Career Diya helps you decide whether a direction is worth pursuing. CareerĀsanā is the
           deeper layer that turns a chosen target{desiredRole ? ` — ${desiredRole}` : ''} into a
           personalized, sequenced preparation plan.
         </p>
 
         <div className="mt-6 grid gap-3">
-          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <div className="rounded-xl border border-gray-200 bg-brand-soft/60 p-4">
             <p className="text-sm font-medium text-gray-900">What the deeper plan adds</p>
             <ul className="mt-2 space-y-1 text-sm text-gray-600">
               <li>• Personalized gap diagnosis</li>
@@ -41,13 +37,9 @@ export default function CareerAsanaAccessGate({
           </p>
         </div>
 
-        <a
-          href="/"
-          className="mt-6 block w-full rounded-lg border border-gray-300 py-2.5 text-center text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
+        <a href="/dashboard.html" className="btn btn-secondary w-full mt-6">
           Back to Career Diya
         </a>
-      </section>
-    </main>
+    </section>
   );
 }

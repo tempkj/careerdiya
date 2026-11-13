@@ -42,9 +42,7 @@ export default function AuthForm({ redirectTo }: { redirectTo: string }) {
   }
 
   return (
-    <div className="w-full max-w-sm">
-      <h1 className="text-2xl font-semibold text-gray-900 mb-1">CareerĀsanā</h1>
-      <p className="text-sm text-gray-500 mb-6">Your Career Operating System</p>
+    <div className="ca-panel w-full max-w-md mx-auto">
 
       <div className="flex rounded-lg border border-gray-200 mb-6 overflow-hidden">
         {(['signin', 'signup'] as Mode[]).map((m) => (
@@ -54,7 +52,7 @@ export default function AuthForm({ redirectTo }: { redirectTo: string }) {
             onClick={() => { setMode(m); setMessage(null); }}
             className={`flex-1 py-2 text-sm font-medium transition-colors ${
               mode === m
-                ? 'bg-gray-900 text-white'
+                ? 'bg-blue-700 text-white'
                 : 'bg-white text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -74,7 +72,7 @@ export default function AuthForm({ redirectTo }: { redirectTo: string }) {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+            className="input"
             placeholder="you@example.com"
             autoComplete="email"
           />
@@ -90,7 +88,7 @@ export default function AuthForm({ redirectTo }: { redirectTo: string }) {
             minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+            className="input"
             placeholder="••••••••"
             autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
           />
@@ -109,7 +107,7 @@ export default function AuthForm({ redirectTo }: { redirectTo: string }) {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-2 px-4 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="btn btn-primary w-full disabled:opacity-50"
         >
           {loading ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}
         </button>

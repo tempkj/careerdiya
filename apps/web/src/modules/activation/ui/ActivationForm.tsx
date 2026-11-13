@@ -38,7 +38,7 @@ function ConfidenceBar({ value }: { value: number }) {
   return (
     <div className="flex items-center gap-2">
       <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-        <div className="h-full bg-gray-400 rounded-full" style={{ width: `${pct}%` }} />
+        <div className="h-full bg-blue-700 rounded-full" style={{ width: `${pct}%` }} />
       </div>
       <span className="text-xs text-gray-400 w-8 text-right">{pct}%</span>
     </div>
@@ -66,7 +66,7 @@ function GapSection({ gap }: { gap: ActivationResult['gap'] }) {
   if (gap.length === 0) return null;
   return (
     <div>
-      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Gap analysis</p>
+      <p className="text-xs font-bold text-blue-700 uppercase tracking-[.14em] mb-2">Gap analysis</p>
       <div className="bg-white border border-gray-200 rounded-xl px-4 divide-y divide-gray-100">
         {gap.map((item) => (
           <GapCard key={item.skill} item={item} />
@@ -78,8 +78,8 @@ function GapSection({ gap }: { gap: ActivationResult['gap'] }) {
 
 function FirstActionCard({ text }: { text: string }) {
   return (
-    <div className="bg-gray-900 text-white rounded-xl p-4">
-      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">
+    <div className="bg-blue-700 text-white rounded-2xl p-5">
+      <p className="text-xs font-bold text-[#f2c75a] uppercase tracking-[.14em] mb-1">
         First action this week
       </p>
       <p className="text-sm font-medium leading-relaxed">{text}</p>
@@ -120,7 +120,7 @@ function SessionCard({
 
   return (
     <div className={`bg-white border rounded-xl p-4 space-y-3 ${
-      isActiveGoal ? 'border-gray-900' : 'border-gray-200'
+      isActiveGoal ? 'border-blue-700 ring-1 ring-blue-700' : 'border-gray-200'
     }`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-2 flex-1 min-w-0">
@@ -129,7 +129,7 @@ function SessionCard({
             checked={selected}
             disabled={selectionDisabled}
             onChange={() => onToggleSelect(session.id)}
-            className="mt-1 h-4 w-4 shrink-0 rounded border-gray-300 text-gray-900 focus:ring-gray-900 disabled:opacity-40"
+            className="mt-1 h-4 w-4 shrink-0 rounded border-gray-300 text-blue-700 focus:ring-blue-700 disabled:opacity-40"
             aria-label={`Select ${session.desiredRole ?? 'exploration'} to compare`}
             title={selectionDisabled ? 'Up to 3 explorations at a time' : 'Select to compare'}
           />
@@ -144,7 +144,7 @@ function SessionCard({
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
           {isActiveGoal && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-900 text-white">
+            <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-blue-700 text-white">
               Your goal
             </span>
           )}
@@ -168,7 +168,7 @@ function SessionCard({
         <button
           onClick={() => onPromote(session)}
           disabled={isPromoting}
-          className="w-full py-1.5 px-3 bg-gray-900 text-white text-xs font-medium rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors"
+          className="btn btn-primary btn-small w-full disabled:opacity-50"
         >
           {isPromoting
             ? 'Updating Twin…'
@@ -183,7 +183,7 @@ function SessionCard({
           // point for any non-goal exploration.
           <a
             href={`/blueprint?sessionId=${session.id}`}
-            className="block w-full text-center py-1.5 px-3 border border-gray-300 text-xs font-medium text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            className="btn btn-secondary btn-small w-full"
           >
             Build roadmap
           </a>
@@ -233,12 +233,12 @@ function ExplorationListView({
   ].filter((t) => t.items.length > 0);
 
   return (
-    <div className="w-full max-w-lg space-y-4">
+    <div className="w-full max-w-3xl mx-auto space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">Compare Explorations</h2>
+        <h2 className="text-xl font-bold text-gray-900">Your explorations</h2>
         <button
           onClick={onStartNew}
-          className="text-xs text-gray-500 hover:text-gray-900 border border-gray-300 rounded-lg px-3 py-1.5 transition-colors"
+          className="btn btn-secondary btn-small"
         >
           New exploration
         </button>
@@ -259,7 +259,7 @@ function ExplorationListView({
           <button
             onClick={onCompare}
             disabled={selectedForCompare.length < 2}
-            className="text-xs font-medium px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="btn btn-primary btn-small disabled:opacity-40"
           >
             Compare selected ({selectedForCompare.length})
           </button>
@@ -272,7 +272,7 @@ function ExplorationListView({
         <div className="space-y-5">
           {tiers.map(({ label, items }) => (
             <div key={label} className="space-y-3">
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{label}</p>
+              <p className="text-xs font-bold text-blue-700 uppercase tracking-[.14em]">{label}</p>
               {items.map((s) => (
                 <SessionCard
                   key={s.id}
@@ -340,7 +340,7 @@ function CompareColumn({
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-4">
       <div>
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Target role</p>
+        <p className="text-xs font-bold text-blue-700 uppercase tracking-[.14em] mb-1">Target role</p>
         <h3 className="text-base font-semibold text-gray-900">{session.desiredRole ?? 'Unknown role'}</h3>
         {session.currentRole && (
           <p className="text-xs text-gray-400 mt-0.5">from {session.currentRole}</p>
@@ -349,7 +349,7 @@ function CompareColumn({
 
       {session.gap.length > 0 && (
         <div>
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Gap analysis</p>
+          <p className="text-xs font-bold text-blue-700 uppercase tracking-[.14em] mb-2">Gap analysis</p>
           <div className="bg-gray-50 border border-gray-100 rounded-lg divide-y divide-gray-100">
             {session.gap.map((item) => (
               <div key={item.skill} className="flex items-center justify-between gap-2 px-3 py-2">
@@ -366,15 +366,15 @@ function CompareColumn({
       )}
 
       {session.firstAction && (
-        <div className="bg-gray-900 text-white rounded-xl p-3">
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">First action</p>
+        <div className="bg-blue-700 text-white rounded-xl p-4">
+          <p className="text-xs font-bold text-[#f2c75a] uppercase tracking-[.14em] mb-1">First action</p>
           <p className="text-sm leading-relaxed">{session.firstAction}</p>
         </div>
       )}
 
       <button
         onClick={() => onDrillIn(session)}
-        className="mt-auto w-full text-center py-1.5 px-3 border border-gray-300 text-xs font-medium text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+        className="btn btn-secondary btn-small w-full mt-auto"
       >
         View full detail
       </button>
@@ -392,12 +392,12 @@ function CompareView({
   onBack: () => void;
 }) {
   return (
-    <div className={`w-full ${compareContainerWidthClass(sessions.length)} space-y-4`}>
+    <div className={`w-full mx-auto ${compareContainerWidthClass(sessions.length)} space-y-4`}>
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">Compare Explorations</h2>
+        <h2 className="text-xl font-bold text-gray-900">Compare explorations</h2>
         <button
           onClick={onBack}
-          className="text-xs text-gray-500 hover:text-gray-900 border border-gray-300 rounded-lg px-3 py-1.5 transition-colors"
+          className="btn btn-secondary btn-small"
         >
           Back to list
         </button>
@@ -436,19 +436,19 @@ function ResultView({
   onExplore: (suggestion: AdjacentRoleSuggestion) => void;
 }) {
   return (
-    <div className="w-full max-w-lg space-y-6">
+    <div className="ca-panel w-full max-w-3xl mx-auto space-y-6">
       {onBackToComparison && (
         <button
           onClick={onBackToComparison}
-          className="text-xs text-gray-500 hover:text-gray-900 border border-gray-300 rounded-lg px-3 py-1.5 transition-colors"
+          className="btn btn-secondary btn-small"
         >
           ← Back to comparison
         </button>
       )}
 
       <div>
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Target role</p>
-        <h2 className="text-xl font-semibold text-gray-900">{result.desiredPosition.role}</h2>
+        <p className="text-xs font-bold text-blue-700 uppercase tracking-[.14em] mb-1">Target role</p>
+        <h2 className="text-2xl font-bold text-gray-900">{result.desiredPosition.role}</h2>
         {result.desiredPosition.onetCode && (
           <p className="text-xs text-gray-400 mt-0.5">O*NET {result.desiredPosition.onetCode}</p>
         )}
@@ -456,7 +456,7 @@ function ResultView({
 
       {result.currentPosition && (
         <div>
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">
+          <p className="text-xs font-bold text-blue-700 uppercase tracking-[.14em] mb-1">
             Current strengths
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -478,17 +478,17 @@ function ResultView({
         </p>
       )}
 
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         <button
           onClick={onSetGoal}
           disabled={settingGoal}
-          className="flex-1 py-2.5 px-4 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors"
+          className="btn btn-primary flex-1 disabled:opacity-50"
         >
           {settingGoal ? 'Setting goal…' : 'Set as Goal'}
         </button>
         <button
           onClick={onBack}
-          className="py-2.5 px-4 border border-gray-300 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          className="btn btn-secondary"
         >
           Try a different role
         </button>
@@ -528,14 +528,14 @@ function ReplaceGoalDialog({
           <button
             onClick={onCancel}
             disabled={confirming}
-            className="flex-1 py-2 px-4 border border-gray-300 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            className="btn btn-secondary flex-1"
           >
             Keep current
           </button>
           <button
             onClick={onConfirm}
             disabled={confirming}
-            className="flex-1 py-2 px-4 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors"
+            className="btn btn-primary flex-1 disabled:opacity-50"
           >
             {confirming ? 'Replacing…' : 'Replace goal'}
           </button>
@@ -548,7 +548,6 @@ function ReplaceGoalDialog({
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function ActivationForm({
-  userEmail,
   sessions: initialSessions,
   activeGoalSessionId: initialActiveGoalSessionId,
   prefill,
@@ -597,12 +596,6 @@ export default function ActivationForm({
     session: ActivationSession;
     navigate: boolean;
   } | null>(null);
-
-  async function handleSignOut() {
-    const { createClient } = await import('@/lib/supabase/client');
-    await createClient().auth.signOut();
-    window.location.href = '/login';
-  }
 
   async function runActivation(
     currentRoleValue: string,
@@ -814,7 +807,7 @@ export default function ActivationForm({
             We&apos;re analysing the preparation gap between them now.
           </p>
           <div className="bg-white border border-gray-200 rounded-xl p-5">
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+            <p className="text-xs font-bold text-blue-700 uppercase tracking-[.14em] mb-2">
               Career transition
             </p>
             <p className="text-sm text-gray-800">
@@ -831,10 +824,10 @@ export default function ActivationForm({
     }
 
     return (
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="ca-panel space-y-5">
         <p className="text-sm text-gray-600">
-          Career Diya brought you here because you chose this direction. We&apos;ll now build the
-          deeper preparation plan around your actual starting point.
+          Tell us where you are now and the role you want. We&apos;ll show what stands between
+          the two and one concrete step to take this week.
         </p>
 
         <div>
@@ -846,7 +839,7 @@ export default function ActivationForm({
             type="text"
             value={currentRole}
             onChange={(e) => setCurrentRole(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+            className="input"
             placeholder="e.g. Software Engineer, Marketing Manager"
           />
         </div>
@@ -861,7 +854,7 @@ export default function ActivationForm({
             required
             value={desiredRole}
             onChange={(e) => setDesiredRole(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+            className="input"
             placeholder="e.g. Product Manager, Data Scientist, UX Designer"
           />
         </div>
@@ -876,7 +869,7 @@ export default function ActivationForm({
           <button
             type="submit"
             disabled={loading || !desiredRole.trim()}
-            className="flex-1 py-2.5 px-4 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="btn btn-primary flex-1 disabled:opacity-50"
           >
             {loading ? 'Analysing…' : 'Show my gap analysis'}
           </button>
@@ -884,7 +877,7 @@ export default function ActivationForm({
             <button
               type="button"
               onClick={() => setView('list')}
-              className="py-2.5 px-4 border border-gray-300 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="btn btn-secondary"
             >
               Back
             </button>
@@ -910,14 +903,11 @@ export default function ActivationForm({
         />
       )}
 
-      <div className={`w-full ${view === 'compare' ? 'max-w-5xl' : 'max-w-lg'}`}>
-        <div className="flex items-center justify-between gap-3 mb-8">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-semibold text-gray-900">CareerĀsanā</h1>
-            <p className="text-sm text-gray-500">{userEmail}</p>
-          </div>
+      <div className={`w-full mx-auto ${view === 'compare' ? 'max-w-6xl' : 'max-w-3xl'}`}>
+        {sessions.length >= 2 && view !== 'list' && view !== 'compare' && (
+        <div className="flex items-center justify-end gap-3 mb-5">
           <div className="flex items-center gap-3 shrink-0">
-            {sessions.length >= 2 && view !== 'list' && (
+            {(
               <button
                 type="button"
                 onClick={() => {
@@ -926,19 +916,14 @@ export default function ActivationForm({
                   setSelectedForCompare([]);
                   setView('list');
                 }}
-                className="text-xs font-medium text-gray-700 border border-gray-300 rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors"
+                className="btn btn-secondary btn-small"
               >
                 Compare explorations
               </button>
             )}
-            <button
-              onClick={handleSignOut}
-              className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              Sign out
-            </button>
           </div>
         </div>
+        )}
 
         {renderBody()}
       </div>
