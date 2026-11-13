@@ -27,3 +27,6 @@ This directory contains the accepted architectural and product decisions that co
 | [ADR-CAREERDIY-0012](./ADR-CAREERDIY-0012-career-data-cache-and-backend-boundary.md) | Server-side partner calls, normalization and caching boundary |
 | [ADR-CAREERDIY-0013](./ADR-CAREERDIY-0013-free-profile-gate.md) | Free profile gate before revealing the exploration result |
 | [ADR-CAREERDIY-0014](./ADR-CAREERDIY-0014-pre-application-and-offline-admissions-boundary.md) | Career Diya pre-application capture; downstream admissions remain offline |
+| [ADR-CAREERDIY-0015](./ADR-CAREERDIY-0015-free-tier-llm-enrichment.md) | Free-tier LLM enrichment: deterministic floor plus LLM prose (proposed) |
+| [ADR-CAREERDIY-0016](./ADR-CAREERDIY-0016-contextual-bounded-dropdowns-and-edge-guide.md) | Contextual bounded to-role/stream dropdowns and edge guide LLM (proposed) |
+| [ADR-CAREERDIY-0017](./ADR-CAREERDIY-0017-target-ai-architecture.md) | Target AI architecture and post-Kutumbh roadmap (proposed) |
