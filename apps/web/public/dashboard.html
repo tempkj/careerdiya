@@ -39,8 +39,8 @@
       auth.getVaultItems()
     ]);
 
-    const name=(profile&&profile.display_name)||((auth.getSession().user||{}).email||'there').split('@')[0];
-    document.getElementById('dashboardGreeting').textContent=`${name}'s Career Workspace`;
+    const name=(profile&&profile.display_name)||((auth.getSession().user||{}).email||'').split('@')[0];
+    document.getElementById('dashboardGreeting').textContent=name?`${name}'s Career Workspace`:'Your Career Workspace';
 
     const audienceLabel={professional:'Professional',student:'Student',parent:'Parent'}[profile?.audience]||'Career Explorer';
     const role=profile?.current_role_title||profile?.current_role_other||null;
