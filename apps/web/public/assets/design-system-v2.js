@@ -25,7 +25,7 @@
     if(current) link.setAttribute('aria-current','page');
     const labels={
       'index.html':'Home',
-      'explore.html':'Explore Careers',
+      'explore.html':'Career Explorer',
       'paths.html':'Career Paths',
       'assessment.html':'Assessment',
       'counselling.html':'Counselling',

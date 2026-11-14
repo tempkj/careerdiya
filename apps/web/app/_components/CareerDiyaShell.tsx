@@ -7,7 +7,7 @@ import SignOutButton from './SignOutButton';
 // app/layout.tsx), so CareerĀsanā reads as part of Career Diya rather than a separate app.
 
 const NAV = [
-  ['/explore.html', 'Explore Careers'],
+  ['/explore.html', 'Career Explorer'],
   ['/paths.html', 'Career Paths'],
   ['/assessment.html', 'Assessment'],
   ['/counselling.html', 'Counselling'],
@@ -57,6 +57,7 @@ export default function CareerDiyaShell({
                 {label}
               </a>
             ))}
+            {signedIn && <a href="/dashboard.html">My Career</a>}
           </nav>
           {signedIn ? (
             <div className="ca-header-actions">
@@ -100,26 +101,25 @@ export default function CareerDiyaShell({
         <div className="container footer-grid">
           <div>
             <img className="logo" src="/assets/careerdiya-horizontal-lockup-white.svg" alt="Career Diya" />
-            <p style={{ color: '#aeb2c1', maxWidth: 320 }}>
-              Career guidance that helps you make the next decision with more clarity.
-            </p>
+            <p className="footer-tagline">A guiding light for every path.</p>
             <small className="footer-unit">a Swakojo Group company</small>
           </div>
           <div>
             <b>Explore</b>
             <a href="/explore.html">Career Explorer</a>
             <a href="/paths.html">Career Paths</a>
-            <a href="/assessment.html">Assessment</a>
+            <a href="/courses.html">Courses &amp; Training</a>
           </div>
           <div>
             <b>Guidance</b>
+            <a href="/assessment.html">Assessment</a>
             <a href="/counselling.html">Counselling</a>
-            <a href="/dashboard.html">My Career</a>
             <a href="/resources.html">Resources</a>
           </div>
           <div>
-            <b>Ecosystem</b>
-            <a href="/courses.html">Courses &amp; Training</a>
+            <b>Your account</b>
+            <a href="/dashboard.html">My Career</a>
+            <a href="/profile.html">Profile</a>
           </div>
         </div>
         <div className="container footer-legal">

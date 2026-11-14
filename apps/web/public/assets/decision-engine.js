@@ -896,6 +896,15 @@ async function resolvePlatformExplorerContext(audience, currentRole=null, vaultC
     if(inferredStage){ answers.stage=inferredStage; skipQuestionIds.push('stage'); }
   }
 
+  // A question card picked on the home page (?intent=…) is this visit's answer to "What are
+  // you trying to figure out?", so it wins over saved goals and the question is not asked twice.
+  const urlIntent=String(qs().get('intent')||'');
+  const intentQuestion=questionsForAudience(resolvedAudience).find(q=>q.id==='intent');
+  if(urlIntent && intentQuestion && intentQuestion.options.some(o=>o[0]===urlIntent)){
+    answers.intent=urlIntent;
+    if(!skipQuestionIds.includes('intent')) skipQuestionIds.push('intent');
+  }
+
   const experienceForSummary=profile?.experience_years||experience.find(x=>x?.years_bucket)?.years_bucket||null;
   return {
     audience:resolvedAudience,
