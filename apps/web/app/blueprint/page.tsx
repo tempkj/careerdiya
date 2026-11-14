@@ -6,7 +6,7 @@ import { getActivationSession } from '@modules/activation';
 import BlueprintForm from '@modules/blueprint/ui/BlueprintForm';
 import CareerDiyaShell from '../_components/CareerDiyaShell';
 
-export const metadata = { title: 'Your roadmap — CareerĀsanā | Career Diya' };
+export const metadata = { title: 'Your roadmap — Career Plan | Career Diya' };
 
 // Blueprint is canonically reached from a goal (/activate -> "Build roadmap").
 // A session is required — /blueprint/identify is session-scoped (roles live
@@ -22,10 +22,11 @@ export default async function BlueprintPage({
   if (!(await hasCareerAsanaAccess(supabase, user.id))) {
     return (
       <CareerDiyaShell
-        eyebrow="CareerĀsanā · early access"
-        title="Turn your chosen direction into a plan"
-        intro="CareerĀsanā is Career Diya's deeper planning layer for people who already know the role they want."
+        eyebrow="Career Plan · early access"
+        title="Turn your chosen career into a plan"
+        intro="Personal career plans are in early access, for people who already know the role they want."
         userEmail={user.email ?? null}
+        userName={(user.user_metadata?.display_name ?? user.user_metadata?.full_name ?? null) as string | null}
       >
         <CareerAsanaAccessGate />
       </CareerDiyaShell>
@@ -55,10 +56,11 @@ export default async function BlueprintPage({
 
   return (
     <CareerDiyaShell
-      eyebrow="CareerĀsanā · your roadmap"
+      compact
+      eyebrow="Career Plan · your roadmap"
       title={`From ${session.currentRole ? session.currentRole : 'where you are'} to ${session.desiredRole}`}
-      intro="Tell us your starting point, review what you need to work on, then choose a path that fits the time you have."
       userEmail={user.email ?? null}
+        userName={(user.user_metadata?.display_name ?? user.user_metadata?.full_name ?? null) as string | null}
     >
       <BlueprintForm sessionContext={sessionContext} />
     </CareerDiyaShell>

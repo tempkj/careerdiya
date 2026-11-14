@@ -69,3 +69,22 @@
 .footer p {
   margin-block: 1em;
 }
+
+/* Compact banner for the working Career Plan screens: the task, not the banner, should be
+   above the fold on a laptop. */
+.page-hero.ca-hero-compact {
+  padding-top: 26px;
+  padding-bottom: 26px;
+}
+.page-hero.ca-hero-compact h1 {
+  font-size: clamp(28px, 3.2vw, 40px);
+  line-height: 1.08;
+  margin-block: 6px 4px;
+}
+.page-hero.ca-hero-compact p {
+  margin-block: 6px 0;
+  font-size: 15px;
+}
+.page-hero.ca-hero-compact .mural-shape {
+  display: none;
+}

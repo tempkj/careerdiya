@@ -183,16 +183,15 @@
 </style></style></head><body><header class="site-header"><div class="container nav"><a href="index.html"><img class="logo" src="assets/careerdiya-horizontal-lockup.svg"></a><nav class="navlinks"><a href="explore.html">Explore Careers</a><a href="paths.html">Career Paths</a><a href="assessment.html">Assessment</a><a href="counselling.html">Counselling</a><a href="resources.html">Resources</a><a href="courses.html">Courses &amp; Training</a></nav><a class="profile-menu guest" data-profile-menu href="javascript:void(0)" title="Create a free profile to unlock your Career Diya workspace" aria-label="Profile locked for guests"><span class="profile-avatar">?</span></a></div></header><main><section class="page-hero mural-band"><div class="container"><div class="eyebrow">Career path</div><h1 id="careerName">Career path</h1><p id="careerIntro">Understand the work, identify the evidence you need, then decide whether the learning investment makes sense.</p><div class="career-hero-actions"><button type="button" class="btn btn-primary" id="personalizeCareerBtn">See how this fits me →</button><a class="btn btn-secondary" href="#career-work">Explore the work ↓</a></div></div></section><nav class="career-quicknav" id="careerQuickNav" aria-label="Career information"><div class="container"><a href="#career-overview" data-section="career-overview">Overview</a><a href="#career-work" data-section="career-work">Work</a><a href="#career-skills" data-section="career-skills">Skills</a><a href="#career-routes" data-section="career-routes">Routes</a><a href="#career-outlook" data-section="career-outlook">Outlook</a><a href="#career-learning" data-section="career-learning">Skill Diya</a><a href="#career-faq" data-section="career-faq">FAQs</a></div></nav><section class="section career-snapshot" id="career-overview"><div class="container"><div class="career-snapshot-grid" id="careerSnapshotGrid"></div></div></section><section class="section career-personalize-panel" id="careerPersonalizePanel"><div class="container"><div id="careerPersonalizeContent"></div></div></section><section class="section"><div class="container"><div id="careerDetails"></div></div></section><section class="section skilldiya-career-section"><div class="container"><div id="skillDiyaCareerCourses"></div></div></section><section class="section" id="careerAsanaBridge" style="padding-top:0;display:none">
   <div class="container">
     <div class="career-card" style="border:1px solid #dfe3eb;background:#f8f9fb">
-      <span class="tag">Deeper · CareerAsana</span>
-      <h2 style="margin:8px 0;font-size:30px">Ready to turn this career choice into a personalized plan?</h2>
+      <span class="tag">Career Plan</span>
+      <h2 style="margin:8px 0;font-size:28px">Turn this career into your own plan</h2>
       <p style="max-width:820px;color:#626979">
-        Career Diya helps you evaluate the direction. CareerAsana takes the next step: it diagnoses
-        the preparation gap in more depth and builds an editable path with tasks, dependencies and
-        effort estimates.
+        See what stands between you and this role, then get a step-by-step plan with tasks, time
+        estimates and one thing to do this week.
       </p>
       <div class="course-actions" style="margin-top:18px">
-        <button class="btn btn-primary" type="button" id="careerAsanaCta">Build my personalized path →</button>
-        <a class="btn btn-secondary" href="counselling.html">Talk to an Expert</a>
+        <button class="btn btn-primary" type="button" id="careerAsanaCta">Build my career plan →</button>
+        <a class="btn btn-secondary" href="counselling.html">Talk to an expert</a>
       </div>
       <p id="careerAsanaBridgeNote" style="margin-top:10px;font-size:12px;color:#7a8090"></p>
     </div>
@@ -263,14 +262,14 @@ async function wireRelatedCareerOptions(){
       if(!desiredRole) return;
       button.disabled=true;
       const old=button.textContent;
-      button.textContent='Opening CareerAsana…';
+      button.textContent='Opening your career plan…';
       try{
         await window.CareerDiyaProfileAuth.openCareerAsana({desiredRole,currentRole,careerId:button.dataset.careerRelatedId||null});
       }catch(err){
         button.disabled=false;
         button.textContent=old;
         const note=document.getElementById('careerAsanaBridgeNote');
-        if(note) note.textContent=err?.message || 'Could not open the deeper planning layer. Please try again.';
+        if(note) note.textContent=err?.message || 'Could not open your career plan right now. Please try again.';
       }
     });
   });
@@ -301,7 +300,7 @@ function wireCareerAsanaBridge(career){
   if(!bridge||!button||!window.CareerDiyaProfileAuth) return;
   bridge.style.display='block';
   if(!window.CareerDiyaProfileAuth.isAuthenticated()){
-    note.textContent='Create a free Career Diya profile to carry this career choice into the deeper planning layer.';
+    note.textContent='Create a free Career Diya profile to turn this career into your own plan.';
     button.textContent='Sign in to build my path →';
     button.onclick=()=>{ window.location.href=`auth.html?return=${encodeURIComponent('career.html?careerId='+encodeURIComponent(career.id)+'&direction='+encodeURIComponent(directionId||'')+(audience?'&audience='+encodeURIComponent(audience):''))}`; };
     return;
@@ -309,7 +308,7 @@ function wireCareerAsanaBridge(career){
   button.onclick=async()=>{
     button.disabled=true;
     const old=button.textContent;
-    button.textContent='Opening CareerAsana…';
+    button.textContent='Opening your career plan…';
     try{
       let currentRole=null;
       if(audience==='professional'){
@@ -322,7 +321,7 @@ function wireCareerAsanaBridge(career){
         careerId:career.id
       });
     }catch(err){
-      note.textContent=err?.message || 'Could not open the deeper planning layer. Please try again.';
+      note.textContent=err?.message || 'Could not open your career plan right now. Please try again.';
       button.disabled=false;
       button.textContent=old;
     }
@@ -453,10 +452,10 @@ function renderVaultCareerJourney(career,matches,profile){
       asana.addEventListener('click',async()=>{
         asana.disabled=true;
         const oldText=asana.textContent;
-        asana.textContent='Opening CareerAsana…';
+        asana.textContent='Opening your career plan…';
         try{
           const auth=window.CareerDiyaProfileAuth;
-          if(!auth) throw new Error('The deeper planning layer is not available right now.');
+          if(!auth) throw new Error('Career plans are not available right now.');
           const authenticated=auth.isAuthenticated();
           if(!authenticated){
             const next=`/activate?source=careerdiya&desiredRole=${encodeURIComponent(career.canonicalName||'')}&currentRole=${encodeURIComponent(profileRole||'')}&careerId=${encodeURIComponent(career.id||'')}`;
@@ -472,7 +471,7 @@ function renderVaultCareerJourney(career,matches,profile){
           asana.disabled=false;
           asana.textContent=oldText;
           const note=document.getElementById('careerAsanaBridgeNote');
-          if(note) note.textContent=err?.message || 'Could not open CareerAsana right now. Please try again.';
+          if(note) note.textContent=err?.message || 'Could not open your career plan right now. Please try again.';
         }
       });
     }
@@ -784,7 +783,7 @@ function renderCareerMatchContext(career,profile,saved,contextRecords=[]){
     '</div>';
 }
 async function renderCareer(career,country=selectedCountry,language=selectedLanguage){
-  heroTitle.textContent=career.canonicalName; heroIntro.textContent='Career information, work reality, entry routes and market context — presented inside Career Diya.';
+  heroTitle.textContent=career.canonicalName; heroIntro.textContent='What the work is like, what it pays, who it suits and how people get in.';
   detailsEl.innerHTML='<div class="career-library-loading"><div class="career-loader"></div><div><strong>Loading career profile</strong><p>Fetching the latest career information…</p></div></div>';
   try{
     const data=await CareerDiyaCareerLibrary.loadCareerProfile({careerName:career.canonicalName,careerId:career.id,directionName:directionId,country,language});

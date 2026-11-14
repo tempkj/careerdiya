@@ -1,14 +1,14 @@
 import type { ReactNode } from 'react';
 import './globals.css';
 
-export const metadata = { title: 'CareerĀsanā — Career Diya', description: 'Turn a chosen career direction into a plan' };
+export const metadata = { title: 'Career Plan — Career Diya', description: 'Turn a chosen career direction into a plan' };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
-        {/* Same fonts and stylesheets as the static Career Diya pages, so the CareerĀsanā
-            routes share one look (see app/_components/CareerDiyaShell.tsx). */}
+        {/* Same fonts and stylesheets as the static Career Diya pages, so the Career Plan
+            routes (internally CareerĀsanā) share one look (see app/_components/CareerDiyaShell.tsx). */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link

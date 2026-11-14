@@ -17,30 +17,65 @@ const STRATEGY_LABEL: Record<PathStrategy, string> = {
 
 // ── Edit view row ────────────────────────────────────────────────────────────
 
+// Path tasks are titled "Build <depth>-level <skill>" (ADR-013: the depth is what differs
+// between Fastest / Optimal / Thorough). On screen we show the task the user actually agreed
+// to on the review step, with the depth as a label underneath. Display only: the stored
+// title is unchanged.
+const DEPTH_LABEL: Record<string, string> = {
+  awareness: 'Awareness level',
+  working: 'Working level',
+  expert: 'Expert level',
+};
+
+function depthOf(title: string): string | null {
+  const m = title.match(/^Build (awareness|working|expert)-level /);
+  return m ? DEPTH_LABEL[m[1]!] ?? null : null;
+}
+
+function plural(n: number, one: string, many: string): string {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
 function TaskRow({
   task,
+  agreedTitle,
   index,
   total,
+  editing,
   onMoveUp,
   onMoveDown,
   onRemove,
 }: {
   task: DraftTask;
+  agreedTitle: string | null;
   index: number;
   total: number;
+  editing: boolean;
   onMoveUp: () => void;
   onMoveDown: () => void;
   onRemove: () => void;
 }) {
+  const depth = depthOf(task.title);
+  const meta = [
+    depth,
+    categoryLabel(task.evolveCategory),
+    `${task.effortHours}h`,
+    task.dependencies.length > 0 ? `after ${plural(task.dependencies.length, 'other task', 'other tasks')}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
   return (
-    <div className="flex items-center justify-between gap-3 py-2 border-b border-gray-200 last:border-0">
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-900">{plainText(task.title)}</p>
-        <p className="text-xs text-gray-500">
-          {categoryLabel(task.evolveCategory)} · {task.effortHours}h
-          {task.dependencies.length > 0 ? ` · depends on ${task.dependencies.length} task(s)` : ''}
-        </p>
+    <div className="flex items-center justify-between gap-3 py-2.5 border-b border-gray-200 last:border-0">
+      <div className="flex items-start gap-3 flex-1 min-w-0">
+        <span className="mt-0.5 shrink-0 w-6 h-6 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold grid place-items-center">
+          {index + 1}
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm text-gray-900">{plainText(agreedTitle ?? task.title)}</p>
+          <p className="text-xs text-gray-500 mt-0.5">{meta}</p>
+        </div>
       </div>
+      {editing && (
       <div className="flex items-center gap-1 shrink-0">
         <button
           type="button"
@@ -66,6 +101,7 @@ function TaskRow({
           Remove
         </button>
       </div>
+      )}
     </div>
   );
 }
@@ -73,14 +109,31 @@ function TaskRow({
 // ── Task-review row (plan row, grouped under a counsellor section + per-task dispute) ──
 
 function ReviewTaskRow({ task, onDispute }: { task: DraftTask; onDispute: () => void }) {
+  // Titles first; the long explanation is one tap away, so the list scans quickly.
+  const [open, setOpen] = useState(false);
   return (
-    <div className="flex items-start justify-between gap-3 py-2 border-b border-gray-200 last:border-0">
+    <div className="flex items-start justify-between gap-3 py-2.5 border-b border-gray-200 last:border-0">
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-900">{plainText(task.title)}</p>
-        {task.description && (
-          <p className="text-sm text-gray-600 mt-0.5 leading-relaxed">{plainText(task.description)}</p>
+        <p className="text-xs text-blue-700 mt-0.5">
+          {taskMetaLine(task)}
+          {task.description && (
+            <>
+              {' · '}
+              <button
+                type="button"
+                onClick={() => setOpen((o) => !o)}
+                className="underline text-gray-500 hover:text-gray-800"
+                aria-expanded={open}
+              >
+                {open ? 'Less' : 'Why this task'}
+              </button>
+            </>
+          )}
+        </p>
+        {open && task.description && (
+          <p className="text-sm text-gray-600 mt-1.5 leading-relaxed">{plainText(task.description)}</p>
         )}
-        <p className="text-xs text-blue-700 mt-1">{taskMetaLine(task)}</p>
       </div>
       <button
         type="button"
@@ -98,58 +151,101 @@ function ReviewTaskRow({ task, onDispute }: { task: DraftTask; onDispute: () => 
 function PathCard({
   path,
   recommended,
+  agreedTitles,
   onSelect,
 }: {
   path: DerivedPath;
   recommended: boolean;
+  agreedTitles: Map<string, string>;
   onSelect: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-2">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-gray-900">
-          {STRATEGY_LABEL[path.strategy]}
-          {recommended && (
-            <span className="ml-2 text-xs border border-gray-400 rounded px-1.5 py-0.5">Recommended</span>
-          )}
-        </p>
-        <button type="button" onClick={() => setExpanded((e) => !e)} className="text-xs text-gray-500 underline">
-          {expanded ? 'Hide detail' : 'Show detail'}
-        </button>
+    <div
+      className={`bg-white border rounded-2xl p-5 flex flex-col gap-2 ${
+        recommended ? 'border-blue-700 ring-1 ring-blue-700' : 'border-gray-200'
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-base font-bold text-gray-900">{STRATEGY_LABEL[path.strategy]}</p>
+        {recommended && (
+          <span className="text-xs font-semibold rounded-full px-2.5 py-0.5 bg-blue-700 text-white">Recommended</span>
+        )}
       </div>
 
-      <p className="text-sm text-gray-700">{path.landingDefinition}</p>
-      <p className="text-xs text-gray-500">
-        {path.calendarRange.minWeeks}–{path.calendarRange.maxWeeks} weeks at {path.intensityHoursPerWeek}h/week
+      <p className="text-2xl font-bold text-gray-900 leading-tight">
+        {path.calendarRange.minWeeks}–{path.calendarRange.maxWeeks} weeks
       </p>
+      <p className="text-xs text-gray-500">
+        at {path.intensityHoursPerWeek}h a week · {path.effortTotalHours}h in total
+      </p>
+      <p className="text-sm text-gray-700 leading-relaxed">{path.landingDefinition}</p>
 
-      {recommended && (
-        <p className="text-xs text-gray-400 italic">
-          Balances speed and depth — a good default starting point.
-        </p>
-      )}
+      <button
+        type="button"
+        onClick={() => setExpanded((e) => !e)}
+        className="self-start text-xs text-gray-500 underline"
+        aria-expanded={expanded}
+      >
+        {expanded ? 'Hide tasks' : `See the ${path.tasks.length} tasks`}
+      </button>
 
       {expanded && (
-        <div className="pt-2 space-y-1">
-          <p className="text-xs text-gray-500">
-            Total effort: {path.effortTotalHours}h · Probability: {path.probabilityBand} · Basis: {path.basis}
-          </p>
-          <div className="divide-y divide-gray-100">
-            {path.tasks.map((t) => (
-              <div key={t.id} className="py-1.5 text-sm text-gray-700">
-                {t.title} <span className="text-xs text-gray-400">({categoryLabel(t.evolveCategory)}, {t.effortHours}h)</span>
-              </div>
+        <div className="space-y-1">
+          <ol className="divide-y divide-gray-100">
+            {path.tasks.map((t, i) => (
+              <li key={t.id} className="py-1.5 text-sm text-gray-700">
+                {i + 1}. {plainText(agreedTitles.get(t.id) ?? t.title)}{' '}
+                <span className="text-xs text-gray-500">({t.effortHours}h)</span>
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
       )}
 
-      <button type="button" onClick={onSelect} className="btn btn-primary w-full mt-2">
-        Select this path
+      <button
+        type="button"
+        onClick={onSelect}
+        className={`btn ${recommended ? 'btn-primary' : 'btn-secondary'} w-full mt-auto`}
+      >
+        Choose {STRATEGY_LABEL[path.strategy]}
       </button>
     </div>
+  );
+}
+
+// ── Step indicator ──────────────────────────────────────────────────────────
+
+const STEPS = ['Your starting point', 'Review tasks', 'Choose a path', 'Save your roadmap'] as const;
+
+function StepIndicator({ current }: { current: 1 | 2 | 3 | 4 }) {
+  return (
+    <ol className="flex items-center gap-2 text-xs mb-5" aria-label="Progress">
+      {STEPS.map((label, i) => {
+        const n = i + 1;
+        const state = n < current ? 'done' : n === current ? 'now' : 'next';
+        return (
+          <li key={label} className="flex items-center gap-2 min-w-0" aria-current={state === 'now' ? 'step' : undefined}>
+            <span
+              className={`shrink-0 w-6 h-6 rounded-full grid place-items-center font-semibold ${
+                state === 'now'
+                  ? 'bg-blue-700 text-white'
+                  : state === 'done'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-gray-100 text-gray-500'
+              }`}
+            >
+              {state === 'done' ? '✓' : n}
+            </span>
+            <span className={`max-sm:hidden truncate ${state === 'now' ? 'text-gray-900 font-semibold' : 'text-gray-500'}`}>
+              {label}
+            </span>
+            {n < STEPS.length && <span className="w-4 sm:w-6 h-px bg-gray-300 shrink-0" aria-hidden="true" />}
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
@@ -266,6 +362,11 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState<StoredBlueprint | null>(null);
+  const [editingOrder, setEditingOrder] = useState(false);
+  const [framingOpen, setFramingOpen] = useState(false);
+  // The tasks the user agreed to on the review step, by id — shown in place of the
+  // depth-qualified path titles (see TaskRow).
+  const agreedTitles = new Map(identifiedTasks.map((t) => [t.id, t.title] as const));
 
   async function handleGatesSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -382,6 +483,7 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
     setEditedTasks(path.tasks.map((t) => ({ ...t })));
     setSaved(null);
     setSaveError(null);
+    setEditingOrder(false);
     setView('edit');
   }
 
@@ -421,6 +523,7 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
       }
       const data = (await res.json()) as StoredBlueprint;
       setSaved(data);
+      setEditingOrder(false);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
@@ -431,6 +534,7 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
   if (view === 'gates') {
     return (
       <div className="ca-panel w-full max-w-3xl mx-auto">
+        <StepIndicator current={1} />
         <a href="/activate" className="text-xs text-gray-500 underline">
           ← Back to your explorations
         </a>
@@ -537,72 +641,93 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
       .filter((group) => group.tasks.length > 0);
 
     return (
-      <div className="ca-panel w-full max-w-3xl mx-auto space-y-6">
+      <div className="ca-panel w-full max-w-3xl mx-auto space-y-5">
+        <StepIndicator current={2} />
         <div className="space-y-1">
           <h1 className="text-2xl font-bold text-gray-900">Here&apos;s what we think you need to work on</h1>
-          <p className="text-xs text-gray-500">
-            Review the plan below. Dispute anything that doesn&apos;t fit before agreeing.
+          <p className="text-sm text-gray-500">
+            {plural(identifiedTasks.length, 'task', 'tasks')}
+            {visibleGroups.length > 1 ? ` in ${visibleGroups.length} areas` : ''}. Open an area to see its
+            tasks, and dispute anything that doesn&apos;t fit.
           </p>
         </div>
 
-        {/* Framing — the counsellor's opening read. Prose, not a boxed card: distinct from
-            the task list below by typography alone (larger, relaxed line-height), not by
-            introducing a new visual container the rest of the app doesn't use. Renders
-            nothing in mock mode (empty framing) — no empty box. */}
+        {/* Framing: the counsellor's opening read, shortened to three lines until asked for. */}
         {assessment.framing && (
-          <p className="text-[15px] leading-relaxed text-gray-800">{plainText(assessment.framing)}</p>
+          <div>
+            <p className={`text-[15px] leading-relaxed text-gray-800 ${framingOpen ? '' : 'line-clamp-3'}`}>
+              {plainText(assessment.framing)}
+            </p>
+            <button
+              type="button"
+              onClick={() => setFramingOpen((o) => !o)}
+              className="text-xs text-gray-500 underline mt-1"
+              aria-expanded={framingOpen}
+            >
+              {framingOpen ? 'Show less' : 'Read more'}
+            </button>
+          </div>
         )}
 
-        <div className="space-y-5">
-          {visibleGroups.map((group, gi) => (
-            <div key={gi} className="space-y-2">
-              {/* Empty title (mock mode's single placeholder group) -> no header at all,
-                  so mock mode degrades to a plain headerless task list, not a broken/empty
-                  section header. */}
-              {group.title && (
-                <div className="space-y-0.5">
-                  <h2 className="text-base font-bold text-gray-900">{plainText(group.title)}</h2>
+        <div className="space-y-3">
+          {visibleGroups.map((group, gi) =>
+            group.title ? (
+              <details
+                key={gi}
+                open={gi === 0}
+                className="group bg-white border border-gray-200 rounded-2xl overflow-hidden"
+              >
+                <summary className="flex items-start justify-between gap-3 cursor-pointer list-none px-5 py-4 [&::-webkit-details-marker]:hidden">
+                  <span className="min-w-0">
+                    <span className="block text-base font-bold text-gray-900">{plainText(group.title)}</span>
+                    <span className="block text-xs text-gray-500 mt-0.5">
+                      {plural(group.tasks.length, 'task', 'tasks')}
+                    </span>
+                  </span>
+                  <span className="text-blue-700 text-sm mt-1 transition-transform group-open:rotate-180" aria-hidden="true">
+                    ⌄
+                  </span>
+                </summary>
+                <div className="px-5 pb-4">
                   {group.rationale && (
-                    <p className="text-sm text-gray-600 leading-relaxed">{plainText(group.rationale)}</p>
+                    <p className="text-sm text-gray-600 leading-relaxed mb-2">{plainText(group.rationale)}</p>
                   )}
+                  {group.tasks.map((task) => (
+                    <ReviewTaskRow key={task.id} task={task} onDispute={() => openDispute(task)} />
+                  ))}
                 </div>
-              )}
-              <div className="bg-white border border-gray-200 rounded-2xl p-5">
+              </details>
+            ) : (
+              // Mock mode's single untitled group: a plain list, no empty header.
+              <div key={gi} className="bg-white border border-gray-200 rounded-2xl px-5 py-2">
                 {group.tasks.map((task) => (
                   <ReviewTaskRow key={task.id} task={task} onDispute={() => openDispute(task)} />
                 ))}
               </div>
-            </div>
-          ))}
-          {visibleGroups.length === 0 && <p className="text-sm text-gray-400">No tasks left.</p>}
+            ),
+          )}
+          {visibleGroups.length === 0 && <p className="text-sm text-gray-500">No tasks left.</p>}
         </div>
 
-        {/* Through-line — the counsellor's closing read. Same prose treatment as framing;
-            a top rule separates it from the plan without boxing it like a card. */}
+        {/* Through-line: the counsellor's closing read. */}
         {assessment.throughLine && (
-          <p className="text-[15px] leading-relaxed text-gray-800 border-t border-gray-200 pt-4">
-            {plainText(assessment.throughLine)}
-          </p>
+          <div className="rounded-2xl bg-blue-50 px-5 py-4">
+            <p className="text-xs font-bold text-blue-700 uppercase tracking-[.14em] mb-1">How it fits together</p>
+            <p className="text-sm leading-relaxed text-gray-800">{plainText(assessment.throughLine)}</p>
+          </div>
         )}
 
         {deriveError && <p className="text-sm text-red-700">{deriveError}</p>}
 
-        <div className="space-y-2">
+        {/* Kept in view while scrolling a long plan. */}
+        <div className="sticky bottom-0 z-10 -mx-5 px-5 sm:-mx-7 sm:px-7 py-3 bg-white/95 backdrop-blur border-t border-gray-200">
           <button
             type="button"
             onClick={handleAgree}
             disabled={derivingPaths || identifiedTasks.length === 0}
             className="btn btn-primary w-full disabled:opacity-50"
           >
-            {derivingPaths ? 'Building paths…' : 'Agree & proceed'}
-          </button>
-          <button
-            type="button"
-            disabled
-            className="w-full py-2 px-4 border border-dashed border-gray-400 text-gray-400 text-sm rounded cursor-not-allowed"
-            title="Deferred per ADR-013 — not built yet"
-          >
-            Disagree entirely (coming soon)
+            {derivingPaths ? 'Building paths…' : 'Agree & see paths'}
           </button>
         </div>
       </div>
@@ -612,8 +737,9 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
   if (view === 'dispute' && disputeTask) {
     return (
       <div className="ca-panel w-full max-w-3xl mx-auto space-y-4">
+        <StepIndicator current={2} />
         <h1 className="text-2xl font-bold text-gray-900">Dispute a task</h1>
-        <div className="border border-gray-300 rounded p-3 text-sm text-gray-700">{disputeTask.title}</div>
+        <div className="border border-gray-200 rounded-xl p-3 text-sm text-gray-700">{plainText(disputeTask.title)}</div>
 
         {!disputeResult ? (
           <form onSubmit={handleDisputeSubmit} className="space-y-4">
@@ -688,8 +814,15 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
 
   if (view === 'paths') {
     return (
-      <div className="ca-panel w-full max-w-3xl mx-auto space-y-4">
-        <h1 className="text-2xl font-bold text-gray-900">Choose a path</h1>
+      <div className="ca-panel w-full max-w-5xl mx-auto space-y-4">
+        <StepIndicator current={3} />
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold text-gray-900">Choose a path</h1>
+          <p className="text-sm text-gray-500">
+            Same tasks, different depth. Optimal is a good default; you can change the order or drop
+            tasks next.
+          </p>
+        </div>
 
         {assumedFreshStart && (
           <p className="text-sm text-gray-600 bg-white border border-gray-200 rounded-xl p-3">
@@ -699,12 +832,13 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
           </p>
         )}
 
-        <div className="space-y-3">
+        <div className="grid gap-3 md:grid-cols-3 items-stretch">
           {paths.map((path) => (
             <PathCard
               key={path.strategy}
               path={path}
               recommended={path.strategy === 'optimal'}
+              agreedTitles={agreedTitles}
               onSelect={() => handleSelectPath(path)}
             />
           ))}
@@ -725,41 +859,68 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
     ? computePathTotals(editedTasks, selectedPath.intensityHoursPerWeek)
     : { effortTotalHours: 0, calendarRange: { minWeeks: 0, maxWeeks: 0 } };
 
+  const pathName = selectedPath ? STRATEGY_LABEL[selectedPath.strategy] : '';
   return (
     <div className="ca-panel w-full max-w-3xl mx-auto space-y-4">
-      <h1 className="text-2xl font-bold text-gray-900">
-        Edit your {selectedPath ? STRATEGY_LABEL[selectedPath.strategy] : ''} path
-      </h1>
+      <StepIndicator current={4} />
 
-      <p className="text-xs text-gray-500">
-        {liveTotals.effortTotalHours}h total · {liveTotals.calendarRange.minWeeks}–
-        {liveTotals.calendarRange.maxWeeks} weeks at {selectedPath?.intensityHoursPerWeek}h/week
-      </p>
+      {saved && (
+        <div className="rounded-2xl bg-blue-50 px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-gray-900">
+            <span className="font-semibold">Roadmap saved.</span> You can come back to it from your goal.
+          </p>
+          <a href="/activate" className="btn btn-secondary btn-small">
+            Back to your goal
+          </a>
+        </div>
+      )}
 
-      <div className="bg-white border border-gray-200 rounded-2xl p-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {saved ? `Your ${pathName} roadmap` : `Your ${pathName} path`}
+          </h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {plural(editedTasks.length, 'task', 'tasks')} · {liveTotals.calendarRange.minWeeks}–
+            {liveTotals.calendarRange.maxWeeks} weeks at {selectedPath?.intensityHoursPerWeek}h a week ·{' '}
+            {liveTotals.effortTotalHours}h in total
+          </p>
+        </div>
+        {!saved && (
+          <button
+            type="button"
+            onClick={() => setEditingOrder((e) => !e)}
+            className="btn btn-secondary btn-small"
+            aria-pressed={editingOrder}
+          >
+            {editingOrder ? 'Done editing' : 'Change order or remove'}
+          </button>
+        )}
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-2xl px-5 py-2">
         {editedTasks.map((task, i) => (
           <TaskRow
             key={task.id}
             task={task}
+            agreedTitle={agreedTitles.get(task.id) ?? null}
             index={i}
             total={editedTasks.length}
+            editing={editingOrder && !saved}
             onMoveUp={() => moveTask(i, -1)}
             onMoveDown={() => moveTask(i, 1)}
             onRemove={() => removeTask(i)}
           />
         ))}
-        {editedTasks.length === 0 && <p className="text-sm text-gray-400">No tasks left.</p>}
+        {editedTasks.length === 0 && <p className="text-sm text-gray-500 py-2">No tasks left.</p>}
       </div>
 
       {saved ? (
-        <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-2">
-          <p className="text-sm text-gray-900">Roadmap saved (version {saved.version}).</p>
-          <a href="/activate" className="text-sm text-gray-700 underline">
-            Back to your goal
-          </a>
-        </div>
+        <button type="button" onClick={() => setSaved(null)} className="text-xs text-gray-500 underline">
+          Make changes
+        </button>
       ) : (
-        <div className="space-y-2">
+        <>
           {saveError && <p className="text-sm text-red-700">{saveError}</p>}
           <button
             type="button"
@@ -769,12 +930,11 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
           >
             {saving ? 'Saving…' : 'Save this roadmap'}
           </button>
-        </div>
+          <button type="button" onClick={() => setView('paths')} className="text-xs text-gray-500 underline">
+            Back to paths
+          </button>
+        </>
       )}
-
-      <button type="button" onClick={() => setView('paths')} className="text-xs text-gray-500 underline">
-        Back to paths
-      </button>
     </div>
   );
 }

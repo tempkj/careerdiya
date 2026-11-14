@@ -15,16 +15,22 @@ const NAV = [
   ['/courses.html', 'Courses & Training'],
 ] as const;
 
-function initialOf(email?: string | null): string {
-  const c = (email ?? '').trim().charAt(0);
-  return c ? c.toUpperCase() : 'U';
+// Same rule as the static pages (public/assets/site.js initialsForUser), so the avatar reads
+// "KU" everywhere rather than "KU" on Career Diya and "K" here.
+function initialsFor(name?: string | null, email?: string | null): string {
+  const base = (name || (email ?? '').split('@')[0] || '').trim();
+  const parts = base.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
+  return (base.slice(0, 2) || 'U').toUpperCase();
 }
 
 export default function CareerDiyaShell({
-  eyebrow = 'CareerĀsanā',
+  eyebrow = 'Career Plan',
   title,
   intro,
   userEmail,
+  userName,
+  compact = false,
   children,
 }: {
   eyebrow?: string;
@@ -32,6 +38,9 @@ export default function CareerDiyaShell({
   intro?: string;
   /** Signed-in user's email; shows the profile avatar and Sign out. Omit on sign-in pages. */
   userEmail?: string | null;
+  userName?: string | null;
+  /** Shorter banner for working screens, so the task starts above the fold. */
+  compact?: boolean;
   children: ReactNode;
 }) {
   const signedIn = userEmail !== undefined;
@@ -58,7 +67,7 @@ export default function CareerDiyaShell({
                 title={userEmail ? `My Career · ${userEmail}` : 'My Career'}
                 aria-label="My Career"
               >
-                <span className="profile-avatar">{initialOf(userEmail)}</span>
+                <span className="profile-avatar">{initialsFor(userName, userEmail)}</span>
               </a>
             </div>
           ) : (
@@ -67,7 +76,7 @@ export default function CareerDiyaShell({
         </div>
       </header>
 
-      <section className="page-hero mural-band">
+      <section className={`page-hero mural-band${compact ? ' ca-hero-compact' : ''}`}>
         <div className="cd2-mural-decor" aria-hidden="true">
           <span className="bloom bloom-navy" data-bloom="" />
           <span className="bloom bloom-gold" data-bloom="" />
