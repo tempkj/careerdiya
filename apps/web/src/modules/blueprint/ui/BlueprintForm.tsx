@@ -45,7 +45,7 @@ function TaskRow({
           type="button"
           onClick={onMoveUp}
           disabled={index === 0}
-          className="px-2 py-1 text-xs border border-gray-300 rounded disabled:opacity-30"
+          className="px-2.5 py-1 text-xs bg-white border border-gray-300 rounded-lg hover:border-blue-300 disabled:opacity-30"
         >
           ↑
         </button>
@@ -53,14 +53,14 @@ function TaskRow({
           type="button"
           onClick={onMoveDown}
           disabled={index === total - 1}
-          className="px-2 py-1 text-xs border border-gray-300 rounded disabled:opacity-30"
+          className="px-2.5 py-1 text-xs bg-white border border-gray-300 rounded-lg hover:border-blue-300 disabled:opacity-30"
         >
           ↓
         </button>
         <button
           type="button"
           onClick={onRemove}
-          className="px-2 py-1 text-xs border border-red-300 text-red-700 rounded"
+          className="px-2.5 py-1 text-xs bg-white border border-red-200 text-red-700 rounded-lg hover:bg-red-50"
         >
           Remove
         </button>
@@ -84,7 +84,7 @@ function ReviewTaskRow({ task, onDispute }: { task: DraftTask; onDispute: () => 
       <button
         type="button"
         onClick={onDispute}
-        className="shrink-0 px-2 py-1 text-xs border border-gray-300 rounded"
+        className="btn btn-secondary btn-small shrink-0"
       >
         Dispute
       </button>
@@ -106,7 +106,7 @@ function PathCard({
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="border border-gray-300 rounded p-4 space-y-2">
+    <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-2">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-gray-900">
           {STRATEGY_LABEL[path.strategy]}
@@ -145,7 +145,7 @@ function PathCard({
         </div>
       )}
 
-      <button type="button" onClick={onSelect} className="w-full mt-2 py-2 px-3 bg-gray-900 text-white text-sm rounded">
+      <button type="button" onClick={onSelect} className="btn btn-primary w-full mt-2">
         Select this path
       </button>
     </div>
@@ -429,11 +429,11 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
 
   if (view === 'gates') {
     return (
-      <div className="w-full max-w-lg">
+      <div className="ca-panel w-full max-w-3xl mx-auto">
         <a href="/activate" className="text-xs text-gray-500 underline">
           ← Back to your explorations
         </a>
-        <h1 className="text-xl font-semibold text-gray-900 mb-4 mt-2">Before we build your plan</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-4 mt-2">Before we build your plan</h1>
         <div className="bg-white border border-gray-200 rounded p-3 text-sm text-gray-700 mb-4">
           <p>
             From <span className="font-medium">{sessionContext.currentRole || 'not specified'}</span> to{' '}
@@ -452,7 +452,7 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
               min={0}
               value={weeklyHours}
               onChange={(e) => setWeeklyHours(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+              className="input"
               placeholder="e.g. 15"
             />
           </div>
@@ -463,7 +463,7 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
             </p>
 
             {skillsLoading && (
-              <p className="text-sm text-gray-500 border border-gray-200 rounded px-3 py-2">
+              <p className="text-sm text-gray-500 bg-white border border-gray-200 rounded-xl px-3 py-2">
                 {skillsLoadingSlow
                   ? `Still working — gathering the skill list for ${sessionContext.desiredRole} for the first time can take up to 20 seconds…`
                   : 'Loading relevant-experience options…'}
@@ -471,7 +471,7 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
             )}
 
             {!skillsLoading && skillsError && (
-              <p className="text-sm text-gray-500 border border-gray-200 rounded px-3 py-2">
+              <p className="text-sm text-gray-500 bg-white border border-gray-200 rounded-xl px-3 py-2">
                 Couldn&apos;t load a checklist for this role — no problem, describe it below instead, or skip.
               </p>
             )}
@@ -506,7 +506,7 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
               type="text"
               value={relevantExperienceText}
               onChange={(e) => setRelevantExperienceText(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+              className="input"
               placeholder="anything else about your background that might be relevant, even if it seems unrelated"
             />
           </div>
@@ -514,7 +514,7 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
           <button
             type="submit"
             disabled={identifying}
-            className="w-full py-2 px-4 bg-gray-900 text-white text-sm rounded disabled:opacity-50"
+            className="btn btn-primary w-full disabled:opacity-50"
           >
             {identifying ? 'Identifying tasks…' : 'Continue'}
           </button>
@@ -536,9 +536,9 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
       .filter((group) => group.tasks.length > 0);
 
     return (
-      <div className="w-full max-w-lg space-y-6">
+      <div className="ca-panel w-full max-w-3xl mx-auto space-y-6">
         <div className="space-y-1">
-          <h1 className="text-xl font-semibold text-gray-900">Here&apos;s what we think you need to work on</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Here&apos;s what we think you need to work on</h1>
           <p className="text-xs text-gray-500">
             Review the plan below. Dispute anything that doesn&apos;t fit before agreeing.
           </p>
@@ -564,7 +564,7 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
                   {group.rationale && <p className="text-xs text-gray-500">{group.rationale}</p>}
                 </div>
               )}
-              <div className="border border-gray-300 rounded p-4">
+              <div className="bg-white border border-gray-200 rounded-2xl p-5">
                 {group.tasks.map((task) => (
                   <ReviewTaskRow key={task.id} task={task} onDispute={() => openDispute(task)} />
                 ))}
@@ -589,7 +589,7 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
             type="button"
             onClick={handleAgree}
             disabled={derivingPaths || identifiedTasks.length === 0}
-            className="w-full py-2 px-4 bg-gray-900 text-white text-sm rounded disabled:opacity-50"
+            className="btn btn-primary w-full disabled:opacity-50"
           >
             {derivingPaths ? 'Building paths…' : 'Agree & proceed'}
           </button>
@@ -608,8 +608,8 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
 
   if (view === 'dispute' && disputeTask) {
     return (
-      <div className="w-full max-w-lg space-y-4">
-        <h1 className="text-xl font-semibold text-gray-900">Dispute a task</h1>
+      <div className="ca-panel w-full max-w-3xl mx-auto space-y-4">
+        <h1 className="text-2xl font-bold text-gray-900">Dispute a task</h1>
         <div className="border border-gray-300 rounded p-3 text-sm text-gray-700">{disputeTask.title}</div>
 
         {!disputeResult ? (
@@ -623,7 +623,7 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
                 required
                 value={disputeReason}
                 onChange={(e) => setDisputeReason(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                className="input"
                 rows={3}
                 placeholder="e.g. I already have years of experience with this"
               />
@@ -632,19 +632,19 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
             <button
               type="submit"
               disabled={disputing || !disputeReason.trim()}
-              className="w-full py-2 px-4 bg-gray-900 text-white text-sm rounded disabled:opacity-50"
+              className="btn btn-primary w-full disabled:opacity-50"
             >
               {disputing ? 'Sending…' : 'Send'}
             </button>
           </form>
         ) : (
           <div className="space-y-3">
-            <p className="text-sm text-gray-700 border border-gray-300 rounded p-3">{disputeResult.message}</p>
+            <p className="text-sm text-gray-700 bg-white border border-gray-200 rounded-xl p-3">{disputeResult.message}</p>
             {disputeResult.disposition === 'agreed' ? (
               <button
                 type="button"
                 onClick={() => resolveDispute(false)}
-                className="w-full py-2 px-4 bg-gray-900 text-white text-sm rounded"
+                className="btn btn-primary w-full"
               >
                 Continue
               </button>
@@ -653,14 +653,14 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
                 <button
                   type="button"
                   onClick={() => resolveDispute(true)}
-                  className="flex-1 py-2 px-4 border border-gray-300 text-sm rounded"
+                  className="btn btn-secondary flex-1"
                 >
                   Keep it
                 </button>
                 <button
                   type="button"
                   onClick={() => resolveDispute(false)}
-                  className="flex-1 py-2 px-4 bg-gray-900 text-white text-sm rounded"
+                  className="btn btn-primary flex-1"
                 >
                   Drop it anyway
                 </button>
@@ -685,11 +685,11 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
 
   if (view === 'paths') {
     return (
-      <div className="w-full max-w-lg space-y-4">
-        <h1 className="text-xl font-semibold text-gray-900">Choose a path</h1>
+      <div className="ca-panel w-full max-w-3xl mx-auto space-y-4">
+        <h1 className="text-2xl font-bold text-gray-900">Choose a path</h1>
 
         {assumedFreshStart && (
-          <p className="text-sm text-gray-600 border border-gray-300 rounded p-3">
+          <p className="text-sm text-gray-600 bg-white border border-gray-200 rounded-xl p-3">
             Assuming you&apos;re starting fresh in this field — if you already have some of these
             skills, you&apos;ll move faster than shown; we&apos;ll factor that in once
             skill-assessment is added.
@@ -723,8 +723,8 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
     : { effortTotalHours: 0, calendarRange: { minWeeks: 0, maxWeeks: 0 } };
 
   return (
-    <div className="w-full max-w-lg space-y-4">
-      <h1 className="text-xl font-semibold text-gray-900">
+    <div className="ca-panel w-full max-w-3xl mx-auto space-y-4">
+      <h1 className="text-2xl font-bold text-gray-900">
         Edit your {selectedPath ? STRATEGY_LABEL[selectedPath.strategy] : ''} path
       </h1>
 
@@ -733,7 +733,7 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
         {liveTotals.calendarRange.maxWeeks} weeks at {selectedPath?.intensityHoursPerWeek}h/week
       </p>
 
-      <div className="border border-gray-300 rounded p-4">
+      <div className="bg-white border border-gray-200 rounded-2xl p-5">
         {editedTasks.map((task, i) => (
           <TaskRow
             key={task.id}
@@ -749,7 +749,7 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
       </div>
 
       {saved ? (
-        <div className="border border-gray-300 rounded p-4 space-y-2">
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-2">
           <p className="text-sm text-gray-900">Roadmap saved (version {saved.version}).</p>
           <a href="/activate" className="text-sm text-gray-700 underline">
             Back to your goal
@@ -762,7 +762,7 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
             type="button"
             onClick={handleSave}
             disabled={saving || editedTasks.length === 0}
-            className="w-full py-2 px-4 bg-gray-900 text-white text-sm rounded disabled:opacity-50"
+            className="btn btn-primary w-full disabled:opacity-50"
           >
             {saving ? 'Saving…' : 'Save this roadmap'}
           </button>

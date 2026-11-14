@@ -1,3 +1,71 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* CareerĀsanā inside the Career Diya shell. Header, hero band, footer, .btn and .input come
+   from public/assets/site.css + design-system-v2.css (linked in app/layout.tsx); these rules
+   only cover what the CareerĀsanā screens add on top. */
+
+.ca-main {
+  padding: 36px 0 72px;
+}
+
+.ca-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ca-header-actions .nav-signin {
+  background: #fff;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* The white panel CareerĀsanā forms and results sit in — same surface as Career Diya's
+   profile and auth cards. */
+.ca-panel {
+  background: #fff;
+  border: 1px solid #e8e7e2;
+  border-radius: 22px;
+  padding: 28px;
+  box-shadow: 0 18px 50px rgba(31, 35, 54, 0.06);
+}
+
+@media (max-width: 650px) {
+  .ca-main {
+    padding: 22px 0 56px;
+  }
+  .ca-panel {
+    padding: 20px;
+    border-radius: 18px;
+  }
+}
+
+/* Career Diya's .btn is inline-flex; full-width buttons in CareerĀsanā stretch. */
+.btn.w-full {
+  display: flex;
+  width: 100%;
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+}
+
+.input:focus,
+.input:focus-visible {
+  outline: none;
+  border-color: #213a8f;
+  box-shadow: 0 0 0 3px rgba(33, 58, 143, 0.14);
+}
+
+/* Tailwind's preflight resets heading weights and paragraph margins that the Career Diya
+   stylesheets rely on from browser defaults; restore them inside the shared chrome. */
+.page-hero h1,
+.page-hero h2 {
+  font-weight: 700;
+}
+.page-hero p,
+.footer p {
+  margin-block: 1em;
+}

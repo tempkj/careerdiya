@@ -4,8 +4,9 @@ import { hasCareerAsanaAccess } from '@modules/identity';
 import CareerAsanaAccessGate from '@modules/identity/ui/AccessGate';
 import { getActivationSession } from '@modules/activation';
 import BlueprintForm from '@modules/blueprint/ui/BlueprintForm';
+import CareerDiyaShell from '../_components/CareerDiyaShell';
 
-export const metadata = { title: 'Your plan — CareerĀsanā' };
+export const metadata = { title: 'Your roadmap — CareerĀsanā | Career Diya' };
 
 // Blueprint is canonically reached from a goal (/activate -> "Build roadmap").
 // A session is required — /blueprint/identify is session-scoped (roles live
@@ -18,7 +19,18 @@ export default async function BlueprintPage({
 }) {
   const { supabase, user } = await createClient();
   if (!user) redirect('/login?next=/blueprint');
-  if (!(await hasCareerAsanaAccess(supabase, user.id))) return <CareerAsanaAccessGate />;
+  if (!(await hasCareerAsanaAccess(supabase, user.id))) {
+    return (
+      <CareerDiyaShell
+        eyebrow="CareerĀsanā · early access"
+        title="Turn your chosen direction into a plan"
+        intro="CareerĀsanā is Career Diya's deeper planning layer for people who already know the role they want."
+        userEmail={user.email ?? null}
+      >
+        <CareerAsanaAccessGate />
+      </CareerDiyaShell>
+    );
+  }
 
   const { sessionId } = await searchParams;
   if (!sessionId) { redirect('/activate'); return null; }
@@ -42,8 +54,13 @@ export default async function BlueprintPage({
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <CareerDiyaShell
+      eyebrow="CareerĀsanā · your roadmap"
+      title={`From ${session.currentRole ? session.currentRole : 'where you are'} to ${session.desiredRole}`}
+      intro="Tell us your starting point, review what you need to work on, then choose a path that fits the time you have."
+      userEmail={user.email ?? null}
+    >
       <BlueprintForm sessionContext={sessionContext} />
-    </main>
+    </CareerDiyaShell>
   );
 }
