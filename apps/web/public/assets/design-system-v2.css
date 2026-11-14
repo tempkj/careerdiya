@@ -473,3 +473,19 @@ section.career-snapshot:has(#careerSnapshotGrid:empty){display:none}
 .vault-more-menu button:hover{background:#f4f3ee}
 .vault-more-menu button.danger{color:#b42318}
 .contextual-courses .course-actions .btn{padding:9px 14px;font-size:14px}
+
+/* Home page review (pre-Kutumbh) ------------------------------------------------ */
+/* The dark panel sets white text; its white tiles need dark text or their titles vanish. */
+.hero-orbit .choice{color:var(--ink,#151827)}
+.hero-orbit .choice strong{color:var(--ink,#151827)}
+/* The floating outline shapes read as stray loading spinners; the blooms carry the look. */
+.mural-shape{display:none!important}
+/* Audience picker: once chosen, collapse to one line with a Change link. */
+.hero-audience-summary{display:none;align-items:center;gap:10px;font-size:14px;color:var(--muted,#687083)}
+.hero-audience-summary b{color:var(--ink,#151827)}
+.hero-audience-picker.is-collapsed .hero-audience-head,.hero-audience-picker.is-collapsed .hero-audience-grid{display:none}
+.hero-audience-picker.is-collapsed .hero-audience-summary{display:flex}
+.hero-audience-summary .link-button{background:none;border:0;padding:0;font:inherit;font-weight:700;color:var(--brand,#213A8F);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.hero-audience-head{display:block}
+.footer .footer-tagline{color:#d9dbe6;max-width:320px;font-size:14px}
+@media (max-width:560px){.intent{min-height:0}}
