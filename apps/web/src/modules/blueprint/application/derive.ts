@@ -24,13 +24,18 @@ const PORTFOLIO_LEVEL_THRESHOLD = 0.85;
 // ── Per-strategy cosmetic templates (ADR-012 §1.2 language) — unchanged ─────
 // This is the ONLY place strategy names attach meaning now; the packaging
 // itself (computePathAtLevel) knows nothing about "fastest"/"optimal"/"longest".
+// "a data scientist role" / "an agri business management role".
+function withArticle(phrase: string): string {
+  return /^[aeiou]/i.test(phrase.trim()) ? `an ${phrase}` : `a ${phrase}`;
+}
+
 const STRATEGY_TEMPLATES: Record<
   Exclude<PathStrategy, 'custom'>,
   { probabilityBand: ProbabilityBand; landing: (toRoleKey: string) => string }
 > = {
   fastest: {
     probabilityBand: 'medium',
-    landing: (toRoleKey) => `Land a ${toRoleKey} role focused on the required core, moving fast.`,
+    landing: (toRoleKey) => `Land ${withArticle(toRoleKey)} role focused on the required core, moving fast.`,
   },
   optimal: {
     probabilityBand: 'medium_high',
@@ -38,7 +43,7 @@ const STRATEGY_TEMPLATES: Record<
   },
   longest: {
     probabilityBand: 'high',
-    landing: (toRoleKey) => `Land a ${toRoleKey} role with full target-depth mastery and a portfolio to prove it.`,
+    landing: (toRoleKey) => `Land ${withArticle(toRoleKey)} role with full target-depth mastery and a portfolio to prove it.`,
   },
 };
 

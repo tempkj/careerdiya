@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { categoryLabel, plainText, taskMetaLine } from './plainLanguage';
 import type { DerivedPath, DraftTask, PathStrategy, StoredBlueprint } from '../domain/types';
 import { computePathTotals } from '../application/pathTotals';
 import type { DisputeResult } from '../application/dispute';
@@ -36,7 +37,7 @@ function TaskRow({
       <div className="flex-1 min-w-0">
         <p className="text-sm text-gray-900">{task.title}</p>
         <p className="text-xs text-gray-500">
-          {task.evolveCategory} · {task.effortHours}h
+          {categoryLabel(task.evolveCategory)} · {task.effortHours}h
           {task.dependencies.length > 0 ? ` · depends on ${task.dependencies.length} task(s)` : ''}
         </p>
       </div>
@@ -75,11 +76,11 @@ function ReviewTaskRow({ task, onDispute }: { task: DraftTask; onDispute: () => 
   return (
     <div className="flex items-start justify-between gap-3 py-2 border-b border-gray-200 last:border-0">
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-900">{task.title}</p>
-        {task.description && <p className="text-xs text-gray-500 mt-0.5">{task.description}</p>}
-        <p className="text-xs text-gray-400 mt-0.5">
-          {task.evolveCategory} · {task.criticality ?? 'system-added'} · {task.taskType ?? 'unclassified'}
-        </p>
+        <p className="text-sm font-medium text-gray-900">{plainText(task.title)}</p>
+        {task.description && (
+          <p className="text-sm text-gray-600 mt-0.5 leading-relaxed">{plainText(task.description)}</p>
+        )}
+        <p className="text-xs text-blue-700 mt-1">{taskMetaLine(task)}</p>
       </div>
       <button
         type="button"
@@ -138,7 +139,7 @@ function PathCard({
           <div className="divide-y divide-gray-100">
             {path.tasks.map((t) => (
               <div key={t.id} className="py-1.5 text-sm text-gray-700">
-                {t.title} <span className="text-xs text-gray-400">({t.evolveCategory}, {t.effortHours}h)</span>
+                {t.title} <span className="text-xs text-gray-400">({categoryLabel(t.evolveCategory)}, {t.effortHours}h)</span>
               </div>
             ))}
           </div>
@@ -549,7 +550,7 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
             introducing a new visual container the rest of the app doesn't use. Renders
             nothing in mock mode (empty framing) — no empty box. */}
         {assessment.framing && (
-          <p className="text-[15px] leading-relaxed text-gray-800">{assessment.framing}</p>
+          <p className="text-[15px] leading-relaxed text-gray-800">{plainText(assessment.framing)}</p>
         )}
 
         <div className="space-y-5">
@@ -560,8 +561,10 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
                   section header. */}
               {group.title && (
                 <div className="space-y-0.5">
-                  <h2 className="text-sm font-semibold text-gray-900">{group.title}</h2>
-                  {group.rationale && <p className="text-xs text-gray-500">{group.rationale}</p>}
+                  <h2 className="text-base font-bold text-gray-900">{plainText(group.title)}</h2>
+                  {group.rationale && (
+                    <p className="text-sm text-gray-600 leading-relaxed">{plainText(group.rationale)}</p>
+                  )}
                 </div>
               )}
               <div className="bg-white border border-gray-200 rounded-2xl p-5">
@@ -578,7 +581,7 @@ export default function BlueprintForm({ sessionContext }: { sessionContext: Sess
             a top rule separates it from the plan without boxing it like a card. */}
         {assessment.throughLine && (
           <p className="text-[15px] leading-relaxed text-gray-800 border-t border-gray-200 pt-4">
-            {assessment.throughLine}
+            {plainText(assessment.throughLine)}
           </p>
         )}
 
