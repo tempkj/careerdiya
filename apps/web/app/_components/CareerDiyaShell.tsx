@@ -103,6 +103,7 @@ export default function CareerDiyaShell({
             <p style={{ color: '#aeb2c1', maxWidth: 320 }}>
               Career guidance that helps you make the next decision with more clarity.
             </p>
+            <small className="footer-unit">a Swakojo Group company</small>
           </div>
           <div>
             <b>Explore</b>
@@ -119,7 +120,6 @@ export default function CareerDiyaShell({
           <div>
             <b>Ecosystem</b>
             <a href="/courses.html">Courses &amp; Training</a>
-            <a href="https://careerdiya.edumilestones.com/">Deeper Assessment</a>
           </div>
         </div>
         <div className="container footer-legal">

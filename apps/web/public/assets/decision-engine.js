@@ -538,7 +538,7 @@ function gateBeforeResults(root,answers,audience,currentRole=null,targetRole=nul
         <input class="input" type="text" name="name" placeholder="Your name" autocomplete="name" required>
         <input class="input" type="email" name="email" placeholder="Email address" autocomplete="email" required>
         <input class="input" type="password" name="password" placeholder="Create a password (8+ characters)" autocomplete="new-password" minlength="8" required>
-        <button class="btn btn-primary" type="submit">Create My Free Profile →</button>
+        <button class="btn btn-primary" type="submit">Create my free profile →</button>
       </form>
       <p class="profile-gate-status" role="status" aria-live="polite"></p>
       <p class="profile-gate-switch">Already have a Career Diya profile? <a class="link-button" href="auth.html?return=explore">Sign In</a></p>
@@ -586,7 +586,7 @@ function gateBeforeResults(root,answers,audience,currentRole=null,targetRole=nul
     }catch(err){
       if(status){status.textContent=err && err.message ? err.message : 'We could not create your profile. Please try again.';status.className='profile-gate-status err';}
     }finally{
-      if(btn){btn.disabled=false;btn.textContent='Create My Free Profile →';}
+      if(btn){btn.disabled=false;btn.textContent='Create my free profile →';}
     }
   });
 }
@@ -645,7 +645,9 @@ function renderResults(root,answers,audience,profileMessage='',currentRole=null,
   const anchorNote=result.anchoredDirectionId
     ? ` You told us you're ${answers.intent==='switch'?'switching into':'growing toward'} ${effectiveTargetRole}, so ${top.name} is the primary direction surfaced for this exploration.`
     : '';
-  const explanation=(result.routingNote ? `${result.routingNote} Within that set, your answers highlighted ${rationale}.` : `Your answers highlighted ${rationale}.`)+anchorNote;
+  // result.routingNote stays on the result for diagnostics; it describes the engine's
+  // candidate routing and is not shown to users.
+  const explanation=`Your answers highlighted ${rationale}.`+anchorNote;
   const storedResult={profileCreated:true,audience,currentRole:effectiveCurrentRole,targetRole:effectiveTargetRole,answers,recommendationMatrixVersion:FREE_ENGINE_CONFIG.version,score:result.chosen[0].score,signal,margin:result.margin,userProfile:result.userProfile,contextRouting:result.context?{intent:result.context.intent,roleFamily:result.context.roleFamily,currentRole:result.context.currentRole}:null,recommendations:result.chosen.map(x=>({id:x.direction.id,name:x.direction.name,score:x.score,similarities:x.similarities,penalty:x.penalty})),recs:result.chosen.map(x=>({id:x.direction.id,name:x.direction.name,skills:x.direction.skills||[],score:x.score,similarities:x.similarities,penalty:x.penalty})),updatedAt:new Date().toISOString()};
   if(persistSnapshot){
     localStorage.setItem('careerdiya_profile',JSON.stringify(storedResult));
@@ -656,18 +658,16 @@ function renderResults(root,answers,audience,profileMessage='',currentRole=null,
   }
   const resultEyebrow=isParent?'Your child’s starting directions':'Your starting directions';
   const heading=isParent?`A direction worth exploring: ${top.name}`:`A direction worth exploring: ${top.name}`;
-  const lead=isParent?'This is an exploration signal based on the observations you shared about your child. It is not a final stream recommendation or a child psychometric assessment.':'These are exploration signals based on the preferences you shared. They are not a definitive career-fit assessment.';
+  const lead=isParent?'These are starting directions based on what you shared about your child, not a final stream recommendation or a formal assessment.':'These are starting directions based on what you shared, not a formal career-fit assessment.';
   const nextTitle=isParent?'Build evidence before choosing a stream.':'Build evidence before you commit.';
-  const nextCopy=isParent?`You highlighted ${rationale}. Start with ${plan.top.join(', ')} and use ${plan.plan}. Then consider the age-designed school-stage assessment for deeper evidence.`:`You highlighted ${rationale}. Start with ${plan.top.join(', ')} and use ${plan.plan}. This is a low-risk way to test whether the direction feels right.`;
+  const nextCopy=isParent?`You highlighted ${rationale}. Start with ${plan.top.join(', ')} and use ${plan.plan}. If you want more confidence, talk it through with a Career Diya counsellor.`:`You highlighted ${rationale}. Start with ${plan.top.join(', ')} and use ${plan.plan}. This is a low-risk way to test whether the direction feels right.`;
   const topMapping = typeof getDirectionCareerMapping==='function' ? getDirectionCareerMapping(top.id) : null;
   const topHasVerifiedCareers = !!(topMapping && (topMapping.careers||[]).some(c=>c.status==='verified'));
   const vaultParam=vaultItemId?`&vaultItem=${encodeURIComponent(vaultItemId)}`:'';
-  const primaryAction=isParent
-    ? '<a class="btn btn-primary" href="https://careerdiya.edumilestones.com/career-lab/">Explore school-stage assessment →</a>'
-    : topHasVerifiedCareers
+  const primaryAction=topHasVerifiedCareers
       ? `<a class="btn btn-primary" href="career.html?direction=${encodeURIComponent(top.id)}&audience=${encodeURIComponent(audience)}${vaultParam}">Explore careers in ${top.name} →</a>`
       : `<span class="btn btn-secondary" aria-disabled="true" title="Career Library mappings for this direction are still being verified.">Career options being mapped</span>`;
-  const extra=isParent?'<a class="btn btn-secondary" href="explore.html?audience=parent">Start another exploration</a>':`<a class="btn btn-secondary" href="assessment.html?audience=${audience}">Need more confidence?</a>`;
+  const extra=isParent?'<a class="btn btn-secondary" href="explore.html?audience=parent">Start another exploration</a>':'<a class="btn btn-secondary" href="counselling.html">Talk to a counsellor</a>';
   const renderDirectionLink=(direction,aud) => {
     const m=typeof getDirectionCareerMapping==='function' ? getDirectionCareerMapping(direction.id) : null;
     const hasVerified=!!(m && (m.careers||[]).some(c=>c.status==='verified'));
@@ -677,12 +677,12 @@ function renderResults(root,answers,audience,profileMessage='',currentRole=null,
   };
   const leadCopy="Leave your email and we'll send this exploration summary so you can revisit it — no spam, no pressure to buy.";
   // ADR-CAREERDIY-0015: llmAdviceBlock/courseRecsPanel start hidden/empty and are only
-  // populated if the bounded-role enrichment fetch below succeeds. "Why it surfaced"
+  // populated if the bounded-role enrichment fetch below succeeds. "Why this direction"
   // above always stays the deterministic explanation, unedited — this block is
   // additive and clearly attributed, never a replacement for it.
   const llmSection=isBoundedRole?`<p class="llm-advice" id="llmAdviceBlock" hidden></p>`:'';
   const courseRecsPanel=isBoundedRole?`<div class="result-panel courses-panel" id="courseRecsPanel" hidden><span class="tag">AI-suggested · explore further</span><h3>Suggested learning</h3><div id="courseRecsList"></div></div>`:'';
-  root.innerHTML=`<div class="results-wrap">${profileMessage?`<div class="profile-confirmation">${profileMessage}</div>`:''}<div class="eyebrow">${resultEyebrow}</div><h2>${heading}</h2><p class="results-lead">${lead}</p>${effectiveTargetRole?`<p class="target-role-note">Targeting: <b>${escHtml(effectiveTargetRole)}</b></p>`:''}<div class="results-grid"><div class="result-panel"><span class="tag">${signal}</span><h3>${top.name}</h3><p>${top.tags.join(' · ')}</p><div class="scorebar"><span style="width:${Math.max(35,Math.min(94,result.chosen[0].score))}%"></span></div><small>Exploration signal based on your answers; this score is not a validated percentage.</small><p class="result-why"><b>Why it surfaced:</b> ${explanation}</p></div><div class="result-panel"><span class="tag">Other directions worth exploring</span>${alternatives.map(c=>renderDirectionLink(c.direction,audience)).join('')}</div></div><div class="result-panel next-step"><span class="tag">What to do next</span><h3>${nextTitle}</h3><p>${nextCopy}</p><div class="actions">${primaryAction}${extra}</div>${llmSection}</div>${courseRecsPanel}<div class="result-panel lead-panel"><span class="tag">Get this by email</span><h3>Send me this direction</h3><p>${leadCopy}</p><form id="leadForm" class="lead-form" novalidate><input class="input" type="text" name="name" placeholder="Name (optional)" autocomplete="name"><input class="input" type="email" name="email" placeholder="you@email.com" required autocomplete="email"><input class="input" type="tel" name="phone" placeholder="Phone (optional)" autocomplete="tel"><button class="btn btn-primary" type="submit">Send me this direction</button></form><p class="lead-status" role="status" aria-live="polite"></p></div><div class="notice">${isParent?'<b>Parent note:</b> This free exploration uses observations you provided about your child and is intentionally broad. Use the age-designed school-stage assessment when you need deeper evidence.':'<b>Free exploration note:</b> This is a lightweight, deterministic exploration tool. A deeper assessment can provide more evidence when you are ready.'}</div></div>`;
+  root.innerHTML=`<div class="results-wrap">${profileMessage?`<div class="profile-confirmation">${profileMessage}</div>`:''}<div class="eyebrow">${resultEyebrow}</div><h2>${heading}</h2><p class="results-lead">${lead}</p>${effectiveTargetRole?`<p class="target-role-note">Targeting: <b>${escHtml(effectiveTargetRole)}</b></p>`:''}<div class="results-grid"><div class="result-panel"><span class="tag">Your top direction</span><h3>${top.name}</h3><p>${top.tags.join(' · ')}</p><p class="result-why"><b>Why this direction:</b> ${explanation}</p></div><div class="result-panel"><span class="tag">Other directions worth exploring</span>${alternatives.map(c=>renderDirectionLink(c.direction,audience)).join('')}</div></div><div class="result-panel next-step"><span class="tag">What to do next</span><h3>${nextTitle}</h3><p>${nextCopy}</p><div class="actions">${primaryAction}${extra}</div>${llmSection}</div>${courseRecsPanel}<div class="result-panel lead-panel"><span class="tag">Get this by email</span><h3>Send me this direction</h3><p>${leadCopy}</p><form id="leadForm" class="lead-form" novalidate><input class="input" type="text" name="name" placeholder="Name (optional)" autocomplete="name"><input class="input" type="email" name="email" placeholder="you@email.com" required autocomplete="email"><input class="input" type="tel" name="phone" placeholder="Phone (optional)" autocomplete="tel"><button class="btn btn-primary" type="submit">Send me this direction</button></form><p class="lead-status" role="status" aria-live="polite"></p></div><div class="notice">${isParent?'<b>About this result:</b> It is based on what you told us about your child and is intentionally broad. A conversation with a Career Diya counsellor can help you go further.':'<b>About this result:</b> This is a short exploration, not a formal assessment. If you want more confidence, talk it through with a Career Diya counsellor.'}</div></div>`;
   wireLeadForm(root,top,audience,answers,signal);
   if(isBoundedRole) enrichBoundedResult(root,effectiveCurrentRole,answers,top.id);
 }
@@ -1199,23 +1199,27 @@ async function initDecisionEngine(){
         }
       }
       if(resumeRequested){
-        const saved=JSON.parse(localStorage.getItem('careerdiya_profile')||'null');
-        if(saved && saved.answers && saved.audience){
-          renderResults(root,saved.answers,saved.audience,'Here is your saved exploration result.',saved.currentRole||null,saved.targetRole||null,null,{persistProfileContext:false,persistSnapshot:false});
-          return;
-        }
+        // The account's saved exploration is the source of truth: it is what My Career,
+        // Career Paths and Courses show as "latest". This browser's local copy can belong
+        // to an older exploration (or another account on a shared device), so it is only a
+        // fallback when the account has none.
         if(window.CareerDiyaProfileAuth && window.CareerDiyaProfileAuth.getSavedExploration){
           const persisted=await window.CareerDiyaProfileAuth.getSavedExploration();
           if(persisted && persisted.answers && persisted.audience){
-            renderResults(root,persisted.answers,persisted.audience,'Here is your saved exploration result.',persisted.result?.currentRole||null,persisted.result?.targetRole||null,null,{persistProfileContext:false,persistSnapshot:false});
+            renderResults(root,persisted.answers,persisted.audience,'Here is your latest saved exploration.',persisted.result?.currentRole||null,persisted.result?.targetRole||null,null,{persistProfileContext:false,persistSnapshot:false});
             return;
           }
+        }
+        const saved=JSON.parse(localStorage.getItem('careerdiya_profile')||'null');
+        if(saved && saved.answers && saved.audience){
+          renderResults(root,saved.answers,saved.audience,'Here is your latest saved exploration.',saved.currentRole||null,saved.targetRole||null,null,{persistProfileContext:false,persistSnapshot:false});
+          return;
         }
       }
     } catch(_) {}
   }
   const audience=currentAudience();
-  const startCopy=audience==='parent'?{eyebrow:'Free · a few minutes',title:'Explore your child’s direction before choosing a stream.',copy:'Answer a few questions about your child’s stage, interests and strengths. We will suggest broad directions worth exploring and a sensible next step.',benefits:['✓ Free profile to see your result','✓ No pressure to buy','✓ Use an age-designed assessment when you need deeper evidence']} : audience==='student'?{eyebrow:'Free · a few minutes',title:'Two ways to start exploring.',copy:'Jump straight to careers that come from your stream or major, or answer 7 quick questions for a read based on how you actually think and work. Neither is the "real" one — pick whichever you want first.',benefits:['✓ Free profile to see your result','✓ No pressure to buy','✓ Designed for students aged 16+']} : {eyebrow:'Free · 5–7 minutes',title:'Get a starting direction before you buy anything.',copy:'Answer a few questions about your situation, work preferences and goals. We will turn that into a short list of directions worth exploring and the most sensible next action.',benefits:['✓ Free profile to see your result','✓ No pressure to buy','✓ Skill Diya connection']};
+  const startCopy=audience==='parent'?{eyebrow:'Free · a few minutes',title:'Explore your child’s direction before choosing a stream.',copy:'Answer a few questions about your child’s stage, interests and strengths. We will suggest broad directions worth exploring and a sensible next step.',benefits:['✓ Free profile to see your result','✓ No pressure to buy','✓ Talk to a counsellor when you want more confidence']} : audience==='student'?{eyebrow:'Free · a few minutes',title:'Two ways to start exploring.',copy:'Jump straight to careers that come from your stream or major, or answer 7 quick questions for a read based on how you actually think and work. Neither is the "real" one — pick whichever you want first.',benefits:['✓ Free profile to see your result','✓ No pressure to buy','✓ Designed for students aged 16+']} : {eyebrow:'Free · 5–7 minutes',title:'Get a starting direction before you buy anything.',copy:'Answer a few questions about your situation, work preferences and goals. We will turn that into a short list of directions worth exploring and the most sensible next action.',benefits:['✓ Free profile to see your result','✓ No pressure to buy','✓ Skill Diya connection']};
   const autoStartWizard = qs().get('intent')||(!qs().get('wizard')&&qs().get('start')==='1');
   if(autoStartWizard){
     // Auto-start must go through the same context resolver as the normal Start button.

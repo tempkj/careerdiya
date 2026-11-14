@@ -330,7 +330,10 @@
     const key=directionAliases[normalize(directionId||'')]||normalize(directionId||'');
     const targetDomains=new Set(domains[key]||[]);
     if(!targetDomains.size) return {courses:[],exact:[],adjacent:[],matchType:'none',basis:'no curated direction mapping',label:'No meaningful Skill Diya course match'};
-    const adjacent=courses.filter(c=>targetDomains.has(c.domain));
+    // Keep the curated domain order, so the most relevant domain's courses come first
+    // (e.g. UX & Product Design before Architecture for the design direction).
+    const order=[...targetDomains];
+    const adjacent=courses.filter(c=>targetDomains.has(c.domain)).sort((a,b)=>order.indexOf(a.domain)-order.indexOf(b.domain));
     return {courses:adjacent.slice(0,3),exact:[],adjacent:adjacent.slice(0,3),matchType:adjacent.length?'adjacent':'none',basis:'curated exploration-direction/domain mapping',label:`Suggestions for ${directionName||'your exploration direction'}`};
   }
 
@@ -345,7 +348,7 @@
     if(!target) return;
     const name=careerName||'this career';
     if(!matches.courses.length){
-      target.innerHTML=`<section class="skill-training-section no-course-state"><div class="eyebrow">Courses &amp; Training</div><h2>No Skill Diya course for ${esc(name)} yet</h2><p class="training-muted">We do not have a meaningful current course match for this career yet. Would you be interested in doing courses in this career path?</p><button class="btn btn-primary" type="button" data-career-path-interest data-career-path-id="${esc(careerId||'')}" data-career-path-name="${esc(name)}">Yes, I’d Be Interested</button></section>`;
+      target.innerHTML=`<section class="skill-training-section no-course-state"><div class="eyebrow">Courses &amp; Training</div><h2>No Skill Diya course for ${esc(name)} yet</h2><p class="training-muted">We do not have a meaningful current course match for this career yet. Would you be interested in doing courses in this career path?</p><button class="btn btn-primary" type="button" data-career-path-interest data-career-path-id="${esc(careerId||'')}" data-career-path-name="${esc(name)}">Yes, I’d be interested</button></section>`;
       return;
     }
     const strong=matches.strong||matches.exact||[], adjacent=matches.adjacent||[];
@@ -355,7 +358,7 @@
   }
 
   function renderList(courses,target){
-    target.innerHTML=courses.length?courses.map(c=>`<article class="course-card"><div class="course-card-top"><span class="tag">${esc(c.domain)}</span><span class="course-status">${esc(c.status)}</span></div><h3>${esc(c.title)}</h3><p>${esc(c.description)}</p><div class="course-meta"><span>${esc(c.level)}</span><span>${esc(c.duration)}</span><span>${esc(c.format)}</span></div><div class="course-actions"><a class="btn btn-secondary" href="course.html?id=${encodeURIComponent(c.id)}">View course</a><button class="btn btn-primary" data-course-interest="${esc(c.id)}" type="button">Register interest</button></div></article>`).join(''):'<div class="course-empty"><h3>No Courses Match This Search</h3><p>Can’t find the training you were looking for? Tell us what would be useful and we’ll review the request.</p><button class="btn btn-primary" type="button" data-course-request>Tell Us What You Need</button></div>';
+    target.innerHTML=courses.length?courses.map(c=>`<article class="course-card"><div class="course-card-top"><span class="tag">${esc(c.domain)}</span><span class="course-status">${esc(c.status)}</span></div><h3>${esc(c.title)}</h3><p>${esc(c.description)}</p><div class="course-meta"><span>${esc(c.level)}</span><span>${esc(c.duration)}</span><span>${esc(c.format)}</span></div><div class="course-actions"><a class="btn btn-secondary" href="course.html?id=${encodeURIComponent(c.id)}">View course</a><button class="btn btn-primary" data-course-interest="${esc(c.id)}" type="button">Register interest</button></div></article>`).join(''):'<div class="course-empty"><h3>No courses match this search</h3><p>Can’t find the training you were looking for? Tell us what would be useful and we’ll review the request.</p><button class="btn btn-primary" type="button" data-course-request>Tell us what you need</button></div>';
   }
 
   function wireGlobal(){
