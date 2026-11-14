@@ -6,22 +6,21 @@ export default function CareerAsanaAccessGate({
   return (
     <section className="ca-panel w-full max-w-2xl mx-auto">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          How CareerĀsanā helps
+          What a career plan gives you
         </h2>
         <p className="text-sm leading-relaxed text-gray-600">
-          Career Diya helps you decide whether a direction is worth pursuing. CareerĀsanā is the
-          deeper layer that turns a chosen target{desiredRole ? ` — ${desiredRole}` : ''} into a
-          personalized, sequenced preparation plan.
+          Career Diya helps you decide whether a direction is worth pursuing. A career plan takes
+          the role you chose{desiredRole ? ` — ${desiredRole}` : ''} and turns it into a
+          step-by-step preparation plan made for you.
         </p>
 
         <div className="mt-6 grid gap-3">
           <div className="rounded-xl border border-gray-200 bg-brand-soft/60 p-4">
-            <p className="text-sm font-medium text-gray-900">What the deeper plan adds</p>
-            <ul className="mt-2 space-y-1 text-sm text-gray-600">
-              <li>• Personalized gap diagnosis</li>
-              <li>• AI-reasoned tasks grounded in your target role</li>
-              <li>• Fastest, optimal and thorough preparation paths</li>
-              <li>• Dependencies, effort estimates and an editable blueprint</li>
+            <ul className="space-y-1.5 text-sm text-gray-700">
+              <li>• What you&apos;ll need for the role, and what you already have</li>
+              <li>• Specific tasks for your situation, not a generic course list</li>
+              <li>• A fast, a balanced and a thorough path to choose from</li>
+              <li>• Time estimates and an order you can change</li>
             </ul>
           </div>
         </div>

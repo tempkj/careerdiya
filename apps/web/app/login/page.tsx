@@ -1,7 +1,7 @@
 import AuthForm from '@modules/identity/ui/AuthForm';
 import CareerDiyaShell from '../_components/CareerDiyaShell';
 
-export const metadata = { title: 'Sign in — CareerĀsanā | Career Diya' };
+export const metadata = { title: 'Sign in — Career Plan | Career Diya' };
 
 export default async function LoginPage({
   searchParams,
@@ -12,7 +12,7 @@ export default async function LoginPage({
   return (
     <CareerDiyaShell
       title="Sign in to plan your next move"
-      intro="Use your Career Diya account to open CareerĀsanā."
+      intro="Use your Career Diya account to open your career plan."
     >
       <AuthForm redirectTo={next ?? '/activate'} />
     </CareerDiyaShell>

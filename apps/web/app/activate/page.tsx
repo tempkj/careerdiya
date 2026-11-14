@@ -7,7 +7,7 @@ import ActivationForm from '@modules/activation/ui/ActivationForm';
 import CareerAsanaAccessGate from '@modules/identity/ui/AccessGate';
 import CareerDiyaShell from '../_components/CareerDiyaShell';
 
-export const metadata = { title: 'CareerĀsanā — Plan your move | Career Diya' };
+export const metadata = { title: 'Plan your move — Career Plan | Career Diya' };
 
 export default async function ActivatePage({
   searchParams,
@@ -32,10 +32,11 @@ export default async function ActivatePage({
   if (!(await hasCareerAsanaAccess(supabase, user.id))) {
     return (
       <CareerDiyaShell
-        eyebrow="CareerĀsanā · early access"
-        title="Turn your chosen direction into a plan"
-        intro="CareerĀsanā is Career Diya's deeper planning layer for people who already know the role they want."
+        eyebrow="Career Plan · early access"
+        title="Turn your chosen career into a plan"
+        intro="Personal career plans are in early access, for people who already know the role they want."
         userEmail={user.email ?? null}
+        userName={(user.user_metadata?.display_name ?? user.user_metadata?.full_name ?? null) as string | null}
       >
         <CareerAsanaAccessGate desiredRole={desiredRole || null} />
       </CareerDiyaShell>
@@ -56,9 +57,11 @@ export default async function ActivatePage({
 
   return (
     <CareerDiyaShell
+      compact
       title="Plan your move to a new role"
-      intro="See the gap between where you are and the role you want, compare options side by side, then turn your choice into a roadmap."
+      intro="See what you'll need for the role you want, compare options, then turn your choice into a roadmap."
       userEmail={user.email ?? null}
+        userName={(user.user_metadata?.display_name ?? user.user_metadata?.full_name ?? null) as string | null}
     >
       <ActivationForm
         userEmail={user.email ?? ''}

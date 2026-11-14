@@ -427,3 +427,27 @@ html,body{background:var(--cd-bg-paper)!important;color:var(--cd-ink)}
   .redirect-strip{flex-wrap:wrap}
 }
 @media(max-width:480px){.timeline{grid-template-columns:minmax(0,1fr)}}
+
+/* ── UX declutter (Nov 2026) ─────────────────────────────────────────────────────────
+   <button class="btn"> fell back to the browser font (Arial 13px) while <a class="btn">
+   used Poppins 16px, so paired buttons ("View course" / "Register interest") looked
+   mismatched. Form controls inherit the page font everywhere. */
+button,input,select,textarea{font-family:inherit}
+button.btn{font-size:inherit;line-height:inherit}
+
+/* Career page: one loud heading (the page title); sections step down to a calm size. */
+.section .career-detail-card h2{font-size:28px;line-height:1.15;letter-spacing:-.025em;margin:0 0 14px}
+.career-detail-hero-copy .career-overview-title{font-size:26px;line-height:1.15;letter-spacing:-.02em;margin:8px 0 10px}
+.career-detail-hero-copy p{font-size:17px}
+.career-text-link{display:inline-block;margin-top:6px;font-weight:650;color:var(--cd-brand,#213a8f);text-decoration:underline;text-underline-offset:3px}
+@media(max-width:650px){
+  .section .career-detail-card h2{font-size:23px}
+  .career-detail-hero-copy .career-overview-title{font-size:22px}
+}
+/* The snapshot grid above the profile renders empty for library careers: hide the band. */
+section.career-snapshot:has(#careerSnapshotGrid:empty){display:none}
+/* Video entries: a deliberate navy play tile rather than an empty grey box. */
+.career-video-placeholder{background:var(--cd-brand,#213a8f);border-color:var(--cd-brand,#213a8f);color:#fff;font-size:14px}
+/* Course cards: category and status on separate lines instead of wrapping into each other. */
+.skill-training-section .course-card-top{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.skill-training-section .course-card-top .course-status{font-size:12px;font-weight:650;color:#7a5a00;background:#f8f1d9;border-radius:999px;padding:3px 10px}

@@ -18,7 +18,12 @@ function titleCase(roleKey: string): string {
 // pre-commitment screens only (input form, gap-analysis result, compare grid) —
 // never past Set-as-Goal. Inert until the advice intent ships: no destination,
 // no signal collection, just a coming-soon marker so it doesn't read as broken.
+// Hidden until the advisor conversation exists: a disabled "coming soon" box on every screen
+// reads as unfinished. Call sites are kept so it can be switched back on in one place.
+const SHOW_COMING_SOON = false;
+
 function NeedAdviceCTA({ label }: { label: string }) {
+  if (!SHOW_COMING_SOON) return null;
   return (
     <button
       type="button"
@@ -33,31 +38,30 @@ function NeedAdviceCTA({ label }: { label: string }) {
 
 // ── Shared primitives ─────────────────────────────────────────────────────────
 
-function ConfidenceBar({ value }: { value: number }) {
-  const pct = Math.round(value * 100);
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-        <div className="h-full bg-blue-700 rounded-full" style={{ width: `${pct}%` }} />
-      </div>
-      <span className="text-xs text-gray-400 w-8 text-right">{pct}%</span>
-    </div>
-  );
-}
+// Plain-language source of each gap line. No percentages: the model's confidence is not a
+// measured probability, so showing "85%" would be false precision (honesty gate).
+const BASIS_LABEL: Record<string, string> = {
+  grounded: 'Based on job-market data',
+  inferred: 'Our estimate',
+  stated: 'From what you told us',
+};
 
 function GapCard({ item }: { item: ActivationResult['gap'][number] }) {
   return (
-    <div className="flex flex-col gap-1 py-3 border-b border-gray-100 last:border-0">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-medium text-gray-800">{item.skill}</span>
-        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-          item.have ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
-        }`}>
-          {item.have ? 'Have it' : 'Gap'}
-        </span>
+    <div className="flex items-start justify-between gap-3 py-3">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-gray-900">{item.skill}</p>
+        <p className="text-xs text-gray-500 mt-0.5">
+          {BASIS_LABEL[item.confidence.basis] ?? item.confidence.basis}
+        </p>
       </div>
-      <ConfidenceBar value={item.confidence.value} />
-      <span className="text-xs text-gray-400 capitalize">{item.confidence.basis}</span>
+      <span
+        className={`text-xs px-2.5 py-0.5 rounded-full font-semibold shrink-0 ${
+          item.have ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-800'
+        }`}
+      >
+        {item.have ? 'You have this' : 'To build'}
+      </span>
     </div>
   );
 }
@@ -66,7 +70,7 @@ function GapSection({ gap }: { gap: ActivationResult['gap'] }) {
   if (gap.length === 0) return null;
   return (
     <div>
-      <p className="text-xs font-bold text-blue-700 uppercase tracking-[.14em] mb-2">Gap analysis</p>
+      <p className="text-xs font-bold text-blue-700 uppercase tracking-[.14em] mb-2">What you&apos;ll need</p>
       <div className="bg-white border border-gray-200 rounded-xl px-4 divide-y divide-gray-100">
         {gap.map((item) => (
           <GapCard key={item.skill} item={item} />
@@ -118,76 +122,66 @@ function SessionCard({
 }) {
   const isPromoting = promoting === session.id;
 
+  const meta = [
+    session.currentRole ? `from ${session.currentRole}` : null,
+    fmt(session.createdAt),
+    session.gap.length > 0 ? `${session.gap.length} ${session.gap.length === 1 ? 'skill' : 'skills'} to build` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  // One compact row per exploration: role and a single meta line on the left, actions on
+  // the right (stacking under the text on phones).
   return (
-    <div className={`bg-white border rounded-xl p-4 space-y-3 ${
-      isActiveGoal ? 'border-blue-700 ring-1 ring-blue-700' : 'border-gray-200'
-    }`}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-start gap-2 flex-1 min-w-0">
-          <input
-            type="checkbox"
-            checked={selected}
-            disabled={selectionDisabled}
-            onChange={() => onToggleSelect(session.id)}
-            className="mt-1 h-4 w-4 shrink-0 rounded border-gray-300 text-blue-700 focus:ring-blue-700 disabled:opacity-40"
-            aria-label={`Select ${session.desiredRole ?? 'exploration'} to compare`}
-            title={selectionDisabled ? 'Up to 3 explorations at a time' : 'Select to compare'}
-          />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900 truncate">
-              {session.desiredRole ?? 'Unknown role'}
-            </p>
-            {session.currentRole && (
-              <p className="text-xs text-gray-400 mt-0.5">from {session.currentRole}</p>
+    <div
+      className={`bg-white border rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 ${
+        isActiveGoal ? 'border-blue-700 ring-1 ring-blue-700' : 'border-gray-200'
+      }`}
+    >
+      <div className="flex items-start gap-3 flex-1 min-w-0">
+        <input
+          type="checkbox"
+          checked={selected}
+          disabled={selectionDisabled}
+          onChange={() => onToggleSelect(session.id)}
+          className="mt-1 h-4 w-4 shrink-0 rounded border-gray-300 text-blue-700 focus:ring-blue-700 disabled:opacity-40"
+          aria-label={`Select ${session.desiredRole ?? 'exploration'} to compare`}
+          title={selectionDisabled ? 'Up to 3 explorations at a time' : 'Select to compare'}
+        />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-gray-900 flex items-center gap-2 flex-wrap">
+            <span className="truncate">{session.desiredRole ?? 'Unknown role'}</span>
+            {isActiveGoal && (
+              <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-blue-700 text-white">
+                Your goal
+              </span>
             )}
-          </div>
-        </div>
-        <div className="flex flex-col items-end gap-1 shrink-0">
-          {isActiveGoal && (
-            <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-blue-700 text-white">
-              Your goal
-            </span>
-          )}
+          </p>
+          <p className="text-xs text-gray-500 mt-0.5">{meta}</p>
         </div>
       </div>
 
-      <div className="text-xs text-gray-400 space-y-0.5">
-        <div className="flex justify-between">
-          <span>Created</span>
-          <span className="text-gray-600">{fmt(session.createdAt)}</span>
-        </div>
-        {session.gap.length > 0 && (
-          <div className="flex justify-between">
-            <span>Gaps identified</span>
-            <span className="text-gray-600">{session.gap.length}</span>
-          </div>
+      <div className="flex items-center gap-2 shrink-0 sm:justify-end">
+        {isActiveGoal && (
+          // Gated to the active-goal card only — it isn't a parallel entry
+          // point for any non-goal exploration.
+          <a href={`/blueprint?sessionId=${session.id}`} className="btn btn-primary btn-small">
+            Build roadmap
+          </a>
         )}
-      </div>
-
-      <div className="pt-1 space-y-2">
         <button
           onClick={() => onPromote(session)}
           disabled={isPromoting}
-          className={`btn ${isActiveGoal || !hasAnyGoal ? 'btn-primary' : 'btn-secondary'} btn-small w-full disabled:opacity-50`}
+          className={`btn ${!hasAnyGoal ? 'btn-primary' : 'btn-secondary'} btn-small disabled:opacity-50`}
         >
           {isPromoting
             ? 'Saving…'
             : isActiveGoal
-            ? 'Refresh this goal'
+            ? 'Refresh goal'
             : hasAnyGoal
             ? 'Make this my goal'
             : 'Set as my goal'}
         </button>
-        {isActiveGoal && (
-          // Gated to the active-goal card only — it isn't a parallel entry
-          // point for any non-goal exploration.
-          <a
-            href={`/blueprint?sessionId=${session.id}`}
-            className="btn btn-secondary btn-small w-full"
-          >
-            Build roadmap
-          </a>
-        )}
       </div>
     </div>
   );
@@ -349,15 +343,15 @@ function CompareColumn({
 
       {session.gap.length > 0 && (
         <div>
-          <p className="text-xs font-bold text-blue-700 uppercase tracking-[.14em] mb-2">Gap analysis</p>
+          <p className="text-xs font-bold text-blue-700 uppercase tracking-[.14em] mb-2">What you&apos;ll need</p>
           <div className="bg-gray-50 border border-gray-100 rounded-lg divide-y divide-gray-100">
             {session.gap.map((item) => (
               <div key={item.skill} className="flex items-center justify-between gap-2 px-3 py-2">
-                <span className="text-sm text-gray-800 truncate">{item.skill}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
-                  item.have ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+                <span className="text-sm text-gray-800">{item.skill}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 ${
+                  item.have ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-800'
                 }`}>
-                  {item.have ? 'Have it' : 'Gap'}
+                  {item.have ? 'Have' : 'To build'}
                 </span>
               </div>
             ))}
@@ -511,30 +505,43 @@ function ReplaceGoalDialog({
   onCancel: () => void;
   confirming: boolean;
 }) {
+  // Same role as the current goal (e.g. re-explored from Career Diya): the choice is which
+  // exploration backs the goal, not which role — say so instead of "replace X with X".
+  const sameRole = currentGoalRole.trim().toLowerCase() === nextRole.trim().toLowerCase();
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-xl">
-        <h3 className="text-base font-semibold text-gray-900">Replace your current goal?</h3>
-        <p className="text-sm text-gray-600">
-          Your current goal is{' '}
-          <span className="font-medium text-gray-900">{currentGoalRole}</span>. Making{' '}
-          <span className="font-medium text-gray-900">{nextRole}</span> your goal will replace it.
-          Your other explorations stay saved.
-        </p>
+        <h3 className="text-base font-semibold text-gray-900">
+          {sameRole ? 'Use this newer exploration?' : 'Replace your current goal?'}
+        </h3>
+        {sameRole ? (
+          <p className="text-sm text-gray-600">
+            <span className="font-medium text-gray-900">{currentGoalRole}</span> is already your goal,
+            from an earlier exploration. Use this newer gap analysis for it instead? The earlier one
+            stays saved.
+          </p>
+        ) : (
+          <p className="text-sm text-gray-600">
+            Your current goal is{' '}
+            <span className="font-medium text-gray-900">{currentGoalRole}</span>. Making{' '}
+            <span className="font-medium text-gray-900">{nextRole}</span> your goal will replace it.
+            Your other explorations stay saved.
+          </p>
+        )}
         <div className="flex gap-3 pt-1">
           <button
             onClick={onCancel}
             disabled={confirming}
             className="btn btn-secondary flex-1"
           >
-            Keep current
+            {sameRole ? 'Keep earlier' : 'Keep current'}
           </button>
           <button
             onClick={onConfirm}
             disabled={confirming}
             className="btn btn-primary flex-1 disabled:opacity-50"
           >
-            {confirming ? 'Replacing…' : 'Replace goal'}
+            {confirming ? 'Saving…' : sameRole ? 'Use this one' : 'Replace goal'}
           </button>
         </div>
       </div>

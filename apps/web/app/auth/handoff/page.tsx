@@ -50,7 +50,7 @@ export default function CareerDiyaHandoffPage() {
   }, []);
 
   return (
-    <CareerDiyaShell eyebrow="Career Diya → CareerĀsanā" title="Opening your planning workspace">
+    <CareerDiyaShell eyebrow="Career Plan" title="Opening your career plan">
       <section className="ca-panel max-w-xl mx-auto">
         <p className="text-sm text-gray-600">{message}</p>
         <a href="/dashboard.html" className="btn btn-secondary mt-5">

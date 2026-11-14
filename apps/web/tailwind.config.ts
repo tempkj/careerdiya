@@ -16,7 +16,7 @@ export default {
           100: '#f4f3ee',
           200: '#e8e7e2', // line
           300: '#ddd9d0', // input border
-          400: '#9a9fae',
+          400: '#6c7386', // darkened from #9a9fae: small grey labels now meet WCAG AA (4.5:1)
           500: '#687083', // muted
           600: '#586175',
           700: '#42475a',

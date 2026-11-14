@@ -28,7 +28,10 @@
   }
 
   function sectionCard(label, title, content, extra=''){
-    return `<section class="career-detail-card ${extra}"><div class="tag">${esc(label)}</div><h2>${esc(title)}</h2>${content}</section>`;
+    // The small label above each heading was dropped: heading + label on every section made
+    // every section shout. `label` is kept in the signature for callers.
+    void label;
+    return `<section class="career-detail-card ${extra}"><h2>${esc(title)}</h2>${content}</section>`;
   }
 
   function list(items, cls='career-bullet-list'){
@@ -135,9 +138,9 @@
     return `<div class="career-detail-shell">
       <section class="career-detail-hero">
         <div class="career-detail-hero-copy">
-          <div class="eyebrow">Career profile</div><h1>${esc(primaryName)}</h1>
+          <div class="eyebrow">Overview</div><h2 class="career-overview-title">About this career</h2>
           <p>${esc(text(data.introduction,'Explore this career, understand the work, and decide what evidence you need before committing.'))}</p>
-          <div class="career-detail-actions"><a class="btn btn-secondary" href="#career-nature">Explore the work</a><a class="btn btn-secondary" href="counselling.html">Talk to an expert →</a></div>
+          <div class="career-detail-actions"><a class="career-text-link" href="counselling.html">Talk to an expert about this career →</a></div>
         </div>
         <div class="career-snapshot">
           <div class="career-snapshot-icon">${esc(initialsText)}</div><div class="career-snapshot-title">${esc(primaryName)}</div>
@@ -159,13 +162,12 @@
           ${audience==='professional'
             ? sectionCard('For professionals', 'How to move into this career', '<p>You do not need to start from scratch. A realistic transition usually starts by mapping what you already bring, identifying the destination-specific capabilities you still need, and building evidence that you can apply them.</p><div class="career-professional-route-grid"><div><strong>1. Start with your transferable strengths</strong><span>Use your current role, experience and domain knowledge as the starting point.</span></div><div><strong>2. Identify the destination gap</strong><span>Separate skills you already have from career-specific knowledge you need to develop.</span></div><div><strong>3. Test the move</strong><span>Use a small project, practical exposure or expert conversation to test the direction before making a large investment.</span></div></div><div class="career-detail-actions"><a class="btn btn-primary" href="#careerPersonalizePanel">Assess my transition →</a></div>')
             : (arr(data.eligibility).length ? sectionCard('What you may need', 'Eligibility & requirements', list(data.eligibility)) : '') + (arr(data.pathways).length ? sectionCard('Career navigators', 'Ways into this career', arr(data.pathways).map(pathwayMarkup).join('')) : '')}
-          ${(arr(data.conventionalOptions).length || arr(data.newAgeOptions).length || arr(data.aiRelatedOptions).length) ? `<section class="career-detail-card" id="career-opportunities"><div class="tag">Explore opportunities</div><h2>Related career options</h2>${arr(data.conventionalOptions).length?`<h3 class="career-group-title">Conventional career options</h3>${optionAccordion(data.conventionalOptions)}`:''}${arr(data.newAgeOptions).length?`<h3 class="career-group-title">New-age career options</h3>${optionAccordion(data.newAgeOptions)}`:''}${arr(data.aiRelatedOptions).length?`<h3 class="career-group-title">AI-related career options</h3>${optionAccordion(data.aiRelatedOptions)}`:''}</section>` : ''}
-          ${faq.length ? `<section class="career-detail-card"><div class="tag">Common questions</div><h2>Frequently asked questions</h2>${faq.map(item=>`<details class="career-option"><summary><span>${esc(item?.question || item?.title || '')}</span><span class="career-option-chevron">⌄</span></summary><div><p>${esc(item?.answer || item?.description || '')}</p></div></details>`).join('')}</section>` : ''}
+          ${(arr(data.conventionalOptions).length || arr(data.newAgeOptions).length || arr(data.aiRelatedOptions).length) ? `<section class="career-detail-card" id="career-opportunities"><h2>Related career options</h2>${arr(data.conventionalOptions).length?`<h3 class="career-group-title">Conventional career options</h3>${optionAccordion(data.conventionalOptions)}`:''}${arr(data.newAgeOptions).length?`<h3 class="career-group-title">New-age career options</h3>${optionAccordion(data.newAgeOptions)}`:''}${arr(data.aiRelatedOptions).length?`<h3 class="career-group-title">AI-related career options</h3>${optionAccordion(data.aiRelatedOptions)}`:''}</section>` : ''}
+          ${faq.length ? `<section class="career-detail-card"><h2>Frequently asked questions</h2>${faq.map(item=>`<details class="career-option"><summary><span>${esc(item?.question || item?.title || '')}</span><span class="career-option-chevron">⌄</span></summary><div><p>${esc(item?.answer || item?.description || '')}</p></div></details>`).join('')}</section>` : ''}
         </div>
         <aside class="career-detail-side">
-          ${stats.futureOutlook ? `<div class="career-side-card"><div class="tag">Market outlook</div><h3>Where the field is heading</h3><p>${esc(stats.futureOutlook)}</p><div class="career-demand"><span>Demand</span><strong>${esc(demand)}</strong></div></div>`:''}
-          ${videos.length ? `<div class="career-side-card"><div class="tag">Recommended watch</div><h3>Go a little deeper</h3>${videos.map((v,i)=>`<button type="button" class="career-video-item show-career-video" data-video-type="${Number(v?.type||i+1)}" aria-label="Play ${esc(v?.title || ('Career in '+primaryName))}"><span class="career-video-placeholder">▶</span><span><strong>${esc(v?.title || ('Career in '+primaryName))}</strong><small>${esc(v?.channelName || '')}</small></span></button>`).join('')}</div>`:''}
-          <div class="career-side-source">Career information is presented in Career Diya from the connected Career Library service.</div>
+          ${stats.futureOutlook ? `<div class="career-side-card"><h3>Where the field is heading</h3><p>${esc(stats.futureOutlook)}</p><div class="career-demand"><span>Demand</span><strong>${esc(demand)}</strong></div></div>`:''}
+          ${videos.length ? `<div class="career-side-card"><h3>Watch: a day in this career</h3>${videos.map((v,i)=>`<button type="button" class="career-video-item show-career-video" data-video-type="${Number(v?.type||i+1)}" aria-label="Play ${esc(v?.title || ('Career in '+primaryName))}"><span class="career-video-placeholder">▶</span><span><strong>${esc(v?.title || ('Career in '+primaryName))}</strong><small>${esc(v?.channelName || '')}</small></span></button>`).join('')}</div>`:''}
         </aside>
       </div>
     </div>`;
