@@ -168,14 +168,14 @@ function SessionCard({
         <button
           onClick={() => onPromote(session)}
           disabled={isPromoting}
-          className="btn btn-primary btn-small w-full disabled:opacity-50"
+          className={`btn ${isActiveGoal || !hasAnyGoal ? 'btn-primary' : 'btn-secondary'} btn-small w-full disabled:opacity-50`}
         >
           {isPromoting
-            ? 'Updating Twin…'
+            ? 'Saving…'
             : isActiveGoal
-            ? 'Re-apply to Twin'
+            ? 'Refresh this goal'
             : hasAnyGoal
-            ? 'Replace goal'
+            ? 'Make this my goal'
             : 'Set as my goal'}
         </button>
         {isActiveGoal && (
@@ -449,9 +449,6 @@ function ResultView({
       <div>
         <p className="text-xs font-bold text-blue-700 uppercase tracking-[.14em] mb-1">Target role</p>
         <h2 className="text-2xl font-bold text-gray-900">{result.desiredPosition.role}</h2>
-        {result.desiredPosition.onetCode && (
-          <p className="text-xs text-gray-400 mt-0.5">O*NET {result.desiredPosition.onetCode}</p>
-        )}
       </div>
 
       {result.currentPosition && (
@@ -519,10 +516,10 @@ function ReplaceGoalDialog({
       <div className="bg-white rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-xl">
         <h3 className="text-base font-semibold text-gray-900">Replace your current goal?</h3>
         <p className="text-sm text-gray-600">
-          Your Twin currently targets{' '}
-          <span className="font-medium text-gray-900">{currentGoalRole}</span>. Setting{' '}
-          <span className="font-medium text-gray-900">{nextRole}</span> as your goal will replace
-          it in the Twin (last-write-wins).
+          Your current goal is{' '}
+          <span className="font-medium text-gray-900">{currentGoalRole}</span>. Making{' '}
+          <span className="font-medium text-gray-900">{nextRole}</span> your goal will replace it.
+          Your other explorations stay saved.
         </p>
         <div className="flex gap-3 pt-1">
           <button
