@@ -511,30 +511,43 @@ function ReplaceGoalDialog({
   onCancel: () => void;
   confirming: boolean;
 }) {
+  // Same role as the current goal (e.g. re-explored from Career Diya): the choice is which
+  // exploration backs the goal, not which role — say so instead of "replace X with X".
+  const sameRole = currentGoalRole.trim().toLowerCase() === nextRole.trim().toLowerCase();
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-xl">
-        <h3 className="text-base font-semibold text-gray-900">Replace your current goal?</h3>
-        <p className="text-sm text-gray-600">
-          Your current goal is{' '}
-          <span className="font-medium text-gray-900">{currentGoalRole}</span>. Making{' '}
-          <span className="font-medium text-gray-900">{nextRole}</span> your goal will replace it.
-          Your other explorations stay saved.
-        </p>
+        <h3 className="text-base font-semibold text-gray-900">
+          {sameRole ? 'Use this newer exploration?' : 'Replace your current goal?'}
+        </h3>
+        {sameRole ? (
+          <p className="text-sm text-gray-600">
+            <span className="font-medium text-gray-900">{currentGoalRole}</span> is already your goal,
+            from an earlier exploration. Use this newer gap analysis for it instead? The earlier one
+            stays saved.
+          </p>
+        ) : (
+          <p className="text-sm text-gray-600">
+            Your current goal is{' '}
+            <span className="font-medium text-gray-900">{currentGoalRole}</span>. Making{' '}
+            <span className="font-medium text-gray-900">{nextRole}</span> your goal will replace it.
+            Your other explorations stay saved.
+          </p>
+        )}
         <div className="flex gap-3 pt-1">
           <button
             onClick={onCancel}
             disabled={confirming}
             className="btn btn-secondary flex-1"
           >
-            Keep current
+            {sameRole ? 'Keep earlier' : 'Keep current'}
           </button>
           <button
             onClick={onConfirm}
             disabled={confirming}
             className="btn btn-primary flex-1 disabled:opacity-50"
           >
-            {confirming ? 'Replacing…' : 'Replace goal'}
+            {confirming ? 'Saving…' : sameRole ? 'Use this one' : 'Replace goal'}
           </button>
         </div>
       </div>

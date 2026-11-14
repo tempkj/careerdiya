@@ -35,7 +35,7 @@ function TaskRow({
   return (
     <div className="flex items-center justify-between gap-3 py-2 border-b border-gray-200 last:border-0">
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-900">{task.title}</p>
+        <p className="text-sm text-gray-900">{plainText(task.title)}</p>
         <p className="text-xs text-gray-500">
           {categoryLabel(task.evolveCategory)} · {task.effortHours}h
           {task.dependencies.length > 0 ? ` · depends on ${task.dependencies.length} task(s)` : ''}
