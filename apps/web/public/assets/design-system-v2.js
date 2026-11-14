@@ -34,22 +34,13 @@
     if(labels[href]) link.textContent=labels[href];
   });
 
-  // Standardise visible button/link casing where old text slipped into sentence case.
+  // Product names keep their capitals ("My Career", "Career Paths"); everything else on
+  // buttons stays in sentence case, as written in the page.
   const replacements={
     'My career':'My Career',
     'my career':'My Career',
     'Career paths':'Career Paths',
-    'Career explorer':'Career Explorer',
-    'Start free':'Start Free',
-    'Start assessment':'Start Assessment',
-    'See counselling':'See Counselling',
-    'Explore assessment':'Explore Assessment',
-    'Open deeper assessment':'Open Deeper Assessment',
-    'Request a conversation':'Request A Conversation',
-    'Request A conversation':'Request A Conversation',
-    'Talk to us':'Talk To Us',
-    'Explore Skill Diya':'Explore Skill Diya',
-    'Start exploring':'Start Exploring'
+    'Career explorer':'Career Explorer'
   };
   document.querySelectorAll('a.btn,button.btn,.nav-cta').forEach(node=>{
     const t=(node.textContent||'').trim();

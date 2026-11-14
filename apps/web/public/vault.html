@@ -2,8 +2,8 @@
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Career Vault — Career Diya</title><link rel="stylesheet" href="assets/site.css"><link rel="stylesheet" href="assets/design-system-v2.css"></head>
 <body>
-<header class="site-header"><div class="container nav"><a href="index.html"><img class="logo" src="assets/careerdiya-horizontal-lockup.svg" alt="Career Diya"></a><nav class="navlinks"><a href="explore.html">Explore Careers</a><a href="paths.html">Career Paths</a><a href="assessment.html">Assessment</a><a href="resources.html">Resources</a></nav><a class="btn btn-secondary" href="dashboard.html">My Career</a></div></header>
-<main><section class="page-hero mural-band"><div class="container"><div class="eyebrow">My Career Vault</div><h1>Put your career thoughts here.</h1><p>You don't need to know what they are yet. Dump aspirations, side gigs, learning ideas, experiments or anything else you want Career Diya to remember.</p></div></section>
+<header class="site-header"><div class="container nav"><a href="index.html"><img class="logo" src="assets/careerdiya-horizontal-lockup.svg" alt="Career Diya"></a><nav class="navlinks"><a href="explore.html">Explore Careers</a><a href="paths.html">Career Paths</a><a href="assessment.html">Assessment</a><a href="counselling.html">Counselling</a><a href="resources.html">Resources</a><a href="courses.html">Courses &amp; Training</a></nav><a class="profile-menu guest" data-profile-menu href="javascript:void(0)"><span class="profile-avatar">?</span></a></div></header>
+<main><section class="page-hero mural-band"><div class="container"><div class="eyebrow">My Career Vault</div><h1>Put your career thoughts here</h1><p>You don't need to know what they are yet. Dump aspirations, side gigs, learning ideas, experiments or anything else you want Career Diya to remember.</p></div></section>
 <section class="section"><div class="container" style="max-width:900px">
 <div class="career-card"><h2 style="margin-top:0">Add something to your Vault</h2><p>Start with what is on your mind. Career Diya will ask one lightweight question to understand the context.</p>
 <form id="vaultForm"><label style="display:block;font-weight:600;margin:18px 0 8px">What would you like Career Diya to remember?<textarea id="vaultText" required rows="4" class="input" placeholder="e.g. I want to learn Spanish because I may work with Spanish-speaking customers."></textarea></label>
@@ -11,11 +11,14 @@
 <div class="actions" style="margin-top:18px"><button class="btn btn-primary" id="continueBtn" type="button">Continue →</button><button class="btn btn-secondary hidden" id="saveBtn" type="submit">Save to my Vault</button></div><p id="vaultMessage" style="margin-top:12px"></p></form></div>
 <section style="margin-top:35px"><div class="section-head"><div><div class="eyebrow">What you've captured</div><h2 style="font-size:32px">Your Vault</h2></div></div><div id="vaultList"></div></section>
 </div></section></main>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="assets/supabase-config.js"></script><script src="assets/profile-auth.js"></script><script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="assets/supabase-config.js"></script><script src="assets/profile-auth.js"></script><script src="assets/site.js"></script><script>
 const relationships=[
 ['direct_career_pursuit','Direct career pursuit'],['career_enabler','Career enabler'],['side_income','Side gig / additional income'],['future_full_time_career','Future full-time career'],['career_exploration','Exploring whether this could become a career'],['personal_hobby','Personal interest / hobby'],['general_learning','General learning'],['undecided','I’m not sure yet']
 ];
 const form=document.getElementById('vaultForm'), textEl=document.getElementById('vaultText'), contextBlock=document.getElementById('contextBlock'), options=document.getElementById('relationshipOptions'), continueBtn=document.getElementById('continueBtn'), saveBtn=document.getElementById('saveBtn'), list=document.getElementById('vaultList'), msg=document.getElementById('vaultMessage'); let relationship='undecided';
+// One date format across the site ("14 Nov 2026"); sentence-case captured thoughts.
+function fmtDate(v){const d=new Date(v);return isNaN(d)?'':d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});}
+function sentenceCase(v){const t=String(v??'').trim();return t?t.charAt(0).toUpperCase()+t.slice(1):t;}
 function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
 relationships.forEach(([id,label])=>{const b=document.createElement('button');b.type='button';b.className='wizard-option';b.dataset.value=id;b.innerHTML='<span class="radio-dot"></span><span>'+esc(label)+'</span>';b.onclick=()=>{relationship=id;document.querySelectorAll('#relationshipOptions .wizard-option').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');};options.appendChild(b);});
 continueBtn.onclick=()=>{if(!textEl.value.trim()){msg.textContent='Add a thought or pursuit first.';return;}contextBlock.classList.remove('hidden');continueBtn.classList.add('hidden');saveBtn.classList.remove('hidden');};
@@ -28,18 +31,19 @@ list.innerHTML=rows.length?rows.map(x=>{
  const rel=(relationships.find(r=>r[0]===x.career_relationship)||['','Not sure yet'])[1];
  const candidate=isCareerCandidate(x);
  return '<div class="career-card" style="margin-bottom:12px">'+
-   '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="tag">'+esc(rel)+'</span><span class="tag" style="background:#eef2fb;color:#213a8f">'+esc(x.priority||'normal')+' priority</span>'+
-   (candidate?'<span class="tag" style="background:#ecfff6;color:#26734d">Career candidate</span>':'')+'</div>'+
+   '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="tag">'+esc(rel)+'</span>'+(x.priority==='high'?'<span class="tag" style="background:#fff4e0;color:#8a5a00">High priority</span>':'')+(x.status==='archived'?'<span class="tag" style="background:#f1f1ee;color:#5b6070">Archived</span>':'')+'</div>'+
    '<div data-view="'+esc(x.id)+'">'+
-   '<h3>'+esc(x.raw_text)+'</h3>'+(x.context_note?'<p>'+esc(x.context_note)+'</p>':'')+
-   '<small>Added '+new Date(x.created_at).toLocaleDateString()+' · '+esc(x.status||'active')+'</small>'+
+   '<h3>'+esc(sentenceCase(x.raw_text))+'</h3>'+(x.context_note?'<p>'+esc(x.context_note)+'</p>':'')+
+   '<small>Added '+fmtDate(x.created_at)+(x.status==='converted'?' · explored as a career':'')+'</small>'+
    '</div>'+
-   '<div class="actions" style="margin-top:14px">'+
-   (candidate?'<a class="btn btn-primary" href="explore.html?source=vault&vaultItem='+encodeURIComponent(x.id)+'">Explore this as a career →</a>':'')+
-   '<button class="btn btn-secondary" type="button" data-edit="'+esc(x.id)+'">Edit</button>'+
-   '<button class="btn btn-secondary" type="button" data-priority="'+esc(x.id)+'">'+(x.priority==='high'?'Lower priority':'Mark high priority')+'</button>'+
-   (x.status!=='archived'?'<button class="btn btn-secondary" type="button" data-archive="'+esc(x.id)+'">Archive</button>':'')+
-   '<button class="btn btn-secondary" type="button" data-delete="'+esc(x.id)+'">Delete</button>'+
+   '<div class="actions vault-actions" style="margin-top:14px">'+
+   (candidate?'<a class="btn btn-secondary" href="explore.html?source=vault&vaultItem='+encodeURIComponent(x.id)+'">Explore this as a career →</a>':'')+
+   '<details class="vault-more"><summary>More</summary><div class="vault-more-menu">'+
+   '<button type="button" data-edit="'+esc(x.id)+'">Edit</button>'+
+   '<button type="button" data-priority="'+esc(x.id)+'">'+(x.priority==='high'?'Remove high priority':'Mark high priority')+'</button>'+
+   (x.status!=='archived'?'<button type="button" data-archive="'+esc(x.id)+'">Archive</button>':'')+
+   '<button type="button" class="danger" data-delete="'+esc(x.id)+'">Delete</button>'+
+   '</div></details>'+
    '</div></div>';
  }).join(''):'<div class="notice">Your Vault is empty. Add the first thing that has been on your career mind.</div>';
  document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=async()=>{

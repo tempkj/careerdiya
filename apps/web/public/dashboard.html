@@ -1,9 +1,9 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet"><title>My Career — Career Diya</title><link rel="stylesheet" href="assets/site.css"><link rel="stylesheet" href="assets/design-system-v2.css"></head><body><header class="site-header"><div class="container nav"><a href="index.html"><img class="logo" src="assets/careerdiya-horizontal-lockup.svg" alt="Career Diya"></a><div class="navlinks"><a href="explore.html">Explore Careers</a><a href="paths.html">Career Paths</a><a href="assessment.html">Assessment</a><a href="counselling.html">Counselling</a><a href="resources.html">Resources</a></div><button class="btn nav-cta" type="button" data-sign-out>Sign Out</button></div></header><div class="dashboard"><aside class="side"><div style="margin-bottom:20px"><strong>MY CAREER</strong><div style="font-size:12px;color:#9ea2b4;margin-top:4px">Career Diya</div></div><a class="active" href="dashboard.html">Overview</a><a href="profile.html">My Profile</a><a href="explore.html?resume=1">My Exploration</a><a href="paths.html">Career Paths</a><a href="vault.html">Career Vault</a><a href="courses.html">Courses &amp; Training</a><a href="assessment.html">Assessment</a><a href="counselling.html">Counselling</a></aside><main class="main"><div class="section-head"><div><div class="eyebrow">Your Career Workspace</div><h2 id="dashboardGreeting">Your Career Dashboard</h2><p id="dashboardIntro">Your profile, exploration and next actions in one place.</p></div><a class="btn btn-primary" id="continueCta" href="explore.html?start=1">Start Exploration</a></div><div id="profileNotice" class="notice" style="margin-bottom:18px">Loading your current career context…</div>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet"><title>My Career — Career Diya</title><link rel="stylesheet" href="assets/site.css"><link rel="stylesheet" href="assets/design-system-v2.css"></head><body><header class="site-header"><div class="container nav"><a href="index.html"><img class="logo" src="assets/careerdiya-horizontal-lockup.svg" alt="Career Diya"></a><nav class="navlinks"><a href="explore.html">Explore Careers</a><a href="paths.html">Career Paths</a><a href="assessment.html">Assessment</a><a href="counselling.html">Counselling</a><a href="resources.html">Resources</a><a href="courses.html">Courses &amp; Training</a></nav><a class="profile-menu guest" data-profile-menu href="javascript:void(0)"><span class="profile-avatar">?</span></a></div></header><section class="page-hero"><div class="container"><div class="eyebrow">My Career</div><h1 id="dashboardGreeting">Your career workspace</h1><p id="dashboardIntro">Your profile, explorations and next steps in one place.</p><div class="hero-actions"><a class="btn btn-primary" id="continueCta" href="explore.html?start=1">Start an exploration</a></div></div></section><div class="dashboard"><aside class="side"><div style="margin-bottom:20px"><strong>MY CAREER</strong><div style="font-size:12px;color:#9ea2b4;margin-top:4px">Career Diya</div></div><a class="active" href="dashboard.html">Overview</a><a href="profile.html">My Profile</a><a href="explore.html?resume=1">My Exploration</a><a href="paths.html">Career Paths</a><a href="vault.html">Career Vault</a><a href="courses.html">Courses &amp; Training</a><a href="assessment.html">Assessment</a><a href="counselling.html">Counselling</a><button class="side-signout" type="button" data-sign-out>Sign out</button></aside><main class="main"><div id="profileNotice" class="notice" style="margin-bottom:18px">Loading your current career context…</div>
 <section class="section" style="padding:0 0 28px">
-  <div class="section-head"><div><div class="eyebrow">Where You Are Now</div><h2 style="font-size:30px">Your Career Context</h2></div><a class="btn btn-secondary" href="profile.html">Edit Profile →</a></div>
+  <div class="section-head"><div><div class="eyebrow">Where you are now</div><h2 style="font-size:30px">Your career context</h2></div><a class="btn btn-secondary" href="profile.html">Edit profile →</a></div>
   <div id="dashGrid" class="dash-grid"></div>
-</section><section class="section" style="padding:28px 0"><div class="section-head"><div><div class="eyebrow">Journey</div><h2 style="font-size:30px">Your Next Moves</h2></div></div><div class="timeline"><div class="t"><b>01 · Understand</b><p>Keep your current context updated.</p><a href="profile.html">Update →</a></div><div class="t"><b>02 · Explore</b><p>Revisit your saved direction.</p><a href="explore.html?resume=1">Open →</a></div><div class="t"><b>03 · Decide</b><p>Compare directions worth testing.</p><a href="paths.html">Validate →</a></div><div class="t"><b>04 · Learn</b><p>Build capability for your chosen path.</p><a href="courses.html">Explore →</a></div></div></section><section class="section alt" style="padding:28px 0"><div class="section-head"><div><div class="eyebrow">Latest Exploration</div><h2 style="font-size:30px">What You Explored Most Recently</h2><p id="explorationSummary">Your latest saved exploration appears here.</p></div><a class="btn btn-secondary" href="explore.html?resume=1">Review Exploration →</a></div><div id="savedRecs" class="cards"></div></section>
-<section class="section" style="padding:28px 0"><div class="section-head"><div><div class="eyebrow">Remembered Context</div><h2 style="font-size:30px">Career Vault</h2><p>Thoughts and pursuits you have asked Career Diya to remember.</p></div><a class="btn btn-secondary" href="vault.html">Open Vault →</a></div><div id="vaultPreview" class="cards"></div></section><section class="section" style="padding:28px 0"><div class="section-head"><div><div class="eyebrow">Career Repository</div><h2 style="font-size:30px">Your Career Directions</h2><p>Career choices you have explicitly started pursuing through Career Diya.</p></div></div><div id="careerDirections" class="cards"><div class="notice">Loading…</div></div></section><section class="section" style="padding:28px 0"><div class="career-card" style="background:linear-gradient(135deg,#fffdf7,#eef2fb)"><div class="eyebrow">Career Vault</div><h2 style="font-size:30px;margin:8px 0">Have career thoughts you don't know what to do with yet?</h2><p>Put aspirations, side gigs, learning ideas, experiments and other pursuits here. Career Diya will help you add context and organize them over time.</p><a class="btn btn-primary" href="vault.html">Open my Career Vault →</a></div></section><section><div class="redirect-strip"><div><strong>Need More Evidence?</strong><p>Open the deeper assessment when you want a fuller assessment/report journey.</p></div><a class="btn btn-secondary" href="https://careerdiya.edumilestones.com/career-lab/">Open Deeper Assessment</a></div></section></main></div><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="assets/supabase-config.js"></script><script src="assets/profile-auth.js"></script><script src="assets/site.js"></script><script>
+</section><section class="section" style="padding:28px 0"><div class="section-head"><div><div class="eyebrow">Journey</div><h2 style="font-size:30px">Your next moves</h2></div></div><div class="timeline"><div class="t"><b>01 · Understand</b><p>Keep your current context up to date.</p><a href="profile.html">Update your profile →</a></div><div class="t"><b>02 · Explore</b><p>Revisit your latest exploration.</p><a href="explore.html?resume=1">See your result →</a></div><div class="t"><b>03 · Decide</b><p>Look closer at the directions worth testing.</p><a href="paths.html">Compare directions →</a></div><div class="t"><b>04 · Learn</b><p>Build skills for the direction you choose.</p><a href="courses.html">Browse courses →</a></div></div></section><section class="section alt" style="padding:28px 0"><div class="section-head"><div><div class="eyebrow">Latest exploration</div><h2 style="font-size:30px">What you explored most recently</h2><p id="explorationSummary">Your latest saved exploration appears here.</p></div><a class="btn btn-secondary" href="explore.html?resume=1">See full result →</a></div><div id="savedRecs" class="cards"></div></section>
+<section class="section" style="padding:28px 0"><div class="section-head"><div><div class="eyebrow">Career Vault</div><h2 style="font-size:30px">Things you asked us to remember</h2><p>Aspirations, side gigs, learning ideas and other pursuits.</p></div><a class="btn btn-secondary" href="vault.html">Open Vault →</a></div><div id="vaultPreview" class="cards"></div></section><section class="section" style="padding:28px 0"><div class="section-head"><div><div class="eyebrow">Careers you are pursuing</div><h2 style="font-size:30px">Your chosen careers</h2><p>Careers you have chosen to pursue through Career Diya.</p></div></div><div id="careerDirections" class="cards"><div class="notice">Loading…</div></div></section><section class="section" style="padding:28px 0"><div class="career-card" style="background:linear-gradient(135deg,#fffdf7,#eef2fb)"><div class="eyebrow">Career Vault</div><h2 style="font-size:30px;margin:8px 0">Have career thoughts you don't know what to do with yet?</h2><p>Put aspirations, side gigs, learning ideas, experiments and other pursuits here. Career Diya will help you add context and organize them over time.</p><a class="btn btn-primary" href="vault.html">Open my Career Vault →</a></div></section><section><div class="redirect-strip"><div><strong>Want a second opinion?</strong><p>Talk a decision through with a Career Diya counsellor.</p></div><a class="btn btn-secondary" href="counselling.html">Talk to a counsellor</a></div></section></main></div><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="assets/supabase-config.js"></script><script src="assets/profile-auth.js"></script><script src="assets/site.js"></script><script>
 (async()=>{
   const auth=window.CareerDiyaProfileAuth;
   if(!auth){location.replace('auth.html?return=dashboard');return;}
@@ -23,6 +23,11 @@
   const vaultPreview=document.getElementById('vaultPreview');
   const explorationSummary=document.getElementById('explorationSummary');
 
+  // Plain labels for stored codes, and one date format across the site ("14 Nov 2026").
+  const RELATIONSHIP_LABEL={future_full_time_career:'Future full-time career',career_exploration:'Exploring as a career',direct_career_pursuit:'Pursuing now',career_enabler:'Career enabler',side_income:'Side gig / extra income',personal_hobby:'Personal interest',general_learning:'General learning',undecided:'Not sure yet'};
+  const STATUS_LABEL={considering:'Considering',exploring:'Exploring',active:'Pursuing',paused:'Paused',completed:'Completed',archived:'Archived'};
+  const fmtDate=v=>{const d=new Date(v);return isNaN(d)?'':d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});};
+  const sentence=v=>{const t=String(v??'').trim();return t?t.charAt(0).toUpperCase()+t.slice(1):t;};
   const esc=v=>String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const profileCompleteness=p=>{
     const fields=['display_name','audience','country','field_of_study','current_role_title','industry','experience_years'];
@@ -40,50 +45,51 @@
     ]);
 
     const name=(profile&&profile.display_name)||((auth.getSession().user||{}).email||'').split('@')[0];
-    document.getElementById('dashboardGreeting').textContent=name?`${name}'s Career Workspace`:'Your Career Workspace';
+    // Greet by saved name only; an email prefix ("kunaljorofficial") isn't a name.
+    document.getElementById('dashboardGreeting').textContent=profile?.display_name?`Welcome back, ${profile.display_name.split(/\s+/)[0]}`:'Your career workspace';
 
     const audienceLabel={professional:'Professional',student:'Student',parent:'Parent'}[profile?.audience]||'Career Explorer';
-    const role=profile?.current_role_title||profile?.current_role_other||null;
+    const role=profile?.audience==='professional'?(profile?.current_role_title||profile?.current_role_other||null):null;
     const industry=profile?.industry||profile?.industry_other||null;
     const completeness=profileCompleteness(profile);
     const activeDirection=directions.find(x=>['active','exploring','considering'].includes(x.status));
 
     grid.innerHTML=
-      `<div class="metric"><div>Career Profile</div><div class="value">${completeness}%</div><small>${completeness<100?'Add more context when useful':'Core context captured'}</small></div>`+
-      `<div class="metric"><div>Current Context</div><div class="value" style="font-size:20px">${esc(role||audienceLabel)}</div><small>${esc(industry||audienceLabel)}</small></div>`+
-      `<div class="metric"><div>Career Direction</div><div class="value" style="font-size:20px">${esc(activeDirection?.career_name_snapshot||'Not chosen yet')}</div><small>${activeDirection?'Saved in your Career Directions':'Explore or choose a direction'}</small></div>`;
+      `<div class="metric"><div>Profile</div><div class="value">${completeness}%</div><small>complete</small></div>`+
+      `<div class="metric"><div>Current situation</div><div class="value" style="font-size:20px">${esc(role||audienceLabel)}</div><small>${esc(industry||audienceLabel)}</small></div>`+
+      `<div class="metric"><div>Chosen career</div><div class="value" style="font-size:20px">${esc(activeDirection?.career_name_snapshot||'Not chosen yet')}</div><small>${activeDirection?'In your chosen careers':'Explore to choose one'}</small></div>`;
 
     if(completeness<100){
-      notice.innerHTML=`<b>Your career context is ${completeness}% complete.</b> You can keep using Career Diya now and add more context when it becomes useful. <a href="profile.html">Update profile →</a>`;
+      notice.innerHTML=`<b>Your profile is ${completeness}% complete.</b> Add more when it’s useful; everything works now. <a href="profile.html">Update profile →</a>`;
     }else{
-      notice.innerHTML='<b>Your current career context is ready.</b> Career Diya will use this persistent context across your workspace.';
+      notice.innerHTML='<b>Your profile is complete.</b> Career Diya uses it across your workspace.';
     }
 
     if(saved&&saved.result){
       const r=saved.result;
       const recommendations=r.recommendations||r.recs||[];
       const top=recommendations[0];
-      const exploredAt=saved.completed_at?new Date(saved.completed_at).toLocaleDateString():'recently';
-      explorationSummary.textContent=`Saved ${exploredAt}. This is your latest exploration snapshot; changing your profile does not rewrite it.`;
+      const exploredAt=saved.completed_at?fmtDate(saved.completed_at):'recently';
+      explorationSummary.textContent=`Saved ${exploredAt}. Your top directions from that exploration.`;
       recs.innerHTML=recommendations.length
-        ? recommendations.slice(0,3).map(c=>`<a class="career-card" href="career.html?direction=${encodeURIComponent(c.id||'')}&name=${encodeURIComponent(c.name||'')}&audience=${encodeURIComponent(saved.audience||profile?.audience||'professional')}"><span class="tag">Exploration signal</span><h3>${esc(c.name)}</h3><p>${esc((c.skills||c.tags||[]).slice(0,3).join(' · '))}</p><span class="btn btn-secondary">Explore →</span></a>`).join('')
+        ? recommendations.slice(0,3).map(c=>`<a class="career-card" href="career.html?direction=${encodeURIComponent(c.id||'')}&name=${encodeURIComponent(c.name||'')}&audience=${encodeURIComponent(saved.audience||profile?.audience||'professional')}"><span class="tag">Direction</span><h3>${esc(c.name)}</h3><p>${esc((c.skills||c.tags||[]).slice(0,3).join(' · '))}</p><span class="btn btn-secondary">Explore →</span></a>`).join('')
         : '<div class="notice">Your exploration is saved, but there are no recommendation cards to show here.</div>';
-      cta.href='explore.html?resume=1'; cta.textContent='Review Latest Exploration';
+      cta.href='explore.html?resume=1'; cta.textContent='See your latest exploration';
     }else{
       explorationSummary.textContent='You have not saved an exploration yet.';
       recs.innerHTML='<div class="notice">Complete an exploration to create your first saved snapshot and starting directions.</div>';
-      cta.href='explore.html?start=1'; cta.textContent='Start Exploration';
+      cta.href='explore.html?start=1'; cta.textContent='Start an exploration';
     }
 
     if(directionsEl){
       directionsEl.innerHTML=directions.length
-        ? directions.slice(0,6).map(d=>`<a class="career-card" href="career.html?careerId=${encodeURIComponent(d.career_id)}"><span class="tag">${esc(d.status||'considering')}</span><h3>${esc(d.career_name_snapshot||'Career')}</h3><p>Persistent career direction from your Career Diya journey.</p><span class="btn btn-secondary">Open →</span></a>`).join('')
-        : '<div class="notice">No Career Directions yet. When you choose a career to pursue, Career Diya will remember it here.</div>';
+        ? directions.slice(0,6).map(d=>`<a class="career-card" href="career.html?careerId=${encodeURIComponent(d.career_id)}"><span class="tag">${esc(STATUS_LABEL[d.status]||'Considering')}</span><h3>${esc(d.career_name_snapshot||'Career')}</h3><p>Chosen ${d.created_at?fmtDate(d.created_at):''}</p><span class="btn btn-secondary">Open career →</span></a>`).join('')
+        : '<div class="notice">No chosen careers yet. When you choose a career to pursue, it will appear here.</div>';
     }
 
     if(vaultPreview){
       vaultPreview.innerHTML=vault?.length
-        ? vault.slice(0,3).map(x=>`<a class="career-card" href="vault.html"><span class="tag">${esc(x.career_relationship||'undecided')}</span><h3>${esc(x.raw_text)}</h3><p>${x.context_note?esc(x.context_note):'Remembered career context'}</p><small>Updated ${new Date(x.updated_at||x.created_at).toLocaleDateString()}</small></a>`).join('')
+        ? vault.slice(0,3).map(x=>`<a class="career-card" href="vault.html"><span class="tag">${esc(RELATIONSHIP_LABEL[x.career_relationship]||'Not sure yet')}</span><h3>${esc(sentence(x.raw_text))}</h3>${x.context_note?`<p>${esc(x.context_note)}</p>`:''}<small>Updated ${fmtDate(x.updated_at||x.created_at)}</small></a>`).join('')
         : '<div class="notice">Your Career Vault is empty. Capture an aspiration, learning idea, experiment or other pursuit whenever you want Career Diya to remember it.</div>';
     }
   }catch(e){
@@ -92,4 +98,4 @@
     notice.className='notice err';
   }
 })();
-</script></script><script src="assets/design-system-v2.js"></script></body></html>
+</script><script src="assets/design-system-v2.js"></script></body></html>

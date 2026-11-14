@@ -340,6 +340,10 @@
     const { data, error } = await coreTable('profile')
       .upsert({
         user_id: user.id,
+        // Stating a current role in a professional exploration means the person is exploring
+        // as a professional. Without this the profile kept an older audience (e.g. "Student")
+        // and hid the work section that holds this very role, while My Career showed the role.
+        audience: 'professional',
         current_role_title: isOther ? null : value,
         current_role_other: isOther ? value : null,
         updated_at: new Date().toISOString()
